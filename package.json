@@ -1,0 +1,19 @@
+{
+  "name": "air-m2",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/artifishional/air-m2.git"
+  },
+  "author": "/ai",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/artifishional/air-m2/issues"
+  },
+  "homepage": "https://github.com/artifishional/air-m2#readme"
+}
