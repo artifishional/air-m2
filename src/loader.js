@@ -3,7 +3,8 @@ import {concatPath} from "./utils";
 
 export default class Loader {
 
-    constructor() {
+    constructor({path = "m2units/"} = {}) {
+        this.rpath = path;
         this.modules = [];
     }
 
@@ -14,7 +15,7 @@ export default class Loader {
         }
         else {
             const module = new Observable( emt => {
-                eval(`import("${concatPath(relative, path)}")`).then(module => {
+                eval(`import("./${this.rpath}${concatPath(relative, path)}")`).then(module => {
                     emt.complete({data: module});
                 } );
             } );
