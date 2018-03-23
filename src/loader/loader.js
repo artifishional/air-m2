@@ -22,7 +22,7 @@ export default class Loader {
                     emt.complete({data: module});
                 } );
                 */
-                include(`${this.rpath}${concatPath(relative, path)}`).then(module => {
+                include({path: `${this.rpath}${concatPath(relative, path)}`}).then(module => {
                     emt.complete({data: window.m2unit});
                 } );
             } );
