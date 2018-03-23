@@ -2,9 +2,13 @@
   "name": "air-m2",
   "version": "0.1.0",
   "description": "",
-  "main": "index.js",
+  "main": "/src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "patch": "npm version patch && npm publish"
+  },
+  "dependencies": {
+    "air-stream": "^0.2.0"
   },
   "repository": {
     "type": "git",

@@ -1,4 +1,4 @@
-import Advantages from "./index";
+import Advantages from "./advantages";
 import Container from "./container"
 
 export default class Factory {

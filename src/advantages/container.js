@@ -1,4 +1,4 @@
-import Advantages from "./index"
+import Advantages from "./advantages"
 
 export default class Container extends Advantages {
 
