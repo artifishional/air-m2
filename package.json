@@ -5,7 +5,7 @@
   "main": "/src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "patch": "npm version patch && npm publish"
+    "patch": "npm version patch && npm publish && git push origin"
   },
   "dependencies": {
     "air-stream": "^0.2.0"
