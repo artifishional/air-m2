@@ -1,6 +1,5 @@
 import {Observable} from "air-stream"
 import Loader from "../loader/loader"
-import {catalog, concatPath} from "../utils";
 
 /**
  *

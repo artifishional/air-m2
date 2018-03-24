@@ -1,5 +1,4 @@
 import {Observable} from "air-stream"
-import {concatPath} from "../utils";
 import include from "./script_like_promise"
 
 export default class Loader {
@@ -10,7 +9,7 @@ export default class Loader {
         window.m2unit = {};
     }
 
-    obtain({relative, source: {path}}) {
+    obtain({source: {path}}) {
         const exist = this.modules.find( ({ path: _path }) => path === _path );
         if(exist) {
             return exist.module;
@@ -18,11 +17,11 @@ export default class Loader {
         else {
             const module = new Observable( emt => {
                 /*todo es6 dynamic
-                eval(`import("./${this.rpath}${concatPath(relative, path)}")`).then(module => {
+                eval(`import("./${this.rpath}${path}")`).then(module => {
                     emt.complete({data: module});
                 } );
                 */
-                include({path: `${this.rpath}${concatPath(relative, path)}`}).then(module => {
+                include({path: `${this.rpath}${path}`}).then(module => {
                     emt.complete({data: window.m2unit});
                 } );
             } );
