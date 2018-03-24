@@ -114,6 +114,10 @@ export default class Advantages {
         }
     }
 
+    toSCHEMA() {
+        return [ this.key, { source: this.source, ...this.args }, ...this.item.map( ch => ch.toSCHEMA() ) ];
+    }
+
     static create({
                       parent = null,
                       loader = Loader.default,
