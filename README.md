@@ -1,3 +1,3 @@
-# air-example
+# m2-air
 
 platform

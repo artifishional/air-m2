@@ -1,6 +1,5 @@
 import {Observable} from "air-stream"
-import Loader from "../loader"
-import {catalog, concatPath} from "../utils";
+import Loader from "../loader/loader"
 
 /**
  *
@@ -24,7 +23,6 @@ export function routeNormalizer(route) {
 export default class Advantages {
 
     constructor( {
-                     relative,
                      parent,
                      factory,
                      loader,
@@ -37,9 +35,8 @@ export default class Advantages {
         this.source = source;
         this.parent = parent;
         this.item = advs
-            .map( schema => factory.create( { relative, factory, parent: this, schema, loader } ) );
+            .map( schema => factory.create( { factory, parent: this, schema, loader } ) );
         this.args = args;
-        this.relative = relative;
     }
 
     /**
@@ -64,7 +61,6 @@ export default class Advantages {
                 }
                 else {
                     if(this.source.hasOwnProperty("path") && !this.item.length) {
-                        const relative = concatPath(this.relative, catalog(this.source.path));
                         return new Observable( (emt) => {
                             let res = null;
                             const loader = this.loader.obtain(this).on( ({data: module}) => {
@@ -72,7 +68,7 @@ export default class Advantages {
                                 const {factory, loader} = this;
                                 this.item =
                                     advs.map( schema =>
-                                        factory.create( { relative, factory, parent: this, schema, loader } ) );
+                                        factory.create( { factory, parent: this, schema, loader } ) );
                                 res = this._obtain( { route: [key, ...route], ...args } ).on( emt.emit );
                             });
                             return (...args) => {
@@ -82,26 +78,25 @@ export default class Advantages {
                         } );
                     }
                     else {
-                        throw "module not found";
+                        throw `module "${key}" not found`;
                     }
                 }
             }
         }
         else {
             if(typeof this.source === "function") {
-                return this.source.module({advantages: this, ...this.args, ...args});
+                return this.source({advantages: this, ...this.args, ...args});
             }
             else {
                 return new Observable((emt) => {
                     let obs = null;
                     const loader = this.loader.obtain(this).on(({data: module}) => {
                         if (Array.isArray(module[this.source.name || "default"])) {
-                            const relative = concatPath(this.relative, catalog(this.source.path));
                             const [, , ...advs] = schemasNormalizer(module[this.source.name || "default"]);
                             const {factory, loader} = this;
                             this.item =
                                 advs.map(schema =>
-                                    factory.create({relative, factory, parent: this, schema, loader}));
+                                    factory.create({factory, parent: this, schema, loader}));
                             obs = module.main({advantages: this, ...this.args, ...args})
                                 .on(emt.emit);
                         }
@@ -120,13 +115,12 @@ export default class Advantages {
     }
 
     static create({
-                      relative = "./",
                       parent = null,
                       loader = Loader.default,
                       factory,
                       schema
     }) {
-        return factory.create( { relative, factory, parent, schema: schemasNormalizer(schema), loader } );
+        return factory.create( { factory, parent, schema: schemasNormalizer(schema), loader } );
     }
 
     static sign(sign) {

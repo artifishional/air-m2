@@ -1,11 +1,11 @@
 {
   "name": "air-m2",
-  "version": "0.1.1",
+  "version": "0.1.6",
   "description": "",
   "main": "/src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "patch": "npm version patch && npm publish"
+    "patch": "npm version patch && npm publish && git push origin"
   },
   "dependencies": {
     "air-stream": "^0.2.0"
