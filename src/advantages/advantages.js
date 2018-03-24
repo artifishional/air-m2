@@ -78,14 +78,14 @@ export default class Advantages {
                         } );
                     }
                     else {
-                        throw "module not found";
+                        throw `module "${key}" not found`;
                     }
                 }
             }
         }
         else {
             if(typeof this.source === "function") {
-                return this.source.module({advantages: this, ...this.args, ...args});
+                return this.source({advantages: this, ...this.args, ...args});
             }
             else {
                 return new Observable((emt) => {
