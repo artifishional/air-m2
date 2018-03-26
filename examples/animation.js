@@ -25,7 +25,8 @@ const json = {
                     //keys
                     { duration: "3s" },
                     //[ "0%" //it's default prev ]
-                    [ "50%", { "x": { ease: "cubic", value: "",  } } ]
+                    [ "50%", { x: 456, y: 10, ease: "cubic"/*0-50*/ } ],
+                    [ "100%", { x: 456, y: 50, ease: "linear"/*50-100*/ } ]
                 ]
             ],
             onpoinertap: "actionname"
