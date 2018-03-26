@@ -14,6 +14,7 @@ const schema = [
         //[0,10] Range for int number or (0-10) for real
         //enum: like array for every properties - enum: [ array[5,10], [0,10], regexp1, regexp2 ]
         optional: true /*false*/ //as substitution ?
+        //test()
     },
 
     ["array-prop", {type: "array"},
