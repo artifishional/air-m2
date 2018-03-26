@@ -8,40 +8,48 @@
 /**
  * keys: [ {x: 10}, {x: 20}, {x: 30] ]
  */
-function onaction({ action: { name, keys } }) {
+function onaction({ action: [ name, { duration }, ... keys ] }) {
 
 }
 
 const json = {
 
+    builder: { version: "1.0.0" },
+    screen: { width: 1920, height: 1080 },
 
     content: [ "some", //name
 
         {
-            type: "/PIXI.Sprite",
+            type: "/PIXI.Sprite", //PIXI.Container as default
             model: "./rel/route",
-            animations: [
+            animations: [ // as optional
                 [  "animation-name", // it's identical as action name
+                    { duration: "1s" },
                     //keys
-                    { duration: "3s" },
                     //[ "0%" //it's default prev ]
                     [ "50%", { x: 456, y: 10, ease: "cubic"/*0-50*/ } ],
                     [ "100%", { x: 456, y: 50, ease: "linear"/*50-100*/ } ]
-                ]
+                ],
+                [  "fade-out" /* fade-in */ , // as optional
+                    { duration: "3s" },
+                    //keys
+                    [ "0%", { alpha: 0 } ],
+                    [ "100%", { alpha: 1 } ] /* ease: "linear"  also as default  */
+                ],
             ],
-            onpoinertap: "actionname"
+            interactive: {
+                poinertap: { action: [ "action-name" ], static: true } //static existing in view also
+            }
 
         },
 
-        [ "child", { source: { path: "./some/path.json" } } ],
+        [ "child", { source: { path: "./some/path.json" } } ], //lazy loader
 
-        [ {state: 1},
-            {
-                source: { path: "./states/1.json" },
-                model: "./some/switch/"
-            }
-        ],
-        [ {state: 2}, { source: { path: "./states/2.json" } } ]
+        [ "loader" ], // optional loader for this layer
+
+        // extensible state view
+        [ {state: 1}, { source: { path: "./states/1.json" } } ],
+        [ {state: 2}, { source: { path: "./states/2.json" } } ],
 
     ]
 
