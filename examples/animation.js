@@ -23,10 +23,12 @@ const json = {
             animations: [
                 [  "animation-name", // it's identical as action name
                     //keys
+                    { duration: "3s" },
                     //[ "0%" //it's default prev ]
-                    [ "50%", { "x": { ease: "", value: "" } } ]
+                    [ "50%", { "x": { ease: "cubic", value: "",  } } ]
                 ]
             ],
+            onpoinertap: "actionname"
 
         },
 
