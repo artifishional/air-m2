@@ -61,6 +61,7 @@ export default class Advantages {
                 }
                 else {
                     if(this.source.hasOwnProperty("path") && !this.item.length) {
+                        //continuation of the way is always a schema
                         return new Observable( (emt) => {
                             let res = null;
                             const loader = this.loader.obtain(this).on( ({data: module}) => {
@@ -92,11 +93,6 @@ export default class Advantages {
                     let obs = null;
                     const loader = this.loader.obtain(this).on(({data: module}) => {
                         if (Array.isArray(module[this.source.name || "default"])) {
-                            const [, , ...advs] = schemasNormalizer(module[this.source.name || "default"]);
-                            const {factory, loader} = this;
-                            this.item =
-                                advs.map(schema =>
-                                    factory.create({factory, parent: this, schema, loader}));
                             obs = module.main({advantages: this, ...this.args, ...args})
                                 .on(emt.emit);
                         }
