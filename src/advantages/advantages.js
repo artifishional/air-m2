@@ -93,8 +93,9 @@ export default class Advantages {
                     let obs = null;
                     const loader = this.loader.obtain(this).on(({data: module}) => {
                         if (Array.isArray(module[this.source.name || "default"])) {
-                            obs = module.main({advantages: this, ...this.args, ...args})
-                                .on(emt.emit);
+                            const [, {source}] = module[this.source.name || "default"];
+                            this.source = source;
+                            obs = source({advantages: this, ...this.args, ...args}).on(emt.emit);
                         }
                         else {
                             obs = module[this.source.name || "default"]({advantages: this, ...this.args, ...args})

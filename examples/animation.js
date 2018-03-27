@@ -15,15 +15,16 @@ function onaction({ action: [ name, { duration }, ... keys ] }) {
 const json = {
 
     builder: { version: "1.0.0" },
-    screen: { width: 1920, height: 1080 },
+    screen: { width: 1920, height: 1080 }, //for every nodes in this scene
 
-    content: [ "some", //name
+    content: [ "some", //node name
 
         {
+            screen: { width: 1920, height: 1080 }, //default is the same as that of the container
             type: "/PIXI.Sprite", //PIXI.Container as default
             model: "./rel/route",
             animations: [ // as optional
-                [  "animation-name", // it's identical as action name
+                [  "action-name", // it's identical as action name
                     { duration: "1s" },
                     //keys
                     //[ "0%" //it's default prev ]
