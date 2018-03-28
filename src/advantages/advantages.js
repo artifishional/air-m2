@@ -15,7 +15,7 @@ export function schemasNormalizer([key, ...elems]) {
 
 export function routeNormalizer(route) {
     return route.split("/")
-        //an empty string includes
+    //an empty string includes
         .filter(x => !".".includes(x))
         .map(x => x[0] === "{" ? JSON.parse(x.replace(/[a-zA-Z]\w{1,}/g, x=> `"${x}"`)) : x);
 }
@@ -27,7 +27,7 @@ export default class Advantages {
                      factory,
                      loader,
                      schema: [ key, {sign = Advantages.sign, source = {}, ...args}, ...advs ]
-    }) {
+                 }) {
         this.key = key;
         this.factory = factory;
         this.sign = sign;
@@ -50,28 +50,22 @@ export default class Advantages {
         return this._obtain({ route: routeNormalizer(route), ...args });
     }
 
-    get({route: [ key, ...route ], ...args}) {
+    get({route: [ key, ...route ] }) {
         if(key) {
             if(key === "..") {
-                return this.parent.get({ route, ...args });
+                return this.parent.get({ route });
             }
             else {
                 const node = this.item.find( this.sign(key) );
                 if(node) {
-                    return node.get({ route, ...args });
+                    return node.get({ route });
                 }
                 else {
                     if(!this.state.load) {
                         return new Observable( (emt) => {
-                            return this.loader.obtain(this).on( ({module, advantages}) => {
-                                const [,, ...advs] = schemasNormalizer(module[this.source.name || "default"]);
-                                const {factory, loader} = this;
-                                this.item =
-                                    advs.map( schema =>
-                                        factory.create( { factory, parent: advantages, schema, loader } ) );
-                                this.state.load = true;
-                                return this.get( {route: [ key, ...route ], ...args} ).on( emt );
-                            });
+                            return this.get( {route: []} ).on( () => {
+                                return this.get( {route: [ key, ...route ]} ).on( emt );
+                            } );
                         } );
                     }
                     else {
@@ -84,12 +78,19 @@ export default class Advantages {
             if(!this.state.load) {
                 return new Observable( (emt) => {
                     return this.loader.obtain(this).on( ({module, advantages}) => {
-                        const [,, ...advs] = schemasNormalizer(module[this.source.name || "default"]);
-                        const {factory, loader} = this;
-                        this.item = advs.map( schema =>
+                        const exist = module[this.source.name || "default"];
+                        if(Array.isArray(exist)) {
+                            const [, {source} , ...advs] = schemasNormalizer(exist);
+                            source && (advantages.source = source);
+                            const {factory, loader} = this;
+                            this.item = advs.map( schema =>
                                 factory.create( { factory, parent: advantages, schema, loader } ) );
+                        }
+                        else {
+                            advantages.source = exist;
+                        }
                         this.state.load = true;
-                        return emt( { advantages, module } );
+                        return this.get( {route: [ ]} ).on(emt);
                     });
                 } );
             }
@@ -108,8 +109,6 @@ export default class Advantages {
                 else {
                     const exist = module[advantages.source.name || "default"];
                     if(Array.isArray(exist)) {
-                        const [, {source}] = exist;
-                        advantages.source = source;
                         return source({advantages, ...advantages.args, ...args}).on(emt);
                     }
                     else if(exist) {
@@ -132,7 +131,7 @@ export default class Advantages {
                       loader = Loader.default,
                       factory,
                       schema
-    }) {
+                  }) {
         return factory.create( { factory, parent, schema: schemasNormalizer(schema), loader } );
     }
 
