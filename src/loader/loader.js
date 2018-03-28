@@ -9,7 +9,8 @@ export default class Loader {
         window.m2unit = {};
     }
 
-    obtain({source: {path}}) {
+    obtain(advantages) {
+        const {source: {path}} = advantages;
         const exist = this.modules.find( ({ path: _path }) => path === _path );
         if(exist) {
             return exist.module;
@@ -22,7 +23,7 @@ export default class Loader {
                 } );
                 */
                 include({path: `${this.rpath}${path}`}).then(module => {
-                    emt.complete({data: window.m2unit});
+                    emt.complete({module: window.m2unit, advantages});
                 } );
             } );
             this.modules.push({module, path});
