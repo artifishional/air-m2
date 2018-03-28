@@ -90,7 +90,7 @@ export default class Advantages {
                             advantages.source = exist;
                         }
                         this.state.load = true;
-                        return this.get( {route: [ ]} ).on(emt);
+                        emt( {advantages: this, source: this.source } );
                     });
                 } );
             }
@@ -102,7 +102,7 @@ export default class Advantages {
 
     _obtain({route: [ key, ...route ], ...args}) {
         return new Observable( (emt) => {
-            return this.get( {route: [ key, ...route ]} ).on( ({module, advantages}) => {
+            return this.get( {route: [ key, ...route ], ...args} ).on( ({module, advantages}) => {
                 if(typeof advantages.source === "function") {
                     return advantages.source({advantages, ...advantages.args, ...args}).on(emt);
                 }
