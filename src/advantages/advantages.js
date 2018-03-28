@@ -102,7 +102,7 @@ export default class Advantages {
 
     _obtain({route: [ key, ...route ], ...args}) {
         return new Observable( (emt) => {
-            return this.get( {route: [ key, ...route ], ...args} ).on( ({module, advantages}) => {
+            return this.get( {route: [ key, ...route ]} ).on( ({module, advantages}) => {
                 if(typeof advantages.source === "function") {
                     return advantages.source({advantages, ...advantages.args, ...args}).on(emt);
                 }
