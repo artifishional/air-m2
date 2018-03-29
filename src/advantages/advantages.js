@@ -126,15 +126,6 @@ export default class Advantages {
         return [ this.key, { source: this.source, ...this.args }, ...this.item.map( ch => ch.toSCHEMA() ) ];
     }
 
-    static create({
-                      parent = null,
-                      loader = Loader.default,
-                      factory,
-                      schema
-                  }) {
-        return factory.create( { factory, parent, schema: schemasNormalizer(schema), loader } );
-    }
-
     static sign(sign) {
         return ({key}) => sign === key;
     }
