@@ -1,5 +1,4 @@
 import {Observable} from "air-stream"
-import Loader from "../loader/loader"
 
 /**
  *
