@@ -1,6 +1,6 @@
 import Advantages, {schemasNormalizer} from "./advantages"
 import Loader from "../loader/loader";
-import {Factory} from "./index";
+import Factory from "./factory";
 
 export default class Model extends Advantages {
 

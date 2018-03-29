@@ -12,12 +12,12 @@ function onaction({ action: [ name, { duration }, ... keys ] }) {
 
 }
 
-const json = {
+const json =
 
-    builder: { version: "1.0.0" },
-    screen: { width: 1920, height: 1080 }, //for every nodes in this scene
+    //builder: { version: "1.0.0" },
+    //screen: { width: 1920, height: 1080 }, //for every nodes in this scene
 
-    content: [ "some", //node name
+    [ "some", //node name
 
         {
             screen: { width: 1920, height: 1080 }, //default is the same as that of the container
@@ -52,7 +52,4 @@ const json = {
         [ {state: 1}, { source: { path: "./states/1.json" } } ],
         [ {state: 2}, { source: { path: "./states/2.json" } } ],
 
-    ]
-
-
-};
+    ];
