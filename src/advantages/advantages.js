@@ -15,7 +15,7 @@ export function schemasNormalizer([key, ...elems]) {
 
 export function routeNormalizer(route) {
     return route.split("/")
-        //an empty string includes
+    //an empty string includes
         .filter(x => !".".includes(x))
         .map(x => x[0] === "{" ? JSON.parse(x.replace(/[a-zA-Z]\w{1,}/g, x=> `"${x}"`)) : x);
 }
@@ -27,7 +27,7 @@ export default class Advantages {
                      factory,
                      loader,
                      schema: [ key, {sign = Advantages.sign, source = {}, ...args}, ...advs ]
-    }) {
+                 }) {
         this.key = key;
         this.factory = factory;
         this.sign = sign;
@@ -37,6 +37,7 @@ export default class Advantages {
         this.item = advs
             .map( schema => factory.create( { factory, parent: this, schema, loader } ) );
         this.args = args;
+        this.state = { load: !source.hasOwnProperty("path") };
     }
 
     /**
@@ -49,32 +50,22 @@ export default class Advantages {
         return this._obtain({ route: routeNormalizer(route), ...args });
     }
 
-    _obtain({route: [ key, ...route ], ...args}) {
+    get({route: [ key, ...route ] }) {
         if(key) {
             if(key === "..") {
-                return this.parent._obtain({ route, ...args });
+                return this.parent.get({ route });
             }
             else {
                 const node = this.item.find( this.sign(key) );
                 if(node) {
-                    return node._obtain({ route, ...args });
+                    return node.get({ route });
                 }
                 else {
-                    if(this.source.hasOwnProperty("path") && !this.item.length) {
+                    if(!this.state.load) {
                         return new Observable( (emt) => {
-                            let res = null;
-                            const loader = this.loader.obtain(this).on( ({data: module}) => {
-                                const [,, ...advs] = schemasNormalizer(module[this.source.name || "default"]);
-                                const {factory, loader} = this;
-                                this.item =
-                                    advs.map( schema =>
-                                        factory.create( { factory, parent: this, schema, loader } ) );
-                                res = this._obtain( { route: [key, ...route], ...args } ).on( emt.emit );
-                            });
-                            return (...args) => {
-                                loader(...args);
-                                res(...args);
-                            }
+                            return this.get( {route: []} ).on( () => {
+                                return this.get( {route: [ key, ...route ]} ).on( emt );
+                            } );
                         } );
                     }
                     else {
@@ -84,43 +75,55 @@ export default class Advantages {
             }
         }
         else {
-            if(typeof this.source === "function") {
-                return this.source({advantages: this, ...this.args, ...args});
-            }
-            else {
-                return new Observable((emt) => {
-                    let obs = null;
-                    const loader = this.loader.obtain(this).on(({data: module}) => {
-                        if (Array.isArray(module[this.source.name || "default"])) {
-                            const [, , ...advs] = schemasNormalizer(module[this.source.name || "default"]);
+            if(!this.state.load) {
+                return new Observable( (emt) => {
+                    return this.loader.obtain(this).on( ({module, advantages}) => {
+                        const exist = module[this.source.name || "default"];
+                        if(Array.isArray(exist)) {
+                            const [, {source} , ...advs] = schemasNormalizer(exist);
+                            source && (advantages.source = source);
                             const {factory, loader} = this;
-                            this.item =
-                                advs.map(schema =>
-                                    factory.create({factory, parent: this, schema, loader}));
-                            obs = module.main({advantages: this, ...this.args, ...args})
-                                .on(emt.emit);
+                            this.item = advs.map( schema =>
+                                factory.create( { factory, parent: advantages, schema, loader } ) );
                         }
                         else {
-                            obs = module[this.source.name || "default"]({advantages: this, ...this.args, ...args})
-                                .on(emt.emit);
+                            advantages.source = exist;
                         }
+                        this.state.load = true;
+                        emt( {advantages: this, source: this.source } );
                     });
-                    return (...args) => {
-                        loader(...args);
-                        obs && obs(...args);
-                    }
-                });
+                } );
             }
+            return new Observable( emt => {
+                emt( {advantages: this, source: this.source } );
+            } );
         }
     }
 
-    static create({
-                      parent = null,
-                      loader = Loader.default,
-                      factory,
-                      schema
-    }) {
-        return factory.create( { factory, parent, schema: schemasNormalizer(schema), loader } );
+    _obtain({route: [ key, ...route ], ...args}) {
+        return new Observable( (emt) => {
+            return this.get( {route: [ key, ...route ], ...args} ).on( ({module, advantages}) => {
+                if(typeof advantages.source === "function") {
+                    return advantages.source({advantages, ...advantages.args, ...args}).on(emt);
+                }
+                else {
+                    const exist = module[advantages.source.name || "default"];
+                    if(Array.isArray(exist)) {
+                        return source({advantages, ...advantages.args, ...args}).on(emt);
+                    }
+                    else if(exist) {
+                        return exist({advantages, ...advantages.args, ...args}).on(emt);
+                    }
+                    else {
+                        throw `module "${key}" not found`;
+                    }
+                }
+            } );
+        });
+    }
+
+    toSCHEMA() {
+        return [ this.key, { source: this.source, ...this.args }, ...this.item.map( ch => ch.toSCHEMA() ) ];
     }
 
     static sign(sign) {

@@ -1,3 +1,7 @@
 export * from "air-stream"
 export * from "./advantages"
-export {default as Loader} from "./loader/loader"
+export * from "./loader"
+//todo wtf? it does not want to buid with es2017
+// export * as utils from "./utils"
+import * as _utils from "./utils"
+export const utils = _utils;
