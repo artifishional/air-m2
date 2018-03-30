@@ -1,38 +1,19 @@
-export default class View {
+import Unit from "./../advantages/unit"
 
-    constructor() {
-        this._obs = null;
-        this._dispose = null;
+export default class View extends Unit {
+
+    constructor({maintainer = View.maintainer, ...args}) {
+        super({maintainer, ...args});
     }
 
-    set(observable) {
-
-        if(this._obs) {
-            this.unobserve(this._obs);
-        }
-
-        this.observe(observable);
-
-        this._obs = observable;
-
+    static maintainer(src, {route: [ key, ...route ], ...args}) {
+        return src.get( {route: [ key, ...route ], ...args} );
     }
 
-    unobserve(observable) {
-        this._dispose();
-        this._obs = null;
-    }
+    set(advantages) {
 
-    observe(observable) {
-        this._obs = observable;
-        this._dispose = observable.on( () => this._doaction );
-    }
 
-    _doaction() {
 
     }
-
-    append( node ) { }
-
-    remove( node ) {}
 
 }

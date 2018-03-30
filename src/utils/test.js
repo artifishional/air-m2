@@ -1,4 +1,4 @@
-import {schemasNormalizer, routeNormalizer} from "./advantages";
+import {schemasNormalizer, routeNormalizer} from "./index";
 
 describe('advantages', function () {
 
