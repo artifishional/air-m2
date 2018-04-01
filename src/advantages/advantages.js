@@ -4,12 +4,12 @@ import {schemasNormalizer, routeNormalizer} from "../utils/index"
 export default class Advantages {
 
     constructor( {
-        parent,
-        factory,
-        loader,
-        maintainer,
-        schema: [ key, {sign = Advantages.sign, source = {}, ...args}, ...advs ]
-    }) {
+         parent,
+         factory,
+         loader,
+         maintainer,
+         schema: [ key, {sign = Advantages.sign, source = {}, ...args}, ...advs ]
+     }) {
         this.key = key;
         this.factory = factory;
         this.sign = sign;
@@ -21,6 +21,7 @@ export default class Advantages {
             .map( schema => factory.create( { maintainer, factory, parent: this, schema, loader } ) );
         this.args = args;
         this.state = { load: !source.hasOwnProperty("path") };
+        this.linkers = [];
     }
 
     /**
@@ -95,7 +96,10 @@ export default class Advantages {
     }
 
     toSCHEMA() {
-        return [ this.key, { source: this.source, ...this.args }, ...this.item.map( ch => ch.toSCHEMA() ) ];
+        return [ this.key, {
+            linkers: this.linkers,
+            source: this.source, ...this.args
+        }, ...this.item.map( ch => ch.toSCHEMA() ) ];
     }
 
     static sign(sign) {
