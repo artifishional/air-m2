@@ -22,8 +22,8 @@ export default class Loader {
                     emt.complete({data: module});
                 } );
                 */
-                include({path: `${this.rpath}${path}`}).then(module => {
-                    emt.complete({module: window.m2unit, advantages});
+                include({path: `${this.rpath}${path}`}).then(({module}) => {
+                    emt.complete({module: module || window.m2unit, advantages});
                 } );
             } );
             this.modules.push({module, path});

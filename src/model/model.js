@@ -13,7 +13,7 @@ export default class ModelSchema extends Unit {
             let linkers;
             let res;
 
-            const sub = src.get( {route: [ key, ...route ], ...args} ).on( ({module, advantages}) => {
+            const sub = src._get( {route: [ key, ...route ]} ).on( ({module, advantages}) => {
 
                 advantages.linkers.push(emt);
                 linkers = advantages.linkers;

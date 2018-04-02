@@ -35,21 +35,25 @@ export default class Advantages {
         return this._obtain({ route: routeNormalizer(route), ...args });
     }
 
-    get({route: [ key, ...route ], args }) {
+    get( { route = "" } ) {
+        return this._get({ route: routeNormalizer(route) });
+    }
+
+    _get({route: [ key, ...route ] }) {
         if(key) {
             if(key === "..") {
-                return this.parent.get({ route, ...args });
+                return this.parent._get({ route });
             }
             else {//todo need layers
                 const node = this.item.find( this.sign(key) );
                 if(node) {
-                    return node.get({ route, ...args });
+                    return node._get({ route });
                 }
                 else {
                     if(!this.state.load) {
                         return new Observable( (emt) => {
-                            return this.get( {route: [], ...args} ).on( () => {
-                                return this.get( {route: [ key, ...route ], ...args} ).on( emt );
+                            return this._get( {route: [] } ).on( () => {
+                                return this._get( {route: [ key, ...route ] } ).on( emt );
                             } );
                         } );
                     }
@@ -65,8 +69,9 @@ export default class Advantages {
                     return this.loader.obtain(this).on( ({module, advantages}) => {
                         const exist = module[this.source.name || "default"];
                         if(Array.isArray(exist)) {
-                            const [, {source} , ...advs] = schemasNormalizer(exist);
+                            const [, {source, ...args} , ...advs] = schemasNormalizer(exist);
                             source && (advantages.source = source);
+                            advantages.args = args;
                             const {factory, loader} = this;
                             this.item = advs.map( schema =>
                                 factory.create( {

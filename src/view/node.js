@@ -6,8 +6,12 @@ export default class Node {
      * @param conf
      * @param resources
      */
-    constructor(parent, conf, resources) {
+    constructor({type, ...args}, resources) {
         this.parent = parent;
+
+        if(type === "PIXI.Text") {
+            this.gr = new PIXI.Text(args.text);
+        }
 
     }
 
