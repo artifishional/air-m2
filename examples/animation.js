@@ -12,14 +12,15 @@ function onaction({ action: [ name, { duration }, ... keys ] }) {
 
 }
 
-const json = {
+const json =
 
-    builder: { version: "1.0.0" },
-    screen: { width: 1920, height: 1080 }, //for every nodes in this scene
+    //builder: { version: "1.0.0" },
+    //screen: { width: 1920, height: 1080 }, //for every nodes in this scene
 
-    content: [ "some", //node name
+    [ "some", //node name
 
         {
+            unit: "switch",
             screen: { width: 1920, height: 1080 }, //default is the same as that of the container
             type: "/PIXI.Sprite", //PIXI.Container as default
             model: "./rel/route",
@@ -49,10 +50,22 @@ const json = {
         [ "loader" ], // optional loader for this layer
 
         // extensible state view
-        [ {state: 1}, { source: { path: "./states/1.json" } } ],
-        [ {state: 2}, { source: { path: "./states/2.json" } } ],
-
-    ]
+        [ {name: "spr", state: "state1"}, { source: { path: "./states/1.json" } } ],
+        [ {name: "spr", state: "state2"}, { source: { path: "./states/2.json" } } ],
 
 
-};
+
+
+
+
+    ];
+
+
+/**
+ * Переключение на новое состояние
+ *
+ * 1. Подписка на модель, загрузка предварительного лоадера
+ * 2. Когда данные получены, когда готовы все ресурсы из пакета - переключение на новое состояние
+ *
+ *
+ */

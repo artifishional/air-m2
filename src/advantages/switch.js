@@ -1,5 +1,5 @@
 import {Observable} from "air-stream"
-import {routeNormalizer} from "./advantages";
+import {routeNormalizer} from "../utils/index";
 
 /**
  *
