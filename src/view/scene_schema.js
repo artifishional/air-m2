@@ -1,6 +1,6 @@
 import Unit from "./../advantages/unit"
 import {Observable} from "air-stream"
-import Node from "./node"
+import {Text} from "pixi.js"
 
 export default class SceneSchema extends Unit {
 
@@ -13,20 +13,44 @@ export default class SceneSchema extends Unit {
         super({schema: [key, {source, ...props}, ...schema], maintainer, ...args});
     }
 
-    static maintainer(src, {route, modelschema, parent, ...args}) {
-        return new Observable((emt) => {
-            src._get( {route} )
-                .on( ({ advantages } ) => {
-                    const { args: { model: route, ...conf }, item } = advantages;
-                    const res = new Node( conf );
-                    res.set(modelschema.obtain({route}));
-                    parent && parent.addChild(res.gr);
+    //todo need refactor
+    static maintainer(sceneschema, { modelschema }) {
+        return new Observable( emt => {
 
+            const subs = [
+                sceneschema.get().on( ( {advantages: {args: { vtype, model, position, ...args }, item } } ) => {
 
-                    //item.map( ({key}) => advantages._get( advantages, { route: `./${key}`, modelschema } ) );
+                    let node;
 
-                    emt( res );
-                } );
+                    if(vtype === "PIXI.Text") {
+                        node = new Text( args.text );
+                        position && (node.position = position);
+                    }
+
+                    model && subs.push(modelschema.obtain({ route: model }).on( action => {
+                        //do something with view
+                    } ));
+
+                    subs.push(Observable.combine(
+                        item.map( ({key}) => sceneschema._obtain( ({
+                            route: [key],
+                            modelschema: model && modelschema._get({ route: model }) || modelschema
+                        } ) ) )
+                    ).on( nodes => nodes.map(({node:child}) => node.addChild( child ) )) );
+
+                    subs.push( Observable.combine( [
+                        ...model ? [modelschema.obtain({ route: model })] : [],
+                        ...item.map( ({key}) => sceneschema._obtain( ({
+                            route: [key],
+                            modelschema: model && modelschema._get({ route: model }) || modelschema
+                        } ) ) )
+                    ] ).on( () => emt( { node } )));
+
+                } )
+            ];
+
+            return (...args ) => subs.map(sub => sub(...args));
+
         });
     }
 
