@@ -7,13 +7,14 @@ export default class ModelSchema extends Unit {
         super({maintainer, ...args});
     }
 
-    static maintainer(src, {route: [ key, ...route ], ...args}) {
+    static maintainer(src, args) {
+
         return new Observable( (emt) => {
 
             let linkers;
             let res;
 
-            const sub = src._get( {route: [ key, ...route ]} ).on( ({module, advantages}) => {
+            const sub = src.get().on( ({module, advantages}) => {
 
                 advantages.linkers.push(emt);
                 linkers = advantages.linkers;
