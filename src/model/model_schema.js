@@ -1,10 +1,11 @@
 import Unit from "../advantages/unit"
 import {Observable} from "air-stream"
+import Factory from "./factory"
 
 export default class ModelSchema extends Unit {
 
     constructor({maintainer = ModelSchema.maintainer, ...args}) {
-        super({maintainer, ...args});
+        super({maintainer, factory: new Factory(), ...args});
     }
 
     static maintainer(src, args) {

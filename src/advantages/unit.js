@@ -1,6 +1,6 @@
 import Advantages from "./advantages";
 import Loader from "../loader/loader";
-import Factory from "./factory";
+import Factory from "../model/factory";
 import {schemasNormalizer} from "../utils/index"
 
 export default class Unit extends Advantages {

@@ -1,5 +1,5 @@
-import Advantages from "./advantages";
-import Container from "./container"
+import Advantages from "../advantages/advantages";
+import Container from "../advantages/container"
 
 export default class Factory {
 
@@ -12,7 +12,5 @@ export default class Factory {
             return new Container( options );
         }
     }
-
-    static default = new Factory()
 
 }

@@ -1,1 +1,1 @@
-export {default as ModelSchema} from "./model"
+export {default as ModelSchema} from "./model_schema"
