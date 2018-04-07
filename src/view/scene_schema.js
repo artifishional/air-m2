@@ -1,8 +1,8 @@
 import Unit from "./../advantages/unit"
 import {Observable} from "air-stream"
 import {Container, Text, Sprite} from "pixi.js"
+import loader from "../loader/resources"
 import Factory from "./factory";
-import ObservableTexture from "../loader/observable_texture"
 const reinit = { type: "reinit" };
 
 //todo need refactor!!! need Polimorfing Structure
@@ -29,7 +29,7 @@ export default class SceneSchema extends Unit {
                             node: nodetype = "PIXI.Container",
                             type = "node",
                             model,
-                            textures = [ ],
+                            resources = [],
                             childrenmodel,
                             animations = [],
                             ...args
@@ -37,23 +37,19 @@ export default class SceneSchema extends Unit {
 
                     if (type === "node") {
 
-                        subs.push(Observable.combine( [
-                            ...textures.map( path => new ObservableTexture(`./m2units/${pack.path}${path}`) ),
-                            new Observable(emt => emt("$"))
-                        ],
-                            (...args) => ({ textures: args.slice(0, textures.length) })
-                        ).on( ({textures}) => {
+                        subs.push( loader(pack, resources).on( resources => {
 
                             let node;
 
                             if (nodetype === "PIXI.Text") {
-                                node = new Text(args.text);
+                                const style = resources.find( ({type}) => type === "font" );
+                                node = new Text(args.text, style && style.font);
                             }
                             else if(nodetype === "PIXI.Container") {
                                 node = new Container();
                             }
                             else if (nodetype === "PIXI.Sprite") {
-                                node = new Sprite(textures[0]);
+                                node = new Sprite(resources.find( ({type}) => type === "texture" ).texture);
                             }
                             for(let key in args) {
                                 node[key] = args[key];
@@ -103,7 +99,7 @@ export default class SceneSchema extends Unit {
                             }
 
 
-                        } ));
+                        } ) );
 
                     }
 
