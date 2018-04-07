@@ -10,7 +10,8 @@ export default class Loader {
     }
 
     obtain(advantages) {
-        const {source: {path}} = advantages;
+        const {source: {path: _path}} = advantages;
+        const path = _path.indexOf(".json") > 0 ? _path.replace(".json", "") + "/index.json" : _path;
         const exist = this.modules.find( ({ path: _path }) => path === _path );
         if(exist) {
             return exist.module;

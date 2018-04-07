@@ -3,7 +3,7 @@
  * @param path
  * @example
  * "./" => "./"
- * "./some/joice/model.js" => joice => ./some/joice/
+ * "./some/joice/model_schema.js" => joice => ./some/joice/
  */
 export function catalog(path) {
     return path.replace(/\w{1,}.js/g, "");

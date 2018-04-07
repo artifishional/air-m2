@@ -1,5 +1,5 @@
-import Advantages from "./advantages";
-import Container from "./container"
+import Advantages from "../advantages/advantages";
+import Container from "../advantages/container"
 
 export default class Factory {
 
@@ -11,8 +11,9 @@ export default class Factory {
         else if(type === "container") {
             return new Container( options );
         }
+        else {
+            throw `unknown type '${type}'`
+        }
     }
-
-    static default = new Factory()
 
 }

@@ -1,10 +1,11 @@
 import Unit from "../advantages/unit"
 import {Observable} from "air-stream"
+import Factory from "./factory"
 
 export default class ModelSchema extends Unit {
 
     constructor({maintainer = ModelSchema.maintainer, ...args}) {
-        super({maintainer, ...args});
+        super({maintainer, factory: new Factory(), ...args});
     }
 
     static maintainer(src, args) {
@@ -14,7 +15,7 @@ export default class ModelSchema extends Unit {
             let linkers;
             let res;
 
-            const sub = src.get().on( ({module, advantages}) => {
+            const sub = src.on( ({module, advantages}) => {
 
                 advantages.linkers.push(emt);
                 linkers = advantages.linkers;

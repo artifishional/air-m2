@@ -22,8 +22,9 @@ const json =
         {
             unit: "switch",
             screen: { width: 1920, height: 1080 }, //default is the same as that of the container
-            type: "/PIXI.Sprite", //PIXI.Container as default
+            node: "/PIXI.Sprite", //PIXI.Container as default
             model: "./rel/route",
+            texture: "./image.png",
             animations: [ // as optional
                 [  "action-name", // it's identical as action name
                     { duration: "1s" },
