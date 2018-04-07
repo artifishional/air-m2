@@ -8,8 +8,16 @@ export default class Advantages {
         factory,
         loader,
         maintainer,
+        pack = {path: "./"},
         schema: [key, {sign = Advantages.sign, source = {}, ...args}, ...advs]
     }) {
+        this.pack = { path: source && source.hasOwnProperty("path") ?
+            source.path
+                .replace(".json", "")
+                .replace(".js", "")
+                .replace("./", "") + "/" :
+            pack.path
+        };
         this.key = key;
         this.factory = factory;
         this.sign = sign;
@@ -18,7 +26,7 @@ export default class Advantages {
         this.source = source;
         this.parent = parent;
         this.item = advs
-            .map(schema => factory.create({maintainer, factory, parent: this, schema, loader}));
+            .map(schema => factory.create({pack: this.pack, maintainer, factory, parent: this, schema, loader}));
         this.args = args;
         this.state = {load: !source.hasOwnProperty("path")};
         this.linkers = [];
@@ -82,6 +90,7 @@ export default class Advantages {
                             const {factory, loader} = advantages;
                             advantages.item.push(...advs.map(schema =>
                                 factory.create({
+                                    pack: advantages.pack,
                                     maintainer: advantages.maintainer,
                                     factory,
                                     parent: advantages,

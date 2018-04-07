@@ -1,7 +1,8 @@
 import Unit from "./../advantages/unit"
 import {Observable} from "air-stream"
-import {Container, Text} from "pixi.js"
+import {Container, Text, Sprite} from "pixi.js"
 import Factory from "./factory";
+import ObservableTexture from "../loader/observable_texture"
 const reinit = { type: "reinit" };
 
 //todo need refactor!!! need Polimorfing Structure
@@ -16,8 +17,7 @@ export default class SceneSchema extends Unit {
     }
 
     static maintainer(sceneschema, {modelschema, owner}) {
-        let self;
-        return self = new Observable(emt => {
+        return new Observable(emt => {
 
             const subs = [
                 Observable.combine([ sceneschema, modelschema ].filter(_=>_)).on(([
@@ -25,78 +25,92 @@ export default class SceneSchema extends Unit {
                     {advantages: modelschema} = {},
                 ]) => {
 
-                    const { args: {
+                    const { pack, args: {
                             node: nodetype = "PIXI.Container",
                             type = "node",
                             model,
+                            textures = [ ],
                             childrenmodel,
-                            position,
                             animations = [],
                             ...args
                         }, item } = sceneschema;
 
-                    let node;
-
-                    if (type === "switcher") {
-                        node = new Container();
-                    }
-                    else if (type === "node") {
-                        if (nodetype === "PIXI.Text") {
-                            node = new Text(args.text);
-                        }
-                        else if(nodetype === "PIXI.Container") {
-                            node = new Container();
-                        }
-                        position && (node.position = position);
-                    }
-
-                    model && subs.push(modelschema.obtain({route: model}).on(action => {
-                        //do something with view
-                    }));
-
                     if (type === "node") {
-                        subs.push(owner.on(({action: {name}}) => {
-                            //animations.find( ([_name]) => _name === name ) && 1 ||
+
+                        subs.push(Observable.combine( [
+                            ...textures.map( path => new ObservableTexture(`./m2units/${pack.path}${path}`) ),
+                            new Observable(emt => emt("$"))
+                        ],
+                            (...args) => ({ textures: args.slice(0, textures.length) })
+                        ).on( ({textures}) => {
+
+                            let node;
+
+                            if (nodetype === "PIXI.Text") {
+                                node = new Text(args.text);
+                            }
+                            else if(nodetype === "PIXI.Container") {
+                                node = new Container();
+                            }
+                            else if (nodetype === "PIXI.Sprite") {
+                                node = new Sprite(textures[0]);
+                            }
+                            for(let key in args) {
+                                node[key] = args[key];
+                            }
+
+                            model && subs.push(modelschema.obtain({route: model}).on(action => {
+                                //do something with view
+                            }));
+
+                            subs.push(owner.on(({action: {name}}) => {
+                                //animations.find( ([_name]) => _name === name ) && 1 ||
+
+                                emt({action: {name: `${name}-complete`}}, reinit);
+                            }));
+
+                            let children;
+                            if(item.length) {
+                                children = Observable.combine(
+                                    item.map(({key}) => sceneschema._obtain(({
+                                        owner,
+                                        route: [key],
+                                        modelschema: modelschema.get({route: model || "./"})
+                                    })))
+                                );
+                                subs.push(children.on( actions => {
+                                    if(actions.every( ({action: {name}} ) => name === "complete" )) {
+                                        const nodes = actions.map(({action: {node: child}}) => child);
+                                        node.addChild(...nodes );
+                                    }
+                                } ));
+                            }
+
+                            const waitingFor = [
+                                item.length && children, model && modelschema.obtain({route: model || "./"})
+                            ].filter( _ => _ );
+
+                            if(waitingFor.length) {
+                                subs.push(
+                                    Observable
+                                        .combine(waitingFor)
+                                        .first()
+                                        .on(() => emt({action: {name: "complete", node}}, reinit) )
+                                );
+                            }
+                            else {
+                                emt({action: {name: "complete", node}}, reinit);
+                            }
 
 
-                            console.log(sceneschema, self);
-
-                            emt({action: {name: `${name}-complete`}}, reinit);
-                        }));
-
-                        let children;
-                        if(item.length) {
-                            children = Observable.combine(
-                                item.map(({key}) => sceneschema._obtain(({
-                                    owner,
-                                    route: [key],
-                                    modelschema: modelschema.get({route: model || "./"})
-                                })))
-                            );
-                            subs.push(children.first().on(nodes => nodes.map(({action: {name, node: child}}) =>
-                                name === "complete" && node.addChild(child)
-                            )));
-                        }
-
-                        const waitingFor = [
-                            item.length && children, model && modelschema.obtain({route: model || "./"})
-                        ].filter( _ => _ );
-
-                        if(waitingFor.length) {
-                            subs.push(
-                                Observable
-                                    .combine(waitingFor)
-                                    .first()
-                                    .on(() => emt({action: {name: "complete", node}}, reinit) )
-                            );
-                        }
-                        else {
-                            emt({action: {name: "complete", node}}, reinit);
-                        }
+                        } ));
 
                     }
 
                     else if (type === "switcher") {
+
+                        const node = new Container();
+
                         //todo move it to air-stream/switcher()
                         const views = item.map( ({key}) => {
                             const res = { key };

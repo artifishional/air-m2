@@ -11,6 +11,9 @@ export default class Factory {
         else if(type === "container") {
             return new Container( options );
         }
+        else {
+            throw `unknown type '${type}'`
+        }
     }
 
 }

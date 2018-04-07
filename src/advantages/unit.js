@@ -9,14 +9,18 @@ export default class Unit extends Advantages {
         parent = null,
         loader = Loader.default,
         factory = Factory.default,
-        schema,
+        pack,
+        schema: _schema,
         maintainer
     }) {
+        const schema = schemasNormalizer(_schema);
+        const [, {source}] = schema;
         super({
+            pack,
             maintainer,
             factory,
             parent,
-            schema: schemasNormalizer(schema),
+            schema,
             loader
         });
     }
