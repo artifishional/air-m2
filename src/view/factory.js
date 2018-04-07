@@ -10,6 +10,9 @@ export default class Factory {
         else if(type === "switch") {
             return new Advantages( options );
         }
+        else {
+            throw `unknown type '${type}'`
+        }
     }
 
 }
