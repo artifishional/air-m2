@@ -3,9 +3,10 @@ import {Observable} from "air-stream"
 import {Container, Text, Sprite} from "pixi.js"
 import loader from "../loader/resources"
 import Factory from "./factory";
+import {TweenMax} from "gsap"
 const reinit = { type: "reinit" };
 
-//todo need refactor!!! need Polimorfing Structure
+//todo need refactor!!! need polimorfing structure
 export default class SceneSchema extends Unit {
 
     constructor({
@@ -21,8 +22,7 @@ export default class SceneSchema extends Unit {
 
             const subs = [
                 Observable.combine([ sceneschema, modelschema ].filter(_=>_)).on(([
-                    {advantages: sceneschema},
-                    {advantages: modelschema} = {},
+                    {advantages: sceneschema}, {advantages: modelschema} = {},
                 ]) => {
 
                     const { pack, args: {
@@ -36,6 +36,8 @@ export default class SceneSchema extends Unit {
                         }, item } = sceneschema;
 
                     if (type === "node") {
+
+                        const animationsCatche = [];
 
                         subs.push( loader(pack, resources).on( resources => {
 
@@ -55,9 +57,31 @@ export default class SceneSchema extends Unit {
                                 node[key] = args[key];
                             }
 
-                            model && subs.push(modelschema.obtain({route: model}).on(action => {
-                                //do something with view
-                            }));
+                            animations.length && subs.push(modelschema.obtain({route: model}).on(
+                                ({ action: {name} }, { type }) => {
+
+                                    if(type === "reinit") {
+
+                                    }
+
+                                    else {
+                                        let exist = animationsCatche.findIndex( ({name: _name}) => name === _name );
+                                        exist > -1 && animationsCatche[exist].anm.kill();
+                                        exist < 1 && (exist = animationsCatche.length);
+
+                                        const anm = animations.find( ([_name]) => _name === name );
+
+                                        if(anm) {
+                                            const [ , { duration }, [, props ]] = anm;
+                                            animationsCatche[exist] = {
+                                                anm: new TweenMax( node, duration, props ),
+                                                name,
+                                            };
+                                        }
+                                    }
+
+                                })
+                            );
 
                             subs.push(owner.on(({action: {name}}) => {
                                 //animations.find( ([_name]) => _name === name ) && 1 ||
