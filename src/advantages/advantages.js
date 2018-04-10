@@ -43,11 +43,11 @@ export default class Advantages {
      * @example {route: "./../../state/{type: loto20_80}"}/
      * @param args
      */
-    obtain({route = "", ...args} = {}) {
+    obtain(route = "", args) {
         return this._obtain({route: routeNormalizer(route), ...args});
     }
 
-    get({route = ""} = {}) {
+    get(route = "") {
         return this._get({route: routeNormalizer(route)});
     }
 

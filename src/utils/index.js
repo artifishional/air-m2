@@ -38,3 +38,10 @@ export function schemasNormalizer([key, ...elems]) {
         ...elems.map( elem => schemasNormalizer(elem) )
     ];
 }
+
+export function searchBySignature(sign, arr, sprop = "key") {
+    return arr.find(({[sprop]: key}) => {
+        return typeof sign === "string" ?
+            key === sign : Object.keys(sign).every( k => key[k] === sign[k] )
+    })
+}

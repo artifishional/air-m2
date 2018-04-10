@@ -4,6 +4,7 @@ import {Container, Text, Sprite} from "pixi.js"
 import loader from "../loader/resources"
 import Factory from "./factory";
 import {TweenMax} from "gsap"
+import {searchBySignature} from "../utils"
 const reinit = { type: "reinit" };
 
 //todo need refactor!!! need polimorfing structure
@@ -57,8 +58,8 @@ export default class SceneSchema extends Unit {
                                 node[key] = args[key];
                             }
 
-                            animations.length && subs.push(modelschema.obtain({route: model}).on(
-                                ({ action: {name} }, { type }) => {
+                            animations.length && subs.push(modelschema.obtain(model).on(
+                                ({ action: name }, { type }) => {
 
                                     if(type === "reinit") {
 
@@ -83,10 +84,10 @@ export default class SceneSchema extends Unit {
                                 })
                             );
 
-                            subs.push(owner.on(({action: {name}}) => {
+                            subs.push(owner.on(({action: name}) => {
                                 //animations.find( ([_name]) => _name === name ) && 1 ||
 
-                                emt({action: {name: `${name}-complete`}}, reinit);
+                                emt({action: `${name}-complete`}, reinit);
                             }));
 
                             let children;
@@ -95,19 +96,19 @@ export default class SceneSchema extends Unit {
                                     item.map(({key}) => sceneschema._obtain(({
                                         owner,
                                         route: [key],
-                                        modelschema: modelschema.get({route: model || "./"})
+                                        modelschema: modelschema.get(model)
                                     })))
                                 );
                                 subs.push(children.on( actions => {
-                                    if(actions.every( ({action: {name}} ) => name === "complete" )) {
-                                        const nodes = actions.map(({action: {node: child}}) => child);
+                                    if(actions.every( ({action} ) => action === "complete" )) {
+                                        const nodes = actions.map(({node: child}) => child);
                                         node.addChild(...nodes );
                                     }
                                 } ));
                             }
 
                             const waitingFor = [
-                                item.length && children, model && modelschema.obtain({route: model || "./"})
+                                item.length && children, model && modelschema.obtain(model)
                             ].filter( _ => _ );
 
                             if(waitingFor.length) {
@@ -115,11 +116,11 @@ export default class SceneSchema extends Unit {
                                     Observable
                                         .combine(waitingFor)
                                         .first()
-                                        .on(() => emt({action: {name: "complete", node}}, reinit) )
+                                        .on(() => emt({action: "complete", node}, reinit) )
                                 );
                             }
                             else {
-                                emt({action: {name: "complete", node}}, reinit);
+                                emt({action: "complete", node}, reinit);
                             }
 
 
@@ -138,40 +139,47 @@ export default class SceneSchema extends Unit {
                             res.obs = sceneschema._obtain( {
                                 route: [key],
                                 owner,
-                                modelschema: modelschema.get( { route: model + childrenmodel } )
+                                modelschema: modelschema.get( model + childrenmodel )
                             } );
                             return res;
                         } );
 
-                        const view = views.find(({key}) => key === "loader");
-                        view.sub = view.obs.on( handler );
-                        subs.push(view.obs.on( ({action: {name}}) => {
-                            name === "complete" && emt( {action: {name, node}} );
+                        const loader = views.find(({key}) => key === "loader");
+                        loader.sub = loader.obs.on( handler );
+                        subs.push(loader.obs.on( ({action}) => {
+                            action === "complete" && emt( {action, node} );
                         } ));
 
                         let lastState = null;
                         let curState = "loader";
                         let curentViewNode = null;
 
-                        function handler({action: {name, node: child}}) {
+                        function handler({action: name, node: child}) {
                             if(name === "complete") {
                                 curentViewNode = child;
                                 lastState && views.find(({key}) => key === lastState)
-                                    .emt( { action: { name: "fade-out", reinit } } );
+                                    .emt( { action: "fade-out", reinit } );
                             }
                             if(!lastState && name === "complete" || name === "fade-out-complete") {
                                 lastState && views.find(({key}) => key === lastState).sub();
                                 node.removeChild( node.children[0] );
                                 node.addChild( curentViewNode );
-                                views.find(({key}) => key === curState).emt( { action: { name: "fade-in", reinit } } );
+                                searchBySignature( curState, views )
+                                    .emt( { action: "fade-in", reinit } );
                             }
                         }
 
-                        subs.push(modelschema.obtain({route: model || "./"}).on(({action: {name, state}}) => {
+                        subs.push(
+                            //so that the model does not climb before the loader is ready
+                            Observable.combine([
+                                modelschema.obtain(model),
+                                loader.obs.filter(({action}) => action === "complete")
+                            ], model => model,
+                        ).on(({action: name, state}) => {
                             if(name === "change" && curState !== state) {
                                 lastState = curState;
                                 curState = state;
-                                const view = views.find(({key}) => key === curState);
+                                const view = searchBySignature( curState, views );
                                 view.sub = view.obs.on( handler );
                             }
                         }));

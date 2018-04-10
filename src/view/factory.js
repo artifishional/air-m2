@@ -7,7 +7,7 @@ export default class Factory {
         if(!type) {
             return new Advantages( options );
         }
-        else if(type === "switch") {
+        else if(type === "switcher") {
             return new Advantages( options );
         }
         else {
