@@ -21,10 +21,15 @@ export function forEachFromData(func) {
 }
 
 export function routeNormalizer(route) {
-    return route.split("/")
-    //an empty string includes
-        .filter(x => !".".includes(x))
-        .map(x => x[0] === "{" ? JSON.parse(x.replace(/[a-zA-Z]\w{1,}/g, x=> `"${x}"`)) : x);
+    try {
+        return route.split("/")
+        //an empty string includes
+            .filter(x => !".".includes(x))
+            .map(x => x[0] === "{" ? JSON.parse(x.replace(/[a-zA-Z]\w{1,}/g, x=> `"${x}"`)) : x);
+    }
+    catch(e) {
+        throw `can't parse this route: ${route}`
+    }
 }
 
 /**
