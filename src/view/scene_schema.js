@@ -175,7 +175,10 @@ export default class SceneSchema extends Unit {
                                 modelschema.obtain(model),
                                 loader.obs.filter(({action}) => action === "complete")
                             ], model => model,
-                        ).on(({action: name, state}) => {
+                        ).on(({action: name = "change", ..._state}) => {
+
+                            const state = _state.state || _state;
+
                             if(name === "change" && curState !== state) {
                                 lastState = curState;
                                 curState = state;
