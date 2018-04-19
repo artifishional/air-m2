@@ -8,7 +8,7 @@ export default function reducer( {advantages} ) {
         .withHandler( (emt, evt, src) => {
 
             if(src.type === "reinit" && !evt) {
-                emt( , src );
+                emt( src );
             }
 
         } );
