@@ -18,7 +18,7 @@ export default class SceneSchema extends Unit {
         super({ maintainer, factory, ...args});
     }
 
-    static maintainer(sceneschema, {modelschema, owner}) {
+    static maintainer(sceneschema, {modelschema, owner, key}) {
         return new Observable(emt => {
 
             const subs = [
@@ -139,14 +139,15 @@ export default class SceneSchema extends Unit {
                             res.obs = sceneschema._obtain( {
                                 route: [key],
                                 owner,
-                                modelschema: modelschema.get( model + childrenmodel )
+                                modelschema: modelschema.get( model + childrenmodel  ),
+                                key
                             } );
                             return res;
                         } );
 
-                        const loader = views.find(({key}) => key === "loader");
-                        loader.sub = loader.obs.on( handler );
-                        subs.push(loader.obs.on( ({action}) => {
+                        const _loader = views.find(({key}) => key === "loader");
+                        _loader.sub = _loader.obs.on( handler );
+                        subs.push(_loader.obs.on( ({action}) => {
                             action === "complete" && emt( {action, node} );
                         } ));
 
@@ -173,16 +174,17 @@ export default class SceneSchema extends Unit {
                             //so that the model does not climb before the loader is ready
                             Observable.combine([
                                 modelschema.obtain(model),
-                                loader.obs.filter(({action}) => action === "complete")
+                                _loader.obs.filter(({action}) => action === "complete")
                             ], model => model,
                         ).on(({action: name = "change", ..._state}) => {
-
+                            
                             const state = _state.state || _state;
 
                             if(name === "change" && curState !== state) {
                                 lastState = curState;
                                 curState = state;
                                 const view = searchBySignature( curState, views );
+                                /*<@>*/ if(!view) throw `view at state: ${state} not found` /*</@>*/
                                 view.sub = view.obs.on( handler );
                             }
                         }));

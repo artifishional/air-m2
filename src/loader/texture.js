@@ -14,7 +14,7 @@ export default class ObservableTexture extends Observable {
                     this._aborted && this._abort();
                 }
             }).load();
-            return () => this._abort();
+            return ( {dissolve} ) => dissolve && this._abort();
         } );
     }
 

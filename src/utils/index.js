@@ -47,6 +47,8 @@ export function schemasNormalizer([key, ...elems]) {
 export function searchBySignature(sign, arr, sprop = "key") {
     return arr.find(({[sprop]: key}) => {
         return typeof sign === "string" ?
-            key === sign : Object.keys(sign).every( k => key[k] === sign[k] )
+            key === sign :
+                /*<@>*/ typeof key === "object" &&/*</@>*/
+                Object.keys(sign).every( k => key[k] === sign[k] )
     })
 }

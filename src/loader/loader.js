@@ -32,6 +32,8 @@ export default class Loader {
         }
     }
 
-    static default = new Loader();
+    //static default = new Loader();
 
 }
+
+Loader.default = new Loader();
