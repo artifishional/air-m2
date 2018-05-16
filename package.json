@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "fontfaceobserver": "^2.0.13",
-    "air-stream": "^0.2.0"
+    "air-stream": "^0.4.0"
   },
   "repository": {
     "type": "git",
