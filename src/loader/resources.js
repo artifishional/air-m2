@@ -1,5 +1,5 @@
 import {Observable} from "air-stream"
-import ObservableTexture from "./texture"
+import ObservableTexture from "./observable_texture"
 import ObservableFont from "./font"
 
 export default function (pack, resources) {

@@ -93,7 +93,7 @@ export default class Advantages {
         else {
             if (!this.state.load) {
                 return new Observable((emt) => {
-                    return this.loader.obtain(this).on(({module, advantages}) => {
+                    return this.loader.obtain(this).at(({module, advantages}) => {
                         const exist = module[this.source.name || "default"];
                         if (Array.isArray(exist)) {
                             const [, {source, ...args}, ...advs] = schemasNormalizer(exist);

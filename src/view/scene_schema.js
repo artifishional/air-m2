@@ -21,8 +21,10 @@ export default class SceneSchema extends Unit {
     static maintainer(sceneschema, {modelschema, owner, key}) {
         return new Observable(emt => {
 
+            const source = Observable.combine([ sceneschema, modelschema ].filter(_=>_));
+
             const subs = [
-                Observable.combine([ sceneschema, modelschema ].filter(_=>_)).on(([
+                source.at(([
                     {advantages: sceneschema}, {advantages: modelschema} = {},
                 ]) => {
 
@@ -40,10 +42,10 @@ export default class SceneSchema extends Unit {
 
                         const animationsCatche = [];
 
-                        subs.push( loader(pack, resources).on( resources => {
+                        subs.push( loader(pack, resources).at( resources => {
 
                             let node;
-
+                            
                             if (nodetype === "PIXI.Text") {
                                 const style = resources.find( ({type}) => type === "font" );
                                 node = new Text(args.text, style && style.font);
@@ -59,9 +61,9 @@ export default class SceneSchema extends Unit {
                             }
 
                             animations.length && subs.push(modelschema.obtain(model).on(
-                                ({ action: name }, { type }) => {
+                                ({ action: name, keyF }) => {
 
-                                    if(type === "reinit") {
+                                    if(keyF) {
 
                                     }
 
@@ -84,9 +86,8 @@ export default class SceneSchema extends Unit {
                                 })
                             );
 
-                            subs.push(owner.on(({action: name}) => {
+                            subs.push(owner.at(({action: name}) => {
                                 //animations.find( ([_name]) => _name === name ) && 1 ||
-
                                 emt({action: `${name}-complete`}, reinit);
                             }));
 
@@ -99,7 +100,7 @@ export default class SceneSchema extends Unit {
                                         modelschema: modelschema.get(model)
                                     })))
                                 );
-                                subs.push(children.on( actions => {
+                                subs.push(children.at( actions => {
                                     if(actions.every( ({action} ) => action === "complete" )) {
                                         const nodes = actions.map(({node: child}) => child);
                                         node.addChild(...nodes );
@@ -176,7 +177,7 @@ export default class SceneSchema extends Unit {
                                 modelschema.obtain(model),
                                 _loader.obs.filter(({action}) => action === "complete")
                             ], model => model,
-                        ).on(({action: name = "change", ..._state}) => {
+                        ).at(({action: name = "change", ..._state}) => {
                             
                             const state = _state.state || _state;
 

@@ -20,11 +20,11 @@ export default class Loader {
             const module = new Observable( emt => {
                 /*todo es6 dynamic
                 eval(`import("./${this.rpath}${path}")`).then(module => {
-                    emt.complete({data: module});
+                    emt({data: module});
                 } );
                 */
                 include({path: `${this.rpath}${path}`}).then(({module}) => {
-                    emt.complete({module: module || window.m2unit, advantages});
+                    emt({module: module || window.m2unit, advantages});
                 } );
             } );
             this.modules.push({module, path});

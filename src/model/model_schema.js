@@ -14,7 +14,7 @@ export default class ModelSchema extends Unit {
 
             let res, linkers;
 
-            return res = [src.on( ({module, advantages}) => {
+            return res = [src.at( ({module, advantages}) => {
 
                 advantages.linkers.push(emt);
                 linkers = advantages.linkers;
