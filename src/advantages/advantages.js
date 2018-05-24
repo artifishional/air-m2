@@ -9,7 +9,7 @@ export default class Advantages {
         loader,
         maintainer,
         pack = {path: "./"},
-        schema: [key, {sign = Advantages.sign, source = {}, ...args}, ...advs]
+        schema: [key, {id = "", sign = Advantages.sign, source = {}, ...args}, ...advs]
     }) {
         this.pack = { path: source && source.hasOwnProperty("path") ?
             source.path
@@ -18,6 +18,7 @@ export default class Advantages {
                 .replace("./", "") + "/" :
             pack.path
         };
+        this.id = `#${id}`;
         this.key = key;
         this.factory = factory;
         this.sign = sign;
@@ -30,10 +31,15 @@ export default class Advantages {
         this.args = args;
         this.state = {load: !source.hasOwnProperty("path")};
         this.linkers = [];
+        this.cache = [];
     }
 
     static sign(sign) {
         return ({key}) => sign === key;
+    }
+
+    findId(id) {
+        return this.item.find( ({id: _id}) => _id === id );
     }
 
     /**
@@ -43,26 +49,32 @@ export default class Advantages {
      * @example {route: "./../../state/{type: loto20_80}"}/
      * @param args
      */
-    obtain({route = "", ...args} = {}) {
+    obtain(route = "", args) {
         return this._obtain({route: routeNormalizer(route), ...args});
     }
 
-    get({route = ""} = {}) {
+    get(route = "") {
         return this._get({route: routeNormalizer(route)});
     }
 
-    _get({route: [key, ...route]}) {
-
+    _get({route: [key, ...route]}, from = {src: this, route: [key, ...route] }) {
         if (key) {
+            if(key[0] === "#") {
+                if(this.id === key) return this._get({route}, from);
+                const exist = this.findId(key);
+                if(exist) return exist._get({route}, from);
+                if(!this.parent) throw `module "#${key}" not found from ${from}`;
+                return this.parent._get({route: [key, ...route]}, from);
+            }
             if (key === "..") {
-                return this.parent._get({route});
+                return this.parent._get({route}, from);
             }
             else {//todo need layers
 
                 if (!this.state.load) {
                     return new Observable((emt) => {
-                        return this._get({route: []}).on(() => {
-                            return this._get({route: [key, ...route]}).on(emt);
+                        return this._get({route: []}, from).on(() => {
+                            return this._get({route: [key, ...route]}, from).on(emt);
                         });
                     });
                 }
@@ -70,10 +82,10 @@ export default class Advantages {
                 else {
                     const node = this.item.find(this.sign(key));
                     if (node) {
-                        return node._get({route});
+                        return node._get({route}, from);
                     }
                     else {
-                        throw `module "${key}" not found`;
+                        throw `module "${key}" not found from ${from}`;
                     }
                 }
             }
@@ -81,7 +93,7 @@ export default class Advantages {
         else {
             if (!this.state.load) {
                 return new Observable((emt) => {
-                    return this.loader.obtain(this).on(({module, advantages}) => {
+                    return this.loader.obtain(this).at(({module, advantages}) => {
                         const exist = module[this.source.name || "default"];
                         if (Array.isArray(exist)) {
                             const [, {source, ...args}, ...advs] = schemasNormalizer(exist);

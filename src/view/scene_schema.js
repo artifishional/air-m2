@@ -3,9 +3,11 @@ import {Observable} from "air-stream"
 import {Container, Text, Sprite} from "pixi.js"
 import loader from "../loader/resources"
 import Factory from "./factory";
+import {TweenMax} from "gsap"
+import {searchBySignature} from "../utils"
 const reinit = { type: "reinit" };
 
-//todo need refactor!!! need Polimorfing Structure
+//todo need refactor!!! need polimorfing structure
 export default class SceneSchema extends Unit {
 
     constructor({
@@ -16,13 +18,14 @@ export default class SceneSchema extends Unit {
         super({ maintainer, factory, ...args});
     }
 
-    static maintainer(sceneschema, {modelschema, owner}) {
+    static maintainer(sceneschema, {modelschema, owner, key}) {
         return new Observable(emt => {
 
+            const source = Observable.combine([ sceneschema, modelschema ].filter(_=>_));
+
             const subs = [
-                Observable.combine([ sceneschema, modelschema ].filter(_=>_)).on(([
-                    {advantages: sceneschema},
-                    {advantages: modelschema} = {},
+                source.at(([
+                    {advantages: sceneschema}, {advantages: modelschema} = {},
                 ]) => {
 
                     const { pack, args: {
@@ -37,10 +40,12 @@ export default class SceneSchema extends Unit {
 
                     if (type === "node") {
 
-                        subs.push( loader(pack, resources).on( resources => {
+                        const animationsCatche = [];
+
+                        subs.push( loader(pack, resources).at( resources => {
 
                             let node;
-
+                            
                             if (nodetype === "PIXI.Text") {
                                 const style = resources.find( ({type}) => type === "font" );
                                 node = new Text(args.text, style && style.font);
@@ -55,14 +60,35 @@ export default class SceneSchema extends Unit {
                                 node[key] = args[key];
                             }
 
-                            model && subs.push(modelschema.obtain({route: model}).on(action => {
-                                //do something with view
-                            }));
+                            animations.length && subs.push(modelschema.obtain(model).on(
+                                ({ action: name, keyF }) => {
 
-                            subs.push(owner.on(({action: {name}}) => {
+                                    if(keyF) {
+
+                                    }
+
+                                    else {
+                                        let exist = animationsCatche.findIndex( ({name: _name}) => name === _name );
+                                        exist > -1 && animationsCatche[exist].anm.kill();
+                                        exist < 1 && (exist = animationsCatche.length);
+
+                                        const anm = animations.find( ([_name]) => _name === name );
+
+                                        if(anm) {
+                                            const [ , { duration }, [, props ]] = anm;
+                                            animationsCatche[exist] = {
+                                                anm: new TweenMax( node, duration, props ),
+                                                name,
+                                            };
+                                        }
+                                    }
+
+                                })
+                            );
+
+                            subs.push(owner.at(({action: name}) => {
                                 //animations.find( ([_name]) => _name === name ) && 1 ||
-
-                                emt({action: {name: `${name}-complete`}}, reinit);
+                                emt({action: `${name}-complete`}, reinit);
                             }));
 
                             let children;
@@ -71,19 +97,19 @@ export default class SceneSchema extends Unit {
                                     item.map(({key}) => sceneschema._obtain(({
                                         owner,
                                         route: [key],
-                                        modelschema: modelschema.get({route: model || "./"})
+                                        modelschema: modelschema.get(model)
                                     })))
                                 );
-                                subs.push(children.on( actions => {
-                                    if(actions.every( ({action: {name}} ) => name === "complete" )) {
-                                        const nodes = actions.map(({action: {node: child}}) => child);
+                                subs.push(children.at( actions => {
+                                    if(actions.every( ({action} ) => action === "complete" )) {
+                                        const nodes = actions.map(({node: child}) => child);
                                         node.addChild(...nodes );
                                     }
                                 } ));
                             }
 
                             const waitingFor = [
-                                item.length && children, model && modelschema.obtain({route: model || "./"})
+                                item.length && children, model && modelschema.obtain(model)
                             ].filter( _ => _ );
 
                             if(waitingFor.length) {
@@ -91,11 +117,11 @@ export default class SceneSchema extends Unit {
                                     Observable
                                         .combine(waitingFor)
                                         .first()
-                                        .on(() => emt({action: {name: "complete", node}}, reinit) )
+                                        .on(() => emt({action: "complete", node}, reinit) )
                                 );
                             }
                             else {
-                                emt({action: {name: "complete", node}}, reinit);
+                                emt({action: "complete", node}, reinit);
                             }
 
 
@@ -114,40 +140,52 @@ export default class SceneSchema extends Unit {
                             res.obs = sceneschema._obtain( {
                                 route: [key],
                                 owner,
-                                modelschema: modelschema.get( { route: model + childrenmodel } )
+                                modelschema: modelschema.get( model + childrenmodel  ),
+                                key
                             } );
                             return res;
                         } );
 
-                        const view = views.find(({key}) => key === "loader");
-                        view.sub = view.obs.on( handler );
-                        subs.push(view.obs.on( ({action: {name}}) => {
-                            name === "complete" && emt( {action: {name, node}} );
+                        const _loader = views.find(({key}) => key === "loader");
+                        _loader.sub = _loader.obs.on( handler );
+                        subs.push(_loader.obs.on( ({action}) => {
+                            action === "complete" && emt( {action, node} );
                         } ));
 
                         let lastState = null;
                         let curState = "loader";
                         let curentViewNode = null;
 
-                        function handler({action: {name, node: child}}) {
+                        function handler({action: name, node: child}) {
                             if(name === "complete") {
                                 curentViewNode = child;
                                 lastState && views.find(({key}) => key === lastState)
-                                    .emt( { action: { name: "fade-out", reinit } } );
+                                    .emt( { action: "fade-out", reinit } );
                             }
                             if(!lastState && name === "complete" || name === "fade-out-complete") {
                                 lastState && views.find(({key}) => key === lastState).sub();
                                 node.removeChild( node.children[0] );
                                 node.addChild( curentViewNode );
-                                views.find(({key}) => key === curState).emt( { action: { name: "fade-in", reinit } } );
+                                searchBySignature( curState, views )
+                                    .emt( { action: "fade-in", reinit } );
                             }
                         }
 
-                        subs.push(modelschema.obtain({route: model || "./"}).on(({action: {name, state}}) => {
+                        subs.push(
+                            //so that the model does not climb before the loader is ready
+                            Observable.combine([
+                                modelschema.obtain(model),
+                                _loader.obs.filter(({action}) => action === "complete")
+                            ], model => model,
+                        ).at(({action: name = "change", ..._state}) => {
+                            
+                            const state = _state.state || _state;
+
                             if(name === "change" && curState !== state) {
                                 lastState = curState;
                                 curState = state;
-                                const view = views.find(({key}) => key === curState);
+                                const view = searchBySignature( curState, views );
+                                /*<@>*/ if(!view) throw `view at state: ${state} not found` /*</@>*/
                                 view.sub = view.obs.on( handler );
                             }
                         }));

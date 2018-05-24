@@ -5,7 +5,7 @@ observable( function ( {state} ) {
 } );
 
 
-observable( function ( {action: {name, keys = [] }} ) {
+observable( function ( {action: name, keys = [] } ) {
 
 
 

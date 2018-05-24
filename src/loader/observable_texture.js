@@ -1,21 +1,27 @@
 import {Observable} from "air-stream"
-import {loader} from "pixi.js"
+import {Loader} from "pixi.js"
 
 export default class ObservableTexture extends Observable {
 
-    constructor( texture ) {
+    constructor( { url, ...args } ) {
+        const loader = new Loader();
         super( emt => {
-            this.textureid = ObservableTexture.index ++ ;
-            loader.add(`${this.textureid}`, texture);
-            loader.load((loader, resources) => {
-                emt( resources[this.textureid].texture );
-            });
-            return () => {
-                //todo need async cleaner after the resource is complete loading
-            }
+            loader.add({
+                url,
+                crossOrigin: true,
+                onComplete: res => {
+                    this.res = res;
+                    emt( {url, type: "texture", texture: res.texture, ...args} );
+                    this._aborted && this._abort();
+                }
+            }).load();
+            return ( {dissolve} ) => dissolve && this._abort();
         } );
     }
 
-    static index = 0;
+    _abort() {
+        this._aborted = true;
+        this.res && this.res.texture.destroy(true);
+    }
 
 }
