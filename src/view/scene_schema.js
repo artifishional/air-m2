@@ -34,7 +34,7 @@ export default class SceneSchema extends Unit {
                             model,
                             resources = [],
                             childrenmodel,
-                            animations = [],
+                            frames = [],
                             ...args
                         }, item } = sceneschema;
 
@@ -59,8 +59,8 @@ export default class SceneSchema extends Unit {
                             for(let key in args) {
                                 node[key] = args[key];
                             }
-
-                            animations.length && subs.push(modelschema.obtain(model).on(
+/*
+                            frames.length && subs.push(modelschema.obtain(model).on(
                                 ({ action: name, keyF }) => {
 
                                     if(keyF) {
@@ -72,7 +72,7 @@ export default class SceneSchema extends Unit {
                                         exist > -1 && animationsCatche[exist].anm.kill();
                                         exist < 1 && (exist = animationsCatche.length);
 
-                                        const anm = animations.find( ([_name]) => _name === name );
+                                        const anm = frames.find( ([_name]) => _name === name );
 
                                         if(anm) {
                                             const [ , { duration }, [, props ]] = anm;
@@ -84,11 +84,18 @@ export default class SceneSchema extends Unit {
                                     }
 
                                 })
-                            );
+                            );*/
 
                             subs.push(owner.at(({action: name}) => {
-                                //animations.find( ([_name]) => _name === name ) && 1 ||
-                                emt({action: `${name}-complete`}, reinit);
+                                const frame = frames.find( ([_name]) => _name === name );
+                                if(!frame) emt({action: `${name}-complete`});
+                                else {
+                                    new TweenMax(node, frame[1].duration, {
+                                        onComplete: () => emt({action: `${name}-complete`}),
+                                        startAt: frame[2][1],
+                                        ...frame[3][1],
+                                    });
+                                }
                             }));
 
                             let children;
