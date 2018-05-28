@@ -7,14 +7,26 @@ import {TweenMax} from "gsap"
 import {searchBySignature} from "../utils"
 const reinit = { type: "reinit" };
 
+function animation({ playState = "play" } = {}) {
+    const tweens = [];
+    if(playState === "pause") {
+        tl = new TimelineMax({tweens, paused: true, delay: delay + (from < 0 ? -from : 0), ...args});
+        tl.seek( from, false );
+    }
+    else {
+        tl = new TimelineMax({tweens, delay: delay + (from < 0 ? -from : 0), ...args});
+        from < 0 ? tl.restart( true ) : tl.seek( from, false );
+    }
+}
+
 //todo need refactor!!! need polimorfing structure
 export default class SceneSchema extends Unit {
 
     constructor({
-        maintainer = SceneSchema.maintainer,
-        factory = new Factory(),
-        ...args
-    }) {
+                    maintainer = SceneSchema.maintainer,
+                    factory = new Factory(),
+                    ...args
+                }) {
         super({ maintainer, factory, ...args});
     }
 
@@ -25,18 +37,18 @@ export default class SceneSchema extends Unit {
 
             const subs = [
                 source.at(([
-                    {advantages: sceneschema}, {advantages: modelschema} = {},
-                ]) => {
+                               {advantages: sceneschema}, {advantages: modelschema} = {},
+                           ]) => {
 
                     const { pack, args: {
-                            node: nodetype = "PIXI.Container",
-                            type = "node",
-                            model,
-                            resources = [],
-                            childrenmodel,
-                            frames = [],
-                            ...args
-                        }, item } = sceneschema;
+                        node: nodetype = "PIXI.Container",
+                        type = "node",
+                        model,
+                        resources = [],
+                        childrenmodel,
+                        frames = [],
+                        ...args
+                    }, item } = sceneschema;
 
                     if (type === "node") {
 
@@ -45,7 +57,7 @@ export default class SceneSchema extends Unit {
                         subs.push( loader(pack, resources).at( resources => {
 
                             let node;
-                            
+
                             if (nodetype === "PIXI.Text") {
                                 const style = resources.find( ({type}) => type === "font" );
                                 node = new Text(args.text, style && style.font);
@@ -59,8 +71,10 @@ export default class SceneSchema extends Unit {
                             for(let key in args) {
                                 node[key] = args[key];
                             }
-/*
-                            frames.length && subs.push(modelschema.obtain(model).on(
+
+                            const reactions = frames.filter( ([name]) => !["fade-in", "fade-out"].includes(name) );
+
+                            reactions.length && subs.push(modelschema.obtain(model).on(
                                 ({ action: name, keyF }) => {
 
                                     if(keyF) {
@@ -72,7 +86,7 @@ export default class SceneSchema extends Unit {
                                         exist > -1 && animationsCatche[exist].anm.kill();
                                         exist < 1 && (exist = animationsCatche.length);
 
-                                        const anm = frames.find( ([_name]) => _name === name );
+                                        const anm = reactions.find( ([_name]) => _name === name );
 
                                         if(anm) {
                                             const [ , { duration }, [, props ]] = anm;
@@ -84,13 +98,13 @@ export default class SceneSchema extends Unit {
                                     }
 
                                 })
-                            );*/
+                            );
 
                             subs.push(owner.at(({action: name}) => {
                                 const frame = frames.find( ([_name]) => _name === name );
                                 if(!frame) emt({action: `${name}-complete`});
                                 else {
-                                    new TweenMax(node, frame[1].duration, {
+                                    animationsCatche[name] = new TweenMax(node, frame[1].duration, {
                                         onComplete: () => emt({action: `${name}-complete`}),
                                         startAt: frame[2][1],
                                         ...frame[3][1],
@@ -181,21 +195,21 @@ export default class SceneSchema extends Unit {
                         subs.push(
                             //so that the model does not climb before the loader is ready
                             Observable.combine([
-                                modelschema.obtain(model),
-                                _loader.obs.filter(({action}) => action === "complete")
-                            ], model => model,
-                        ).at(({action: name = "change", ..._state}) => {
-                            
-                            const state = _state.state || _state;
+                                    modelschema.obtain(model),
+                                    _loader.obs.filter(({action}) => action === "complete")
+                                ], model => model,
+                            ).at(({action: name = "change", ..._state}) => {
 
-                            if(name === "change" && curState !== state) {
-                                lastState = curState;
-                                curState = state;
-                                const view = searchBySignature( curState, views );
-                                /*<@>*/ if(!view) throw `view at state: ${state} not found` /*</@>*/
-                                view.sub = view.obs.on( handler );
-                            }
-                        }));
+                                const state = _state.state || _state;
+
+                                if(name === "change" && curState !== state) {
+                                    lastState = curState;
+                                    curState = state;
+                                    const view = searchBySignature( curState, views );
+                                    /*<@>*/ if(!view) throw `view at state: ${state} not found` /*</@>*/
+                                    view.sub = view.obs.on( handler );
+                                }
+                            }));
 
                     }
 
