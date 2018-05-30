@@ -25,13 +25,16 @@ const json =
             node: "/PIXI.Sprite", //PIXI.Container as default
             model: "./rel/route",
             texture: "./image.png",
-            animations: [ // as optional
+            frames: [ // as optional
                 [  "action-name", // it's identical as action name
                     { duration: "1s" },
                     //keys
                     //[ "0%" //it's default prev ]
                     [ "50%", { x: 456, y: 10, ease: "cubic"/*0-50*/ } ],
-                    [ "100%", { x: 456, y: 50, ease: "linear"/*50-100*/ } ]
+                    [ "100%", { x: 456, y: 50, ease: "linear"/*50-100*/ } ],
+
+
+                    [ 100, { x: 456, y: 50, ease: "linear"/*50-100*/ } ]
                 ],
                 [  "fade-out" /* fade-in */ , // as optional
                     { duration: "3s" },
