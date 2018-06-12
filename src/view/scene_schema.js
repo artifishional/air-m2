@@ -52,7 +52,7 @@ export default class SceneSchema extends Unit {
 
                     if (type === "node") {
 
-                        const animationsCatche = [];
+                        const animationsCache = [];
 
                         subs.push( loader(pack, resources).at( resources => {
 
@@ -68,10 +68,7 @@ export default class SceneSchema extends Unit {
                             else if (nodetype === "PIXI.Sprite") {
                                 node = new Sprite(resources.find( ({type}) => type === "texture" ).texture);
                             }
-                            for(let key in args) {
-                                node[key] = args[key];
-                            }
-
+                            Object.keys(args).map( key => node[key] = args[key] );
                             const reactions = frames.filter( ([name]) => !["fade-in", "fade-out"].includes(name) );
 
                             reactions.length && subs.push(modelschema.obtain(model).on(
@@ -82,15 +79,15 @@ export default class SceneSchema extends Unit {
                                     }
 
                                     else {
-                                        let exist = animationsCatche.findIndex( ({name: _name}) => name === _name );
-                                        exist > -1 && animationsCatche[exist].anm.kill();
-                                        exist < 1 && (exist = animationsCatche.length);
+                                        let exist = animationsCache.findIndex( ({name: _name}) => name === _name );
+                                        exist > -1 && animationsCache[exist].anm.kill();
+                                        exist < 1 && (exist = animationsCache.length);
 
                                         const anm = reactions.find( ([_name]) => _name === name );
 
                                         if(anm) {
                                             const [ , { duration }, [, props ]] = anm;
-                                            animationsCatche[exist] = {
+                                            animationsCache[exist] = {
                                                 anm: new TweenMax( node, duration, props ),
                                                 name,
                                             };
@@ -104,7 +101,7 @@ export default class SceneSchema extends Unit {
                                 const frame = frames.find( ([_name]) => _name === name );
                                 if(!frame) emt({action: `${name}-complete`});
                                 else {
-                                    animationsCatche[name] = new TweenMax(node, frame[1].duration, {
+                                    animationsCache[name] = new TweenMax(node, frame[1].duration, {
                                         onComplete: () => emt({action: `${name}-complete`}),
                                         startAt: frame[2][1],
                                         ...frame[3][1],
