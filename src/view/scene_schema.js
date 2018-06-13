@@ -3,21 +3,9 @@ import {Observable} from "air-stream"
 import {Container, Text, Sprite} from "pixi.js"
 import loader from "../loader/resources"
 import Factory from "./factory";
-import {TweenMax} from "gsap"
 import {searchBySignature} from "../utils"
+import { Animate } from "air-gsap"
 const reinit = { type: "reinit" };
-
-function animation({ playState = "play" } = {}) {
-    const tweens = [];
-    if(playState === "pause") {
-        tl = new TimelineMax({tweens, paused: true, delay: delay + (from < 0 ? -from : 0), ...args});
-        tl.seek( from, false );
-    }
-    else {
-        tl = new TimelineMax({tweens, delay: delay + (from < 0 ? -from : 0), ...args});
-        from < 0 ? tl.restart( true ) : tl.seek( from, false );
-    }
-}
 
 //todo need refactor!!! need polimorfing structure
 export default class SceneSchema extends Unit {
@@ -52,8 +40,6 @@ export default class SceneSchema extends Unit {
 
                     if (type === "node") {
 
-                        const animationsCache = [];
-
                         subs.push( loader(pack, resources).at( resources => {
 
                             let node;
@@ -69,45 +55,20 @@ export default class SceneSchema extends Unit {
                                 node = new Sprite(resources.find( ({type}) => type === "texture" ).texture);
                             }
                             Object.keys(args).map( key => node[key] = args[key] );
+
                             const reactions = frames.filter( ([name]) => !["fade-in", "fade-out"].includes(name) );
+                            if(reactions.length) {
+                                const hook = new Animate( node, [ "frames", ...reactions] ).on();
+                                subs.push(hook);
+                                subs.push(modelschema.obtain(model).at( hook ));
+                            }
 
-                            reactions.length && subs.push(modelschema.obtain(model).on(
-                                ({ action: name, keyF }) => {
-
-                                    if(keyF) {
-
-                                    }
-
-                                    else {
-                                        let exist = animationsCache.findIndex( ({name: _name}) => name === _name );
-                                        exist > -1 && animationsCache[exist].anm.kill();
-                                        exist < 1 && (exist = animationsCache.length);
-
-                                        const anm = reactions.find( ([_name]) => _name === name );
-
-                                        if(anm) {
-                                            const [ , { duration }, [, props ]] = anm;
-                                            animationsCache[exist] = {
-                                                anm: new TweenMax( node, duration, props ),
-                                                name,
-                                            };
-                                        }
-                                    }
-
-                                })
-                            );
-
-                            subs.push(owner.at(({action: name}) => {
-                                const frame = frames.find( ([_name]) => _name === name );
-                                if(!frame) emt({action: `${name}-complete`});
-                                else {
-                                    animationsCache[name] = new TweenMax(node, frame[1].duration, {
-                                        onComplete: () => emt({action: `${name}-complete`}),
-                                        startAt: frame[2][1],
-                                        ...frame[3][1],
-                                    });
-                                }
-                            }));
+                            const effects = frames.filter( ([name]) => ["fade-in", "fade-out"].includes(name) );
+                            if(effects.length) {
+                                const hook = new Animate( node, [ "frames", ...reactions] ).at( emt );
+                                subs.push(hook);
+                                subs.push(modelschema.obtain(model).at( hook ));
+                            }
 
                             let children;
                             if(item.length) {
@@ -178,14 +139,14 @@ export default class SceneSchema extends Unit {
                             if(name === "complete") {
                                 curentViewNode = child;
                                 lastState && views.find(({key}) => key === lastState)
-                                    .emt( { action: "fade-out", reinit } );
+                                    .emt( { action: [ "fade-out" ], reinit } );
                             }
                             if(!lastState && name === "complete" || name === "fade-out-complete") {
                                 lastState && views.find(({key}) => key === lastState).sub();
                                 node.removeChild( node.children[0] );
                                 node.addChild( curentViewNode );
                                 searchBySignature( curState, views )
-                                    .emt( { action: "fade-in", reinit } );
+                                    .emt( { action: [ "fade-in" ] } );
                             }
                         }
 
