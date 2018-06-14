@@ -8,7 +8,6 @@
     "patch": "npm version patch && npm publish && git push origin"
   },
   "dependencies": {
-    "air-schema": "^0.1.0",
     "fontfaceobserver": "^2.0.13",
     "air-stream": "^0.4.0",
     "air-gsap": "^0.1.0"
