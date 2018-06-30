@@ -152,7 +152,7 @@ export default class SceneSchema extends Unit {
                                     curState = state;
                                     const view = searchBySignature(curState, views);
                                     /*<@>*/
-                                    if (!view) throw `view at state: ${state} not found`
+                                    if (!view) throw `view at state: ${state} not found`;
                                     /*</@>*/
                                     view.sub = view.obs.on(handler);
                                 }
