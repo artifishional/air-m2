@@ -62,7 +62,7 @@ function statesstream( sceneschema, {modelschema} ) {
 }
 
 
-export default function (input, parent) {
+export default function (sceneschema, {modelschema}, parent) {
 
     return stream( (emt, { sweep }) => {
 
