@@ -1,11 +1,11 @@
 import { stream, combine } from "air-stream"
-import { prop } from "../functional"
+import {Container} from "pixi.js"
 
-function statesstream( sceneschema, {modelschema} ) {
+const statesstream = ( scenesstream, { modelstream } ) =>
 
-    return stream( (emt, { sweep }) => {
+    stream( (emt, { sweep }) => {
 
-        sweep.add(combine([sceneschema, modelschema]).at(
+        sweep.add(combine([scenesstream, modelstream]).at(
             ([ { advantages: sceneschema }, {advantages: modelschema} ]) => {
                 const { args: { model, childrenmodel } } = sceneschema;
 
@@ -20,34 +20,32 @@ function statesstream( sceneschema, {modelschema} ) {
 
                     if(action === "complete") {
 
-                        emt( { stream: loaderstream } );
+                        emt( { stream: loaderstream, key: "loader" } );
 
-                        sweep.add(modelschema.at( ([ action, key ]) => {
-                            if(action === "change") {
+                        sweep.add(modelschema.obtain(model).at( ( { action, key } ) => {
 
-                                if(curstate !== key) {
+                            if(action === "change" && curstate !== key) {
 
-                                    clearTimeout(loadertimeout);
-                                    loadertimeout = setTimeout(() => emt( { stream: loaderstream } ) , 100);
+                                clearTimeout(loadertimeout);
+                                loadertimeout = setTimeout(() => emt( { stream: loaderstream, key: "loader" } ) , 100);
 
-                                    requirestatehook && sweep.force( requirestatehook );
-                                    requirestatestream = sceneschema._obtain( {
-                                        route: [ key ],
-                                        modelschema: modelschema.get(model + childrenmodel),
-                                    } );
-                                    sweep.add(requirestatehook = requirestatestream.at( ({action}) => {
+                                requirestatehook && sweep.force( requirestatehook );
+                                requirestatestream = sceneschema._obtain( {
+                                    route: [ key ],
+                                    modelschema: modelschema.get(model + childrenmodel),
+                                } );
+                                sweep.add(requirestatehook = requirestatestream.at( ({action}) => {
 
-                                        if(action === "complete") {
-                                            clearTimeout(loadertimeout);
-                                            curstate = key;
-                                            emt( { stream: requirestatestream } );
-                                        }
+                                    if(action === "complete") {
+                                        clearTimeout(loadertimeout);
+                                        curstate = key;
+                                        emt( { stream: requirestatestream, key } );
+                                    }
 
-                                    } ));
-
-                                }
+                                } ));
 
                             }
+
                         } ));
 
                     }
@@ -59,74 +57,70 @@ function statesstream( sceneschema, {modelschema} ) {
 
     } );
 
-}
 
+export default (scenesstream, { modelstream }) =>
 
-export default function (sceneschema, {modelschema}, parent) {
+    stream( (emt, { sweep }) => {
 
-    return stream( (emt, { sweep }) => {
+        const child = new Container();
 
-        sweep.add(combine([sceneschema, modelschema]).at(
-            ([ { advantages: sceneschema }, {advantages: modelschema} ]) => {
+        let curstate = null;
+        let curstatehook = stream((emt, { hook }) =>
+            hook.add(({action: [action]}) => emt( { action: `${action}-complete` } ))
+        ).at( handle );
+        sweep.add(curstatehook);
+        let curstatenode = new PIXI.Container();
+        curstatenode.name = "blank";
+        child.addChild(curstatenode);
+        let stage = "idle";
+        let requirestate = null;
+        let requirestatehook = null;
+        let newstatenode = null;
 
-                let curstate = null;
-                let curstatehook = stream((emt) => ([action]) => emt( { action: `${action}-complete` } )).at( handle );
-                sweep.add(curstatehook);
-                let curstatenode = new PIXI.Container();
-                curstatenode.name = "blank";
-                parent.addChild(curstatenode);
-                let stage = "idle";
-                let requirestate = null;
-                let requirestatehook = null;
+        let loaded = false;
 
-                sweep.add(statesstream( sceneschema, {modelschema} ).at( ({ stream }) => {
-                    if( curstate === stream ) {
-                        if(stage === "fade-out") {
-                            stage = "idle";
-                            curstatehook( ["fade-in"] );
-                            //there is no need to load a new state
-                            sweep.force(requirestatehook);
-                            requirestatehook = null;
-                        }
-                    }
-                    else {
-                        if(requirestate !== stream) {
-                            if(requirestatehook) {
-                                sweep.force(requirestatehook);
-                                requirestate = null;
-                            }
-                            requirestate = stream;
-                            sweep.add(requirestatehook = requirestate.at( handle ));
-                        }
-                    }
-                } ));
+        sweep.add(statesstream( scenesstream, { modelstream } ).at( ({ stream }) => {
 
-                function handle( { action, node } ) {
-                    if(action === "fade-out-complete") {
-                        sweep.force(curstatehook);
-                        sweep.add(curstatehook = requirestatehook);
-                        stage = "idle";
-                        parent.removeChild(curstatenode);
-                        parent.addChild( node );
-                        curstate = requirestate;
-                        curstatehook( [ "fade-in" ] );
-                    }
-                    else if(action === "complete") {
-                        curstatenode = node;
-                        curstatehook( [ "fade-out" ] );
-                    }
+            if( curstate === stream ) {
+                if(stage === "fade-out") {
+                    stage = "idle";
+                    curstatehook( { action: ["fade-in"] } );
+                    //there is no need to load a new state
+                    sweep.force(requirestatehook);
+                    requirestatehook = null;
                 }
+            }
+            else {
+                if(requirestate !== stream) {
+                    if(requirestatehook) {
+                        sweep.force(requirestatehook);
+                        requirestate = null;
+                    }
+                    requirestate = stream;
+                    sweep.add(requirestatehook = requirestate.at( handle ));
+                }
+            }
+        } ));
 
-            }));
+        function handle( { action, node } ) {
+            if(action === "fade-out-complete") {
+                sweep.force(curstatehook);
+                sweep.add(curstatehook = requirestatehook);
+                stage = "idle";
+                child.removeChild( curstatenode );
+                child.addChild( newstatenode );
+                curstatenode = newstatenode;
+                curstate = requirestate;
+                curstatehook( { action: [ "fade-in" ]} );
+            }
+            else if(action === "complete") {
+                newstatenode = node;
+                curstatehook( {action: [ "fade-out" ]} );
+                if(!loaded) {
+                    emt( {action: "complete", node: child} );
+                    loaded = true;
+                }
+            }
+        }
 
     });
-
-}
-/*
-
-
-tasks
-toggle the states
-control the animation of the input / output
-
-*/

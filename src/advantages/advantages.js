@@ -35,7 +35,12 @@ export default class Advantages {
     }
 
     static sign(sign) {
-        return ({key}) => sign === key;
+        if(typeof sign === "object") {
+            return ({key}) => Object.keys(sign).every( prop => sign[prop] === key[prop] );
+        }
+        else {
+            return ({key}) => sign === key;
+        }
     }
 
     findId(id) {
