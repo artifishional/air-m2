@@ -2,6 +2,7 @@ import {combine, stream} from "air-stream"
 import {Container, Text, Sprite} from "pixi.js"
 import loader from "../loader/resources"
 import {Animate} from "air-gsap"
+import { prop } from "../functional"
 
 export default (scenesstream, { modelstream }) =>
 
@@ -17,7 +18,9 @@ export default (scenesstream, { modelstream }) =>
                     item
                 } = sceneschema;
 
-                sweep.add(loader(pack, resources).at(resources => {
+                sweep.add(
+                    combine([ loader(pack, resources), model && modelschema.obtain(model).first() ].filter(Boolean)
+                ).at(([resources]) => {
 
                     let child;
 
@@ -42,33 +45,32 @@ export default (scenesstream, { modelstream }) =>
                     }
 
                     const effects = frames.filter(([name]) => ["fade-in", "fade-out"].includes(name));
-                    over.add(new Animate(child, ["frames", ...effects]).at(emt));
+                    const animate = new Animate(child, ["frames", ...effects]);
 
-                    let children;
-                    if (item.length) {
-                        children = combine(
-                            item.map(({key}) => sceneschema._obtain(({
-                                route: [key],
-                                modelschema: modelschema.get(model)
-                            })))
-                        );
-                        sweep.add(children.at(actions => {
-                            if (actions.every(({action}) => action === "complete")) {
-                                const nodes = actions.map(({node: child}) => child);
-                                child.addChild(...nodes);
-                            }
-                        }));
+                    const elems = item.map(({key}) => sceneschema._obtain(({
+                        route: [key],
+                        modelschema: modelschema.get(model)
+                    })));
+
+                    const all = [...elems, animate];
+                    all.map( obs => over.add(obs.at( ()=> {} )) );
+
+                    if(elems.length) sweep.add(combine( elems.map( obs => obs.filter(prop("action").eq("complete")) ) ).at(
+                        childs => {
+                            childs.map( ({node}) => child.addChild(node) );
+                            emt( {action: "complete", node: child} );
+                        }
+                    ));
+                    else {
+                        emt( {action: "complete", node: child} );
                     }
 
-                    const waitingFor = [
-                        item.length && children, model && modelschema.obtain(model)
-                    ].filter(_ => _);
-
-                    sweep.add( combine([...waitingFor, stream(emt => emt({action: "complete"}))])
-                        .first()
-                        .at(() => emt({action: "complete", node: child}))
-                    );
-
+                    sweep.add(combine(all.map( obs => obs.filter(prop("action").eq("fade-in-complete")) )).at(
+                        () => emt( {action: "fade-in-complete"} )
+                    ));
+                    sweep.add(combine(all.map( obs => obs.filter(prop("action").eq("fade-out-complete")) )).at(
+                        () => emt( {action: "fade-out-complete"} )
+                    ));
 
                 }));
 

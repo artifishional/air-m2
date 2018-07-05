@@ -79,31 +79,34 @@ export default (scenesstream, { modelstream }) =>
 
         let loaded = false;
 
-        sweep.add(statesstream( scenesstream, { modelstream } ).at( ({ stream }) => {
+        sweep.add(statesstream( scenesstream, { modelstream } ).at( ({ stream, key }) => {
 
             if( curstate === stream ) {
+                debugger;
                 if(stage === "fade-out") {
                     stage = "idle";
                     curstatehook( { action: ["fade-in"] } );
                     //there is no need to load a new state
                     sweep.force(requirestatehook);
-                    requirestatehook = null;
+                    requirestate = null;
                 }
             }
             else {
                 if(requirestate !== stream) {
-                    if(requirestatehook) {
+                    if(requirestate) {
                         sweep.force(requirestatehook);
                         requirestate = null;
                     }
                     requirestate = stream;
-                    sweep.add(requirestatehook = requirestate.at( handle ));
+                    sweep.add(requirestatehook = requirestate.at( ({...args}) => handle({...args, key}) ));
                 }
             }
         } ));
 
-        function handle( { action, node } ) {
+        function handle( { action, node, key } ) {
+
             if(action === "fade-out-complete") {
+                console.log("fade-out-complete", key);
                 sweep.force(curstatehook);
                 sweep.add(curstatehook = requirestatehook);
                 stage = "idle";
@@ -111,10 +114,13 @@ export default (scenesstream, { modelstream }) =>
                 child.addChild( newstatenode );
                 curstatenode = newstatenode;
                 curstate = requirestate;
+                requirestate = null;
                 curstatehook( { action: [ "fade-in" ]} );
             }
             else if(action === "complete") {
                 newstatenode = node;
+                stage = "fade-out";
+                debugger;
                 curstatehook( {action: [ "fade-out" ]} );
                 if(!loaded) {
                     emt( {action: "complete", node: child} );
