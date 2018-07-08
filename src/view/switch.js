@@ -1,5 +1,4 @@
 import { stream, combine } from "air-stream"
-import {Container} from "pixi.js"
 
 const statesstream = ( scenesstream, { modelstream } ) =>
 
@@ -58,20 +57,19 @@ const statesstream = ( scenesstream, { modelstream } ) =>
     } );
 
 
-export default (scenesstream, { modelstream }) =>
+export default (scenesstream, { modelstream, viewbuilder }) =>
 
     stream( (emt, { sweep }) => {
 
-        const child = new Container();
+        const child = viewbuilder();
 
         let curstate = null;
         let curstatehook = stream((emt, { hook }) =>
-            hook.add(({action: [action]}) => emt( { action: `${action}-complete` } ))
+            hook.add(({action: [action]}) => emt( { key: "pre",  action: `${action}-complete` } ))
         ).at( handle );
         sweep.add(curstatehook);
-        let curstatenode = new PIXI.Container();
-        curstatenode.name = "blank";
-        child.addChild(curstatenode);
+        let curstatenode = viewbuilder( { key: "blank" } );
+        child.add(curstatenode);
         let stage = "idle";
         let requirestate = null;
         let requirestatehook = null;
@@ -80,9 +78,7 @@ export default (scenesstream, { modelstream }) =>
         let loaded = false;
 
         sweep.add(statesstream( scenesstream, { modelstream } ).at( ({ stream, key }) => {
-
             if( curstate === stream ) {
-                debugger;
                 if(stage === "fade-out") {
                     stage = "idle";
                     curstatehook( { action: ["fade-in"] } );
@@ -98,32 +94,32 @@ export default (scenesstream, { modelstream }) =>
                         requirestate = null;
                     }
                     requirestate = stream;
-                    sweep.add(requirestatehook = requirestate.at( ({...args}) => handle({...args, key}) ));
+                    sweep.add(requirestatehook = requirestate.at( ({...args}) => handle({ ...args, key, stream }) ));
                 }
             }
         } ));
 
-        function handle( { action, node, key } ) {
-
+        function handle( { action, node, key, stream } ) {
             if(action === "fade-out-complete") {
-                console.log("fade-out-complete", key);
                 sweep.force(curstatehook);
-                sweep.add(curstatehook = requirestatehook);
+                curstatehook = requirestatehook;
+                //sweep.add(curstatehook = requirestatehook);
                 stage = "idle";
-                child.removeChild( curstatenode );
-                child.addChild( newstatenode );
+                //child.removeChild( curstatenode.remove() );
+                curstatenode.remove();
+                //child.addChild( newstatenode );
+                child.add( newstatenode );
                 curstatenode = newstatenode;
                 curstate = requirestate;
                 requirestate = null;
-                curstatehook( { action: [ "fade-in" ]} );
+                curstatehook( { key, action: [ "fade-in" ]} );
             }
-            else if(action === "complete") {
+            else if(action === "complete" && stream === requirestate) {
                 newstatenode = node;
                 stage = "fade-out";
-                debugger;
-                curstatehook( {action: [ "fade-out" ]} );
+                curstatehook( { key, action: [ "fade-out" ]} );
                 if(!loaded) {
-                    emt( {action: "complete", node: child} );
+                    emt( { key, action: "complete", node: child} );
                     loaded = true;
                 }
             }
