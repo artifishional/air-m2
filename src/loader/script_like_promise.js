@@ -1,5 +1,5 @@
 export default function ({path}) {
-    if(path.indexOf(".json") < 0) {
+    if(/.\.js$/g.test(path)) {
         return new Promise((resolve, reject) => {
             const script = document.createElement("script");
             script.src = path;
@@ -8,18 +8,57 @@ export default function ({path}) {
             document.head.appendChild(script);
         });
     }
-    else {
+    else if(/.\.json$/g.test(path)) {
         return new Promise((resolve, reject) => {
-            const xml = new XMLHttpRequest();
-            xml.open("GET", path, true);
-            xml.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xml.setRequestHeader('Content-type', 'application/json; charset=utf-8');
-            xml.onreadystatechange = function () {
-                if (xml.readyState === 4) {
-                    resolve( {module: {default: JSON.parse(xml.responseText)}} );
-                }
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", path, true);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');
+            xhr.onload = () => {
+                resolve( {module: {default: JSON.parse(xhr.responseText)}} );
             };
-            xml.send();
+            xhr.send();
         });
     }
+    else if (/.\.html/g.test(path)) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", path, true);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');
+            xhr.onload = () => {
+                const doc = new DOMParser().parseFromString(xhr.responseText, "application/xml");
+                const res = transform(doc.firstChild);
+                resolve( {module: {default: res}} );
+            };
+            xhr.send();
+        });
+    }
+}
+
+let pid = 0;
+function transform( node ) {
+    const m2data = JSON.parse(node.getAttribute("data-m2"));
+    !m2data[1] && m2data.push({});
+    m2data[1].node = node;
+    if(m2data[1] && m2data[1].source) {
+        m2data[1].pid = pid;
+        node.setAttribute("data-m2-pid", pid);
+        pid++;
+    }
+    vertextes( node, m2data, m2data[1] && m2data[1].type === "switcher", true );
+    return m2data;
+}
+
+function vertextes(node, exist = [], cut = false, attr = false) {
+    return [...node.children].reduce( (acc, node) => {
+        if(attr) {
+            cut && node.remove();
+            acc.push( transform(node) );
+        }
+        else {
+            vertextes(node, exist);
+        }
+        return acc;
+    }, exist);
 }
