@@ -1,5 +1,5 @@
 import Unit from "../advantages/unit"
-import {Observable} from "air-stream"
+import {stream} from "air-stream"
 import Factory from "./factory"
 
 export default class ModelSchema extends Unit {
@@ -10,17 +10,17 @@ export default class ModelSchema extends Unit {
 
     static maintainer(src, args) {
 
-        return new Observable( emt => {
+        return stream( (emt, { over, sweep }) => {
 
-            let res, linkers;
+            let linkers;
 
-            return res = [src.at( ({module, advantages}) => {
+            over.add(src.at( ({module, advantages}) => {
 
                 advantages.linkers.push(emt);
                 linkers = advantages.linkers;
 
                 if(typeof advantages.source === "function") {
-                    res.push(advantages.source({advantages, ...advantages.args, ...args}).on(emt));
+                    over.add(advantages.source({advantages, ...advantages.args, ...args}).on(emt));
                 }
                 else {
                     const exist = module[advantages.source.name || "default"];
@@ -34,9 +34,9 @@ export default class ModelSchema extends Unit {
                         throw `module "${key}" not found`;
                     }
                 }
-            } ),
-                ({dissolve}) => dissolve && linkers && linkers.splice( linkers.indexOf(emt), 1 )
-            ]
+            } ));
+
+            sweep.add(() => linkers && linkers.splice( linkers.indexOf(emt), 1 ));
         });
     }
 

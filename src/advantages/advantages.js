@@ -1,4 +1,4 @@
-import {Observable} from "air-stream"
+import {Observable, stream} from "air-stream"
 import {routeNormalizer, schemasNormalizer} from "../utils/index"
 
 export default class Advantages {
@@ -29,13 +29,19 @@ export default class Advantages {
         this.item = advs
             .map(schema => factory.create({pack: this.pack, maintainer, factory, parent: this, schema, loader}));
         this.args = args;
-        this.state = {load: !source.hasOwnProperty("path")};
+        this.static = !source.hasOwnProperty("path");
         this.linkers = [];
         this.cache = [];
+        this._stream = null;
     }
 
     static sign(sign) {
-        return ({key}) => sign === key;
+        if(typeof sign === "object") {
+            return ({key}) => Object.keys(sign).every( prop => sign[prop] === key[prop] );
+        }
+        else {
+            return ({key}) => sign === key;
+        }
     }
 
     findId(id) {
@@ -57,43 +63,18 @@ export default class Advantages {
         return this._get({route: routeNormalizer(route)});
     }
 
-    _get({route: [key, ...route]}, from = {src: this, route: [key, ...route] }) {
-        if (key) {
-            if(key[0] === "#") {
-                if(this.id === key) return this._get({route}, from);
-                const exist = this.findId(key);
-                if(exist) return exist._get({route}, from);
-                if(!this.parent) throw `module "#${key}" not found from ${from}`;
-                return this.parent._get({route: [key, ...route]}, from);
+    get stream() {
+        if(!this._stream) {
+            if(this.static) {
+                this._stream = new Observable(emt => {
+                    emt({advantages: this, source: this.source});
+                });
             }
-            if (key === "..") {
-                return this.parent._get({route}, from);
-            }
-            else {//todo need layers
 
-                if (!this.state.load) {
-                    return new Observable((emt) => {
-                        return this._get({route: []}, from).on(() => {
-                            return this._get({route: [key, ...route]}, from).on(emt);
-                        });
-                    });
-                }
-
-                else {
-                    const node = this.item.find(this.sign(key));
-                    if (node) {
-                        return node._get({route}, from);
-                    }
-                    else {
-                        throw `module "${key}" not found from ${from}`;
-                    }
-                }
-            }
-        }
-        else {
-            if (!this.state.load) {
-                return new Observable((emt) => {
+            else {
+                this._stream = new Observable((emt) => {
                     return this.loader.obtain(this).at(({module, advantages}) => {
+                        /*locked cache*/this.stream.on( () => {} );
                         const exist = module[this.source.name || "default"];
                         if (Array.isArray(exist)) {
                             const [, {source, ...args}, ...advs] = schemasNormalizer(exist);
@@ -113,14 +94,42 @@ export default class Advantages {
                         else {
                             advantages.source = exist;
                         }
-                        advantages.state.load = true;
                         emt({advantages, source: advantages.source});
                     });
                 });
             }
-            return new Observable(emt => {
-                emt({advantages: this, source: this.source});
-            });
+        }
+        return this._stream;
+    }
+
+    _get({route: [key, ...route]}, from = {src: this, route: [key, ...route] }) {
+        if (key) {
+            if(key[0] === "#") {
+                if(this.id === key) return this._get({route}, from);
+                const exist = this.findId(key);
+                if(exist) return exist._get({route}, from);
+                if(!this.parent) throw `module "#${key}" not found from ${from}`;
+                return this.parent._get({route: [key, ...route]}, from);
+            }
+            if (key === "..") {
+                return this.parent._get({route}, from);
+            }
+            else {//todo need layers
+                return stream((emt, { over }) =>
+                    over.add(this.stream.at(() => {
+                        const node = this.item.find(this.sign(key));
+                        if (node) {
+                            over.add(node._get({route}, from).at(emt));
+                        }
+                        else {
+                            throw `module "${key}" not found from ${from}`;
+                        }
+                    }))
+                );
+            }
+        }
+        else {
+            return this.stream;
         }
     }
 

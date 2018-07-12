@@ -1,16 +1,17 @@
 {
   "name": "air-m2",
-  "version": "0.3.22",
+  "version": "0.4.0",
   "description": "",
   "main": "/src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "patch": "npm version patch && npm publish && git push origin"
+    "patch": "npm version patch && npm publish && git push origin",
+    "minor": "npm version minor && npm publish && git push origin"
   },
   "dependencies": {
     "fontfaceobserver": "^2.0.13",
-    "air-stream": "^0.4.0",
-    "air-gsap": "^0.1.0"
+    "air-stream": "^0.5.5",
+    "air-gsap": "^0.2.0"
   },
   "repository": {
     "type": "git",
