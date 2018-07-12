@@ -25,13 +25,13 @@ export default (scenesstream, { modelstream, viewbuilder }) =>
 
                     const reactions = frames.filter(([name]) => !["fade-in", "fade-out"].includes(name));
                     if (reactions.length) {
-                        const hook = animate(view.target, ["frames", ...reactions]).on(() => { });
+                        const hook = animate(view, ["frames", ...reactions], key).on(() => { });
                         sweep.add(hook);
                         sweep.add(modelschema.obtain(model).at(hook));
                     }
 
                     const effects = frames.filter(([name]) => ["fade-in", "fade-out"].includes(name));
-                    const _animate = animate(view.target, ["frames", ...effects]);
+                    const _animate = animate(view, ["frames", ...effects], key);
 
                     const elems = item.map(({key}) => sceneschema._obtain(({
                         route: [key],
