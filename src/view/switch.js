@@ -61,68 +61,72 @@ export default (scenesstream, { modelstream, viewbuilder }) =>
 
     stream( (emt, { sweep }) => {
 
-        const child = viewbuilder();
+        sweep.add(scenesstream.at( ({ advantages: {key, args } }) => {
+            
+            const child = viewbuilder({key, ...args});
 
-        let curstate = null;
-        let curstatehook = stream((emt, { hook }) =>
-            hook.add(({action: [action]}) => emt( { key: "pre",  action: `${action}-complete` } ))
-        ).at( handle );
-        sweep.add(curstatehook);
-        let curstatenode = viewbuilder( { key: "blank" } );
-        child.add(curstatenode);
-        let stage = "idle";
-        let requirestate = null;
-        let requirestatehook = null;
-        let newstatenode = null;
+            let curstate = null;
+            let curstatehook = stream((emt, { hook }) =>
+                hook.add(({action: [action]}) => emt( { key: "pre",  action: `${action}-complete` } ))
+            ).at( handle );
+            sweep.add(curstatehook);
+            let curstatenode = viewbuilder( { key: "blank" } );
+            child.add(curstatenode);
+            let stage = "idle";
+            let requirestate = null;
+            let requirestatehook = null;
+            let newstatenode = null;
 
-        let loaded = false;
+            let loaded = false;
 
-        sweep.add(statesstream( scenesstream, { modelstream } ).at( ({ stream, key }) => {
-            if( curstate === stream ) {
-                if(stage === "fade-out") {
+            function handle( { action, node, key, stream } ) {
+                if(action === "fade-out-complete") {
+                    sweep.force(curstatehook);
+                    curstatehook = requirestatehook;
+                    //sweep.add(curstatehook = requirestatehook);
                     stage = "idle";
-                    curstatehook( { action: ["fade-in"] } );
-                    //there is no need to load a new state
-                    sweep.force(requirestatehook);
+                    //child.removeChild( curstatenode.remove() );
+                    curstatenode.remove();
+                    //child.addChild( newstatenode );
+                    child.add( newstatenode );
+                    curstatenode = newstatenode;
+                    curstate = requirestate;
                     requirestate = null;
+                    curstatehook( { key, action: [ "fade-in" ]} );
+                }
+                else if(action === "complete" && stream === requirestate) {
+                    newstatenode = node;
+                    stage = "fade-out";
+                    curstatehook( { key, action: [ "fade-out" ]} );
+                    if(!loaded) {
+                        emt( { key, action: "complete", node: child} );
+                        loaded = true;
+                    }
                 }
             }
-            else {
-                if(requirestate !== stream) {
-                    if(requirestate) {
+
+            sweep.add(statesstream( scenesstream, { modelstream } ).at( ({ stream, key }) => {
+                if( curstate === stream ) {
+                    if(stage === "fade-out") {
+                        stage = "idle";
+                        curstatehook( { action: ["fade-in"] } );
+                        //there is no need to load a new state
                         sweep.force(requirestatehook);
                         requirestate = null;
                     }
-                    requirestate = stream;
-                    sweep.add(requirestatehook = requirestate.at( ({...args}) => handle({ ...args, key, stream }) ));
                 }
-            }
-        } ));
+                else {
+                    if(requirestate !== stream) {
+                        if(requirestate) {
+                            sweep.force(requirestatehook);
+                            requirestate = null;
+                        }
+                        requirestate = stream;
+                        sweep.add(requirestatehook = requirestate.at( ({...args}) => handle({ ...args, key, stream }) ));
+                    }
+                }
+            } ));
 
-        function handle( { action, node, key, stream } ) {
-            if(action === "fade-out-complete") {
-                sweep.force(curstatehook);
-                curstatehook = requirestatehook;
-                //sweep.add(curstatehook = requirestatehook);
-                stage = "idle";
-                //child.removeChild( curstatenode.remove() );
-                curstatenode.remove();
-                //child.addChild( newstatenode );
-                child.add( newstatenode );
-                curstatenode = newstatenode;
-                curstate = requirestate;
-                requirestate = null;
-                curstatehook( { key, action: [ "fade-in" ]} );
-            }
-            else if(action === "complete" && stream === requirestate) {
-                newstatenode = node;
-                stage = "fade-out";
-                curstatehook( { key, action: [ "fade-out" ]} );
-                if(!loaded) {
-                    emt( { key, action: "complete", node: child} );
-                    loaded = true;
-                }
-            }
-        }
+        } ));
 
     });

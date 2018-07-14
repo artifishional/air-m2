@@ -46,14 +46,21 @@ function transform( node ) {
         node.setAttribute("data-m2-pid", pid);
         pid++;
     }
-    vertextes( node, m2data, m2data[1] && m2data[1].type === "switcher", true );
+    vertextes( node, m2data, true );
     return m2data;
 }
 
-function vertextes(node, exist = [], cut = false, attr = false) {
+//todo need refactor
+function vertextes(node, exist = []) {
     return [...node.children].reduce( (acc, node) => {
-        if(attr) {
-            cut && node.remove();
+        if(node.tagName === "img") {
+            const [ name = "image", props = {} ] = JSON.parse(node.getAttribute("data-m2") || "[]");
+            node.setAttribute("data-m2", JSON.stringify([
+                name, { resources: [ {type: "img", url: node.getAttribute("src") } ], ...props}])
+            );
+        }
+        if(node.getAttribute("data-m2")) {
+            node.remove();
             acc.push( transform(node) );
         }
         else {

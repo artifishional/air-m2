@@ -16,7 +16,7 @@ export default (scenesstream, { modelstream, viewbuilder }) =>
                     args: { model, resources = [], frames = [], ...args },
                     item
                 } = sceneschema;
-
+                
                 sweep.add(
                     combine([ loader(pack, resources), model && modelschema.obtain(model).first() ].filter(Boolean)
                 ).at(([resources]) => {
@@ -33,10 +33,14 @@ export default (scenesstream, { modelstream, viewbuilder }) =>
                     const effects = frames.filter(([name]) => ["fade-in", "fade-out"].includes(name));
                     const _animate = animate(view, ["frames", ...effects], key);
 
-                    const elems = item.map(({key}) => sceneschema._obtain(({
-                        route: [key],
-                        modelschema: modelschema.get(model)
-                    })));
+                    const elems = item
+                        .filter( ({ args: { template } }) => !template )
+                        .map(({key, args: { use } }) => {
+                            return sceneschema._obtain(({
+                                route: [use || key],
+                                modelschema: modelschema.get(model)
+                            }))
+                        });
 
                     const all = [...elems, _animate];
                     all.map( obs => over.add(obs.at( ()=> {} )) );

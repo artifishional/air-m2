@@ -12,11 +12,7 @@ export default class Advantages {
         schema: [key, {id = "", sign = Advantages.sign, source = {}, ...args}, ...advs]
     }) {
         this.pack = { path: source && source.hasOwnProperty("path") ?
-            source.path
-                .replace(".json", "")
-                .replace(".js", "")
-                .replace("./", "") + "/" :
-            pack.path
+            source.path + "/" : pack.path
         };
         this.id = `#${id}`;
         this.key = key;

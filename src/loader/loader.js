@@ -1,6 +1,12 @@
 import {Observable} from "air-stream"
 import include from "./script_like_promise"
 
+const schtypes = {
+    "js": ".js",
+    "json": "/index.json",
+    "html": "/index.html",
+};
+
 export default class Loader {
 
     constructor({path = "m2units/"} = {}) {
@@ -10,9 +16,8 @@ export default class Loader {
     }
 
     obtain(advantages) {
-        const {source: {path: _path}} = advantages;
-        let path = _path.indexOf(".json") > 0 ? _path.replace(".json", "") + "/index.json" : _path;
-        path = _path.indexOf(".html") > 0 ? _path.replace(".html", "") + "/index.html" : _path;
+        const {source: {path: _path, schtype = "js"}} = advantages;
+        const path = _path + schtypes[schtype];
         const exist = this.modules.find( ({ path: _path }) => path === _path );
         if(exist) {
             return exist.module;
