@@ -38,14 +38,10 @@ export default function ({path}) {
 
 let pid = 0;
 function transform( node ) {
-    const m2data = JSON.parse(node.getAttribute("data-m2"));
-    !m2data[1] && m2data.push({});
-    m2data[1].node = node;
-    if(m2data[1] && m2data[1].source) {
-        m2data[1].pid = pid;
-        node.setAttribute("data-m2-pid", pid);
-        pid++;
-    }
+    const [ name, { source, ...props } = {} ] = JSON.parse(node.getAttribute("data-m2"));
+    pid++;
+    const m2data = [ name, { source, node, ...props, pid } ];
+    node.setAttribute("data-m2", JSON.stringify(m2data));
     vertextes( node, m2data, true );
     return m2data;
 }
@@ -60,8 +56,14 @@ function vertextes(node, exist = []) {
             );
         }
         if(node.getAttribute("data-m2")) {
+            const m2data = transform(node);
+            if(!m2data[1].template && m2data[1].type !== "switcher") {
+                const placer = document.createElement("div");
+                placer.setAttribute("data-pid", m2data[1].pid );
+                node.parentNode.replaceChild(placer, node);
+            }
             node.remove();
-            acc.push( transform(node) );
+            acc.push( m2data );
         }
         else {
             vertextes(node, exist);
