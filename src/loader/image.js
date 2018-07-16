@@ -1,14 +1,9 @@
-import {Observable} from "air-stream"
+import { stream } from "air-stream"
 
-export default class ObservableImage extends Observable {
-
-    constructor( { url, ...args } ) {
-        super( emt => {
-            const image = new Image();
-            image.src = url;
-            image.crossorigin = true;
-            image.onload = () => emt( {url, type: "img", image, ...args} );
-        } );
-    }
-
-}
+export default ({ url, ...args }) =>
+    stream(emt => {
+        const image = new Image();
+        image.src = url;
+        image.onload = emt( {url, type: "img", image, ...args} );
+    })
+    .first();

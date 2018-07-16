@@ -28,6 +28,8 @@ export default function ({path}) {
             xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');
             xhr.onload = () => {
                 const doc = new DOMParser().parseFromString(xhr.responseText, "application/xml");
+                const err = doc.querySelector("parsererror");
+                if(err) throw `${path} parser error: ${err.innerText}`;
                 const res = transform(doc.firstChild);
                 resolve( {module: {default: res}} );
             };
@@ -38,10 +40,14 @@ export default function ({path}) {
 
 let pid = 0;
 function transform( node ) {
-    const [ name, { source, ...props } = {} ] = JSON.parse(node.getAttribute("data-m2"));
+    const [ name, { source, template = false, ...props } = {} ] = JSON.parse(node.getAttribute("data-m2"));
     pid++;
-    const m2data = [ name, { source, node, ...props, pid } ];
-    node.setAttribute("data-m2", JSON.stringify(m2data));
+    const handlers = [...node.attributes]
+        .filter(({name}) => ["onpointermove"].includes(name))
+        .filter(({value}) => value )
+        .map( ({ name, nodeValue }) => ({ name, hn: new Function("event", "schema", "action", nodeValue) }) );
+    const m2data = [ name, { handlers, source, template, node, ...props, pid } ];
+    node.setAttribute("data-m2", JSON.stringify([ name, { source, ...props } ]));
     vertextes( node, m2data, true );
     return m2data;
 }
@@ -50,9 +56,9 @@ function transform( node ) {
 function vertextes(node, exist = []) {
     return [...node.children].reduce( (acc, node) => {
         if(node.tagName === "img") {
-            const [ name = "image", props = {} ] = JSON.parse(node.getAttribute("data-m2") || "[]");
+            //const [ name, props = {} ] = JSON.parse(node.getAttribute("data-m2") || "[]");
             node.setAttribute("data-m2", JSON.stringify([
-                name, { resources: [ {type: "img", url: node.getAttribute("src") } ], ...props}])
+                "*", { resources: [ {type: "img", url: node.getAttribute("src") } ]}])
             );
         }
         if(node.getAttribute("data-m2")) {

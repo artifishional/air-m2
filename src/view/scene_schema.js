@@ -12,19 +12,22 @@ export default class SceneSchema extends Unit {
         factory = new Factory( { viewbuilder } ),
         ...args
     }) {
-        super({maintainer: (scenesstream, { modelschema }) =>
-            maintainer( scenesstream, { modelschema, viewbuilder } ), factory, ...args}
-        );
+        super({
+            maintainer: (scenesstream, { modelschema, ...argv }) =>
+                maintainer( scenesstream, { modelschema, viewbuilder, ...argv } ),
+            factory,
+            ...args
+        });
     }
 
-    static maintainer(scenesstream, { modelschema: modelstream, viewbuilder }) {
+    static maintainer(scenesstream, { modelschema: modelstream, viewbuilder, ...argv }) {
         return stream((emt, {over}) =>
             over.add(scenesstream.at(({advantages: { args: { type = "node" } } }) => {
                 if (type === "node") {
-                    over.add(scenenode( scenesstream, { modelstream, viewbuilder } ).on( emt ));
+                    over.add(scenenode( scenesstream, { modelstream, viewbuilder, ...argv } ).on( emt ));
                 }
                 else if (type === "switcher") {
-                    over.add(sceneswitch( scenesstream, { modelstream, viewbuilder } ).on( emt ));
+                    over.add(sceneswitch( scenesstream, { modelstream, viewbuilder, ...argv } ).on( emt ));
                 }
             }))
         );

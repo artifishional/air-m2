@@ -3,7 +3,7 @@ import loader from "../loader/resources"
 import { animate } from "air-gsap"
 import { prop } from "../functional"
 
-export default (scenesstream, { modelstream, viewbuilder }) =>
+export default (scenesstream, { modelstream, viewbuilder, ...argv }) =>
 
     stream( (emt, { sweep, over }) => {
 
@@ -21,7 +21,7 @@ export default (scenesstream, { modelstream, viewbuilder }) =>
                     combine([ loader(pack, resources), model && modelschema.obtain(model).first() ].filter(Boolean)
                 ).at(([resources]) => {
 
-                    const view = viewbuilder( {key, resources, ...args} );
+                    const view = viewbuilder( {key, resources, ...args, ...argv},  );
 
                     const reactions = frames.filter(([name]) => !["fade-in", "fade-out"].includes(name));
                     if (reactions.length) {
@@ -35,11 +35,12 @@ export default (scenesstream, { modelstream, viewbuilder }) =>
 
                     const elems = item
                         .filter( ({ args: { template } }) => !template )
-                        .map(({key, args: { use } }) => {
-                            return sceneschema._obtain(({
-                                route: [use || key],
-                                modelschema: modelschema.get(model)
-                            }))
+                        .map(({key, args: { use, pid } }) => {
+                            const route = use ? use : key;
+                            return sceneschema.obtain(route, {
+                                modelschema: modelschema.get(model),
+                                pid
+                            })
                         });
 
                     const all = [...elems, _animate];

@@ -9,7 +9,7 @@ export default function ({path}, resources) {
             return new ObservableTexture({url: `./m2units/${path}${url}` })
         }
         else if(type === "img") {
-            return new ObservableImage({url: `./m2units/${path}${url}` })
+            return ObservableImage({url: `./m2units/${path}${url}` })
         }
         else if(type === "font") {
             return new ObservableFont({url: `./m2units/${path}${url}`, ...args})
