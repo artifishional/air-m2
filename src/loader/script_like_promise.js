@@ -43,9 +43,10 @@ function transform( node ) {
     const [ name, { source, template = false, ...props } = {} ] = JSON.parse(node.getAttribute("data-m2"));
     pid++;
     const handlers = [...node.attributes]
-        .filter(({name}) => ["onpointermove"].includes(name))
+        .filter(({name}) => ["onpointermove", "onclick"].includes(name))
         .filter(({value}) => value )
-        .map( ({ name, nodeValue }) => ({ name, hn: new Function("event", "schema", "action", nodeValue) }) );
+        .map( ({ name, nodeValue }) => ({ name: name.replace(/^on/, ""), hn: new Function("event", "schema", "action", nodeValue) }) );
+    handlers.map( ({name}) => node.removeAttribute(name) );
     const m2data = [ name, { handlers, source, template, node, ...props, pid } ];
     node.setAttribute("data-m2", JSON.stringify([ name, { source, ...props } ]));
     vertextes( node, m2data, true );

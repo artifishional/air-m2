@@ -21,7 +21,10 @@ export default (scenesstream, { modelstream, viewbuilder, ...argv }) =>
                     combine([ loader(pack, resources), model && modelschema.obtain(model).first() ].filter(Boolean)
                 ).at(([resources]) => {
 
-                    const view = viewbuilder( {key, resources, ...args, ...argv},  );
+                    const view = viewbuilder(
+                        { key, resources, ...args, ...argv },
+                        model && modelschema.obtain(model)
+                    );
 
                     const reactions = frames.filter(([name]) => !["fade-in", "fade-out"].includes(name));
                     if (reactions.length) {
@@ -55,14 +58,13 @@ export default (scenesstream, { modelstream, viewbuilder, ...argv }) =>
                     else {
                         emt( { action: "complete", node: view } );
                     }
-
+                    sweep.add(() => view.clear());
                     sweep.add(combine(all.map( obs => obs.filter(prop("action").eq("fade-in-complete")) )).at(
                         () => emt( {action: "fade-in-complete"} )
                     ));
                     sweep.add(combine(all.map( obs => obs.filter(prop("action").eq("fade-out-complete")) )).at(
                         () => emt( {action: "fade-out-complete"} )
                     ));
-
                 }));
 
             }
