@@ -6,7 +6,7 @@ const statesstream = ( scenesstream, { modelstream } ) =>
 
         sweep.add(combine([scenesstream, modelstream]).at(
             ([ { advantages: sceneschema }, {advantages: modelschema} ]) => {
-                const { args: { model, childrenmodel } } = sceneschema;
+                const { args: { model, childrenmodel = "" } } = sceneschema;
 
                 let curstate = null;
                 let requirestatehook = null;

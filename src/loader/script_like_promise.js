@@ -43,9 +43,10 @@ function transform( node ) {
     const [ name, { source, template = false, resources = [], ...props } = {} ] = JSON.parse(node.getAttribute("data-m2"));
     pid++;
     const handlers = [...node.attributes]
-        .filter(({name}) => ["onpointermove"].includes(name))
+        .filter(({name}) => ["onpointermove", "onclick"].includes(name))
         .filter(({value}) => value )
-        .map( ({ name, nodeValue }) => ({ name, hn: new Function("event", "schema", "action", nodeValue) }) );
+        .map( ({ name, nodeValue }) => ({ name: name.replace(/^on/, ""), hn: new Function("event", "schema", "action", nodeValue) }) );
+    handlers.map( ({name}) => node.removeAttribute("on" + name) );
     const m2data = [ name, { handlers, source, template, node, resources, ...props, pid } ];
     node.setAttribute("data-m2", JSON.stringify([ name, { source, ...props } ]));
     vertextes( node, m2data, true );
@@ -61,11 +62,12 @@ function vertextes(parent, exist = []) {
                 "*", { resources: [ {type: "img", url: node.getAttribute("src") } ]}])
             );
         }
+        /*
         if(node.tagName === "link" && node.getAttribute("rel") === "stylesheet") {
             exist[1].resources.push( {type: "style", url: node.getAttribute("href") } );
             node.remove();
             return acc;
-        }
+        }*/
         if(node.getAttribute("data-m2")) {
             const m2data = transform(node);
 
