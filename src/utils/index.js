@@ -20,12 +20,30 @@ export function forEachFromData(func) {
     })
 }
 
+export function argvroute( route ) {
+    return JSON.parse(((
+        route
+        .split("/")
+        .filter(x => !".".includes(x))
+        .slice(-1)[0] || "")
+        .match( /\[.*\]/ ) || ["{}"])[0]
+        .replace("[", "{")
+        .replace("]", "}")
+        .replace("=", ":")
+        .replace(/[a-zA-Z]\w{1,}/g, x=> `"${x}"`)
+    );
+}
+
 export function routeNormalizer(route) {
     try {
-        return route.split("/")
-        //an empty string includes
-            .filter(x => !".".includes(x))
-            .map(x => x[0] === "{" ? JSON.parse(x.replace(/[a-zA-Z]\w{1,}/g, x=> `"${x}"`)) : x);
+        return {
+            route: route.split("/")
+            //an empty string includes
+                .map(x => x.replace(/\[.*\]/, ""))
+                .filter(x => !".".includes(x))
+                .map(x => x[0] === "{" ? JSON.parse(x.replace(/[a-zA-Z]\w{1,}/g, x=> `"${x}"`)) : x),
+            ...argvroute( route ),
+        }
     }
     catch(e) {
         throw `can't parse this route: ${route}`

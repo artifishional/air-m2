@@ -19,7 +19,10 @@ export default class ModelSchema extends Unit {
                 advantages.linkers.push(emt);
                 linkers = advantages.linkers;
 
-                if(typeof advantages.source === "function") {
+                if(advantages.source.hasOwnProperty("path")) {
+                    emt("complete");
+                }
+                else if(typeof advantages.source === "function") {
                     over.add(advantages.source({advantages, ...advantages.args, ...args}).on(emt));
                 }
                 else {

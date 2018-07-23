@@ -52,11 +52,11 @@ export default class Advantages {
      * @param args
      */
     obtain(route = "", args) {
-        return this._obtain({route: routeNormalizer(route), ...args});
+        return this._obtain({...routeNormalizer(route), ...args});
     }
 
     get(route = "") {
-        return this._get({route: routeNormalizer(route)});
+        return this._get(routeNormalizer(route));
     }
 
     get stream() {
