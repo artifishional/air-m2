@@ -39,11 +39,19 @@ export default (scenesstream, { modelstream, viewbuilder, ...argv }) =>
                     const elems = item
                         .filter( ({ args: { template } }) => !template )
                         .map(({key, args: { use, pid } }) => {
-                            const route = use ? use : key;
-                            return sceneschema.obtain(route, {
-                                modelschema: modelschema.get(model),
-                                pid
-                            })
+                            if(use) {
+                                return sceneschema.obtain(use, {
+                                    modelschema: modelschema.get(model),
+                                    pid
+                                })
+                            }
+                            else {
+                                return sceneschema._obtain({
+                                    route: [key],
+                                    modelschema: modelschema.get(model),
+                                    pid
+                                })
+                            }
                         });
 
                     const all = [...elems, _animate];
