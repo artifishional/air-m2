@@ -13,14 +13,15 @@ const schtypes = {
 let pid = 0;
 function transform( node, item = [] ) {
     const schema = new Schema(JSON.parse( node.getAttribute("data-m2") ) ).mergeIfExistAt( item ).toJSON();
-    const [name,  { source, template = false, resources = [], handlers: hns = {}, ...props } = {}, _item ] = schema;
+    const [name, { source, model = "", template = false, resources = [], handlers: hns = {}, ...props } = {}, ..._item ] = schema;
+    const md = model.replace("$name", name);
     pid++;
-    const handlers = [...node.attributes, Object.keys(hns).map( name => ({ name, value: 1, nodeValue: hns[name] }) )]
+    const handlers = [...node.attributes, ...Object.keys(hns).map( name => ({ name, value: 1, nodeValue: hns[name] }) )]
         .filter(({name}) => ["onpointermove", "onclick"].includes(name))
         .filter(({value}) => value )
         .map( ({ name, nodeValue }) => ({ name: name.replace(/^on/, ""), hn: new Function("event", "schema", "action", nodeValue) }) );
     handlers.map( ({name}) => node.removeAttribute("on" + name) );
-    const m2data = [ name, { handlers, source, template, node, resources, ...props, pid } ];
+    const m2data = [ name, { model: md, handlers, source, template, node, resources, ...props, pid } ];
     node.setAttribute("data-m2", JSON.stringify([ name, { source, ...props } ]));
     vertextes( node, m2data, _item );
     return m2data;
