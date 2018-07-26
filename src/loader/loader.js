@@ -12,7 +12,7 @@ const schtypes = {
 
 let pid = 0;
 function transform( node, item = [] ) {
-    const schema = new Schema(JSON.parse( node.getAttribute("data-m2") ) ).mergeIfExistAt( item ).toJSON();
+    const schema = new Schema(JSON.parse( node.getAttribute("data-m2") ) ).subscription( item ).toJSON();
     const [name, { source, model = "", template = false, resources = [], handlers: hns = {}, ...props } = {}, ..._item ] = schema;
     const md = model.replace("$name", name);
     pid++;
