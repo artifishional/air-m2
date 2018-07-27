@@ -61,9 +61,18 @@ export default (scenesstream, { modelstream, viewbuilder }) =>
 
     stream( (emt, { sweep }) => {
 
-        sweep.add(scenesstream.at( ({ advantages: {key, args } }) => {
+        sweep.add(scenesstream.at( ({ advantages: {key, args: { frames = [], ...args }} }) => {
             
             const child = viewbuilder({key, ...args});
+
+            const reactions = frames.filter(([name]) => !["fade-in", "fade-out"].includes(name));
+            if (reactions.length) {
+                sweep.add(modelstream.at( ( {advantages: modelschema} ) => {
+                    const hook = animate(view, ["frames", ...reactions], key).on(() => { });
+                    sweep.add(hook);
+                    sweep.add(modelschema.obtain(model).at(hook));
+                } ));
+            }
 
             let curstate = null;
             let curstatehook = stream((emt, { hook }) =>

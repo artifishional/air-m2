@@ -19,13 +19,15 @@ export default class ModelSchema extends Unit {
                 advantages.linkers.push(emt);
                 linkers = advantages.linkers;
 
-                if(advantages.source.hasOwnProperty("path")) {
-                    emt("complete");
-                }
-                else if(typeof advantages.source === "function") {
+                if(typeof advantages.source === "function") {
                     over.add(advantages.source({advantages, ...advantages.args, ...args}).on(emt));
                 }
                 else {
+
+                    if(!Object.keys(advantages.source).length || advantages.source.hasOwnProperty("path")) {
+                        return emt("complete");
+                    }
+
                     const exist = module[advantages.source.name || "default"];
                     if(Array.isArray(exist)) {
                         res.push(source({advantages, ...advantages.args, ...args}).on(emt));
