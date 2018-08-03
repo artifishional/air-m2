@@ -16,21 +16,23 @@ export default (scenesstream, { modelstream, viewbuilder, ...argv }) =>
                     args: { model, resources = [], frames = [], ...args },
                     item
                 } = sceneschema;
-                
+
+                const modelstream = model && modelschema.obtain(model) || null;
+
                 sweep.add(
-                    combine([ loader(pack, resources), model && modelschema.obtain(model).first() ].filter(Boolean)
+                    combine([ loader(pack, resources), model && modelstream.first() ].filter(Boolean)
                 ).at(([resources]) => {
 
                     const view = viewbuilder(
                         { key, resources, ...args, ...argv },
-                        model && modelschema.obtain(model)
+                        modelstream
                     );
 
                     const reactions = frames.filter(([name]) => !["fade-in", "fade-out"].includes(name));
                     if (reactions.length) {
                         const hook = animate(view, ["frames", ...reactions], key).on(() => { });
                         sweep.add(hook);
-                        sweep.add(modelschema.obtain(model).at(hook));
+                        sweep.add(modelstream.at(hook));
                     }
 
                     const effects = frames.filter(([name]) => ["fade-in", "fade-out"].includes(name));
