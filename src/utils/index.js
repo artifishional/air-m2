@@ -27,10 +27,9 @@ export function argvroute( route ) {
         .filter(x => !".".includes(x))
         .slice(-1)[0] || "")
         .match( /\[.*\]/ ) || ["{}"])[0]
-        .replace("[", "{")
-        .replace("]", "}")
+        .replace(/\[(.*)\]/, (_, x) => `{${x}}` )
         .replace("=", ":")
-        .replace(/[a-zA-Z]\w{1,}/g, x=> `"${x}"`)
+        .replace(/\"{0,1}([a-zA-Z]{1,77})\"{0,1}/g, (_, x) => `"${x}"`)
     );
 }
 
