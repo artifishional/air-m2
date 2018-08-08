@@ -20,7 +20,12 @@ export default class ModelSchema extends Unit {
                 linkers = advantages.linkers;
 
                 if(typeof advantages.source === "function") {
-                    over.add(advantages.source({advantages, ...advantages.args, ...args}).on(emt));
+                    over.add(advantages.source({
+                        obtain: (...args) => advantages.obtain(...args),
+                        advantages,
+                        ...advantages.args,
+                        ...args
+                    }).on(emt));
                 }
                 else {
 
