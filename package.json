@@ -1,6 +1,6 @@
 {
   "name": "air-m2",
-  "version": "0.4.20",
+  "version": "0.4.21",
   "description": "",
   "main": "/src/index.js",
   "scripts": {
