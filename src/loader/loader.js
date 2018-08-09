@@ -20,10 +20,9 @@ const schtypes = {
 
 let pid = 0;
 function transform( node, item = [] ) {
-    const schema = new Schema(JSON5.parse( node.getAttribute("data-m2") ) ).subscription( item ).toJSON();
+    const schema = new Schema(JSON5.parse( node.getAttribute("m2") ) ).subscription( item ).toJSON();
     const [name, { source, model = "", template = false, resources = [], handlers: hns = {}, ...props } = {}, ..._item ] = schema;
-
-    const md = typeof name == "string" ?
+    const md = typeof name === "string" ?
         model.replace("$name", name) :
         model.replace("$name", JSON.stringify(name));
 
@@ -34,7 +33,7 @@ function transform( node, item = [] ) {
         .map( ({ name, nodeValue }) => ({ name: name.replace(/^on/, ""), hn: new Function("event", "options", "action", "key", nodeValue) }) );
     handlers.map( ({name}) => node.removeAttribute("on" + name) );
     const m2data = [ name, { model: md, handlers, source, template, node, resources, ...props, pid } ];
-    node.setAttribute("data-m2", JSON.stringify([ name, { source, ...props } ]));
+    node.setAttribute("m2", JSON.stringify([ name, { source, ...props } ]));
     vertextes( node, m2data, _item );
     return m2data;
 }
@@ -43,8 +42,8 @@ function transform( node, item = [] ) {
 function vertextes(parent, exist = [], item) {
     return [...parent.children].reduce( (acc, node) => {
         if(node.tagName === "img") {
-            //const [ name, props = {} ] = JSON.parse(node.getAttribute("data-m2") || "[]");
-            node.setAttribute("data-m2", JSON.stringify([
+            //const [ name, props = {} ] = JSON.parse(node.getAttribute("m2") || "[]");
+            node.setAttribute("m2", JSON.stringify([
                 "*", { resources: [ {type: "img", url: node.getAttribute("src") } ]}])
             );
         }
@@ -54,7 +53,7 @@ function vertextes(parent, exist = [], item) {
             node.remove();
             return acc;
         }*/
-        if(node.getAttribute("data-m2")) {
+        if(node.getAttribute("m2")) {
             const m2data = transform(node, item);
 
             if(!m2data[1].template && exist[1].type !== "switcher") {

@@ -13,6 +13,24 @@ export function concatPath(...paths) {
     return paths.reduce( (acc, next) => next[0] === "." ? acc + next : next, "");
 }
 
+export function frommodule(module, _key = "main") {
+    return [ _key,
+        ...Object.keys(module).filter(key => key === "default").map( key => {
+            if (typeof module[key] === "function") {
+                return {source: module[key]};
+            }
+        }),
+        ...Object.keys(module).filter(key => key !== "default").map( key => {
+            if(typeof module[key] === "function") {
+                return [ key, { source: module[key] } ];
+            }
+            else if(typeof module[key] === "object") {
+                return frommodule(module[key], key);
+            }
+        })
+    ];
+}
+
 export function forEachFromData(func) {
     return ({data, ...args}) => ({
         data: data.map( data => func({data, ...args}) ),

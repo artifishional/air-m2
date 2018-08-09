@@ -1,5 +1,5 @@
 import {Observable, stream} from "air-stream"
-import {routeNormalizer, schemasNormalizer} from "../utils/index"
+import {routeNormalizer, schemasNormalizer, frommodule} from "../utils/index"
 
 export default class Advantages {
 
@@ -71,7 +71,10 @@ export default class Advantages {
                 this._stream = new Observable((emt) => {
                     return this.loader.obtain(this).at(({module, advantages}) => {
                         /*locked cache*/this.stream.on( () => {} );
-                        const exist = module[this.source.name || "default"];
+                        let exist = module[this.source.name || "default"];
+                        if(!Array.isArray(exist) && typeof exist === "object") {
+                            exist = frommodule(exist);
+                        }
                         if (Array.isArray(exist)) {
                             const [, {source, ...args}, ...advs] = schemasNormalizer(exist);
                             source && (advantages.source = source);
