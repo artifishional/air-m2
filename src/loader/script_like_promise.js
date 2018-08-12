@@ -1,5 +1,5 @@
 export default function ({path}) {
-    if(path.indexOf(".json") < 0) {
+    if(/.\.js$/g.test(path)) {
         return new Promise((resolve, reject) => {
             const script = document.createElement("script");
             script.src = path;
@@ -8,18 +8,32 @@ export default function ({path}) {
             document.head.appendChild(script);
         });
     }
-    else {
+    else if(/.\.json$/g.test(path)) {
         return new Promise((resolve, reject) => {
-            const xml = new XMLHttpRequest();
-            xml.open("GET", path, true);
-            xml.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xml.setRequestHeader('Content-type', 'application/json; charset=utf-8');
-            xml.onreadystatechange = function () {
-                if (xml.readyState === 4) {
-                    resolve( {module: {default: JSON.parse(xml.responseText)}} );
-                }
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", path, true);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');
+            xhr.onload = () => {
+                resolve( {module: {default: JSON.parse(xhr.responseText)}} );
             };
-            xml.send();
+            xhr.send();
+        });
+    }
+    else if (/.\.html$/g.test(path)) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", path, true);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.setRequestHeader('Content-type', 'text/html; charset=utf-8');
+            xhr.onload = () => {
+                const doc = new DOMParser().parseFromString(xhr.responseText, "text/html");
+                const err = doc.querySelector("parsererror");
+                if(err) throw `${path} parser error: ${err.innerText}`;
+                const res = transform(doc.querySelector("body").children[0]);
+                resolve( {module: {default: res}} );
+            };
+            xhr.send();
         });
     }
 }

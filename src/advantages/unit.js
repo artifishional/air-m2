@@ -11,13 +11,11 @@ export default class Unit extends Advantages {
         factory = Factory.default,
         pack,
         schema: _schema,
-        maintainer
     }) {
         const schema = schemasNormalizer(_schema);
         const [, {source}] = schema;
         super({
             pack,
-            maintainer,
             factory,
             parent,
             schema,

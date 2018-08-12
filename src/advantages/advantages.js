@@ -1,5 +1,5 @@
 import {Observable, stream} from "air-stream"
-import {routeNormalizer, schemasNormalizer} from "../utils/index"
+import {routeNormalizer, schemasNormalizer, frommodule} from "../utils/index"
 
 export default class Advantages {
 
@@ -7,31 +7,24 @@ export default class Advantages {
         parent,
         factory,
         loader,
-        maintainer,
         pack = {path: "./"},
         schema: [key, {id = "", sign = Advantages.sign, source = {}, ...args}, ...advs]
     }) {
         this.pack = { path: source && source.hasOwnProperty("path") ?
-            source.path
-                .replace(".json", "")
-                .replace(".js", "")
-                .replace("./", "") + "/" :
-            pack.path
+            source.path + "/" : pack.path
         };
         this.id = `#${id}`;
         this.key = key;
         this.factory = factory;
         this.sign = sign;
-        this.maintainer = maintainer;
         this.loader = loader;
         this.source = source;
         this.parent = parent;
         this.item = advs
-            .map(schema => factory.create({pack: this.pack, maintainer, factory, parent: this, schema, loader}));
+            .map(schema => factory.create({pack: this.pack, factory, parent: this, schema, loader}));
         this.args = args;
         this.static = !source.hasOwnProperty("path");
         this.linkers = [];
-        this.cache = [];
         this._stream = null;
     }
 
@@ -56,11 +49,11 @@ export default class Advantages {
      * @param args
      */
     obtain(route = "", args) {
-        return this._obtain({route: routeNormalizer(route), ...args});
+        return this._obtain({...routeNormalizer(route), ...args});
     }
 
     get(route = "") {
-        return this._get({route: routeNormalizer(route)});
+        return this._get(routeNormalizer(route));
     }
 
     get stream() {
@@ -75,7 +68,10 @@ export default class Advantages {
                 this._stream = new Observable((emt) => {
                     return this.loader.obtain(this).at(({module, advantages}) => {
                         /*locked cache*/this.stream.on( () => {} );
-                        const exist = module[this.source.name || "default"];
+                        let exist = module[this.source.name || "default"];
+                        if(!Array.isArray(exist) && typeof exist === "object") {
+                            exist = frommodule(exist);
+                        }
                         if (Array.isArray(exist)) {
                             const [, {source, ...args}, ...advs] = schemasNormalizer(exist);
                             source && (advantages.source = source);
@@ -84,7 +80,6 @@ export default class Advantages {
                             advantages.item.push(...advs.map(schema =>
                                 factory.create({
                                     pack: advantages.pack,
-                                    maintainer: advantages.maintainer,
                                     factory,
                                     parent: advantages,
                                     schema,
@@ -134,7 +129,11 @@ export default class Advantages {
     }
 
     _obtain({route, ...args}) {
-        return this.maintainer(this._get( {route} ), args);
+        return stream( (emt, { over, sweep }) =>
+            sweep.add(this._get( {route} ).at((evt, src) => {
+                over.add(evt.advantages.maintainer(this._get( {route} ), args).on(emt));
+            }))
+        );
     }
 
     toSCHEMA() {
