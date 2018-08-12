@@ -3,17 +3,13 @@ import Container from "../advantages/container"
 
 export default class Factory {
 
+    constructor({ Creator }) {
+        this.Creator = Creator;
+    }
+
     create(options) {
         const {schema: [, {type}] } = options;
-        if(!type) {
-            return new Advantages( options );
-        }
-        else if(type === "container") {
-            return new Container( options );
-        }
-        else {
-            throw `unknown type '${type}'`
-        }
+        return new this.Creator( options );
     }
 
 }

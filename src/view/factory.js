@@ -2,22 +2,15 @@ import Advantages from "../advantages/advantages";
 
 export default class Factory {
 
-    constructor( viewbuilder ) {
+    constructor( { viewbuilder, Creator } ) {
         this.viewbuilder = viewbuilder;
+        this.Creator = Creator;
     }
 
     create(options) {
         const { viewbuilder } = this;
         const {schema: [, {type}] } = options;
-        if(!type) {
-            return new Advantages( { ...options, viewbuilder } );
-        }
-        else if(type === "switcher") {
-            return new Advantages( { ...options, viewbuilder } );
-        }
-        else {
-            throw `unknown type '${type}'`
-        }
+        return new this.Creator( { ...options, viewbuilder } );
     }
 
 }

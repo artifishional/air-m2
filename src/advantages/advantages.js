@@ -7,7 +7,6 @@ export default class Advantages {
         parent,
         factory,
         loader,
-        maintainer,
         pack = {path: "./"},
         schema: [key, {id = "", sign = Advantages.sign, source = {}, ...args}, ...advs]
     }) {
@@ -18,16 +17,14 @@ export default class Advantages {
         this.key = key;
         this.factory = factory;
         this.sign = sign;
-        this.maintainer = maintainer;
         this.loader = loader;
         this.source = source;
         this.parent = parent;
         this.item = advs
-            .map(schema => factory.create({pack: this.pack, maintainer, factory, parent: this, schema, loader}));
+            .map(schema => factory.create({pack: this.pack, factory, parent: this, schema, loader}));
         this.args = args;
         this.static = !source.hasOwnProperty("path");
         this.linkers = [];
-        this.cache = [];
         this._stream = null;
     }
 
@@ -83,7 +80,6 @@ export default class Advantages {
                             advantages.item.push(...advs.map(schema =>
                                 factory.create({
                                     pack: advantages.pack,
-                                    maintainer: advantages.maintainer,
                                     factory,
                                     parent: advantages,
                                     schema,
@@ -133,7 +129,11 @@ export default class Advantages {
     }
 
     _obtain({route, ...args}) {
-        return this.maintainer(this._get( {route} ), args);
+        return stream( (emt, { over, sweep }) =>
+            sweep.add(this._get( {route} ).at((evt, src) => {
+                over.add(evt.advantages.maintainer(this._get( {route} ), args).on(emt));
+            }))
+        );
     }
 
     toSCHEMA() {

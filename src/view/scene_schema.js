@@ -4,30 +4,25 @@ import sceneswitch from "./switch"
 import Factory from "./factory"
 import Unit from "../advantages/unit"
 
-export default class SceneSchema extends Unit {
+export default class Creator extends Unit {
 
     constructor({
         viewbuilder,
-        maintainer = SceneSchema.maintainer,
-        factory = new Factory( { viewbuilder } ),
+        factory = new Factory( { viewbuilder, Creator } ),
         ...args
     }) {
-        super({
-            maintainer: (scenesstream, { modelschema, ...argv }) =>
-                maintainer( scenesstream, { modelschema, viewbuilder, ...argv } ),
-            factory,
-            ...args
-        });
+        super({ factory, ...args });
+        this.viewbuilder = viewbuilder;
     }
 
-    static maintainer(scenesstream, { modelschema: modelstream, viewbuilder, ...argv }) {
+    maintainer(scenesstream, { modelschema: modelstream, viewbuilder, ...argv }) {
         return stream((emt, {over}) =>
             over.add(scenesstream.at(({advantages: { args: { type = "node" } } }) => {
                 if (type === "node") {
-                    over.add(scenenode( scenesstream, { modelstream, viewbuilder, ...argv } ).on( emt ));
+                    over.add(scenenode( scenesstream, { modelstream, viewbuilder: this.viewbuilder, ...argv } ).on( emt ));
                 }
                 else if (type === "switcher") {
-                    over.add(sceneswitch( scenesstream, { modelstream, viewbuilder, ...argv } ).on( emt ));
+                    over.add(sceneswitch( scenesstream, { modelstream, viewbuilder: this.viewbuilder, ...argv } ).on( emt ));
                 }
             }))
         );
