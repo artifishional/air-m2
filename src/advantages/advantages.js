@@ -1,6 +1,8 @@
 import {Observable, stream} from "air-stream"
 import {routeNormalizer, schemasNormalizer, frommodule} from "../utils/index"
 
+let uid = 0;
+
 export default class Advantages {
 
     constructor({
@@ -14,6 +16,7 @@ export default class Advantages {
             source.path + "/" : pack.path
         };
         this.id = `#${id}`;
+        this.uid = uid++;
         this.key = key;
         this.factory = factory;
         this.sign = sign;
@@ -138,6 +141,7 @@ export default class Advantages {
 
     toSCHEMA() {
         return [this.key, {
+            id: this.uid,
             linkers: this.linkers,
             source: this.source, ...this.args
         }, ...this.item.map(ch => ch.toSCHEMA())];
