@@ -1,5 +1,5 @@
 import Unit from "../advantages/unit"
-import {stream} from "air-stream"
+import {stream, Observable} from "air-stream"
 import Factory from "./factory"
 
 function equal( sign, elem ) {
@@ -41,12 +41,14 @@ export default class Creator extends Unit {
                     linkers = advantages.linkers;
 
                     if(typeof advantages.source === "function") {
-                        over.add(advantages.source({
+                        const stream = advantages.source({
                             obtain: (route, args) => advantages.obtain(route, { __memory: "unit", ...args }),
                             advantages,
                             ...advantages.args,
                             ...args
-                        }).on(emt));
+                        });
+                        /*@*/if(!(stream instanceof Observable)) throw "return value of unit must be a function:\n" + advantages.source;/*/@*/
+                        over.add(stream.on(emt));
                     }
                     else {
 
