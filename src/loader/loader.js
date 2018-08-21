@@ -44,8 +44,8 @@ function vertextes(parent, exist = [], item) {
         if(node.tagName === "img") {
             //const [ name, props = {} ] = JSON.parse(node.getAttribute("m2") || "[]");
             node.setAttribute("m2", JSON.stringify([
-                "*", { resources: [ {type: "img", url: node.getAttribute("src") } ]}])
-            );
+                "*", { resources: [ {type: "img", url: node.getAttribute("src") } ]}
+            ]));
         }
         /*
         if(node.tagName === "link" && node.getAttribute("rel") === "stylesheet") {

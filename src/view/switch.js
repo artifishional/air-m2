@@ -62,7 +62,7 @@ export default (scenesstream, { modelstream, viewbuilder }) =>
     stream( (emt, { sweep }) => {
 
         sweep.add(scenesstream.at( ({ advantages: {key, args: { frames = [], ...args }} }) => {
-            
+
             const child = viewbuilder({key, ...args});
 
             const reactions = frames.filter(([name]) => !["fade-in", "fade-out"].includes(name));
@@ -131,7 +131,11 @@ export default (scenesstream, { modelstream, viewbuilder }) =>
                             requirestate = null;
                         }
                         requirestate = stream;
-                        sweep.add(requirestatehook = requirestate.at( ({...args}) => handle({ ...args, key, stream }) ));
+                        sweep.add(requirestatehook = requirestate.at( ({...args}) => {
+                            //fixme temporary solution controller problem
+                            const id = setTimeout( () => handle({ ...args, key, stream }) );
+                            sweep.add(() => clearTimeout(id));
+                        } ));
                     }
                 }
             } ));

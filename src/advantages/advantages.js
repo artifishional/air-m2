@@ -78,6 +78,8 @@ export default class Advantages {
                         if (Array.isArray(exist)) {
                             const [, {source, ...args}, ...advs] = schemasNormalizer(exist);
                             source && (advantages.source = source);
+                            //fixme hack pid overwriten
+                            args.pid = advantages.args.pid || args.pid;
                             advantages.args = args;
                             const {factory, loader} = advantages;
                             advantages.item.push(...advs.map(schema =>
