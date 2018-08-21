@@ -17,8 +17,12 @@ export default class Creator extends Unit {
 
     maintainer(scenesstream, { modelschema: modelstream, viewbuilder, ...argv }) {
         return stream((emt, {over}) =>
-            over.add(scenesstream.at(({advantages: { args: { type = "node" } } }) => {
-                if (type === "node") {
+            over.add(scenesstream.at((view) => {
+                const {advantages: { args: { type = "node" } } } = view;
+                if (type === "custom") {
+                    over.add(view.source( scenesstream, { modelstream, ...argv } ).on( emt ));
+                }
+                else if (type === "node") {
                     over.add(scenenode( scenesstream, { modelstream, viewbuilder: this.viewbuilder, ...argv } ).on( emt ));
                 }
                 else if (type === "switcher") {
