@@ -1,4 +1,4 @@
-# m2-air
+# air-m2
 
 ## Plugging
 
