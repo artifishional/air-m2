@@ -55,7 +55,7 @@ export default ( { /*...args*/ } ) =>
     })
 ```
 , where 
-- stream - air-m2 object "stream"
+- stream - ["air-stream"](artifishional/air-m2) object "stream"
 
 or an existing converted stream
 
