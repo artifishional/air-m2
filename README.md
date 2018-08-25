@@ -39,3 +39,49 @@ the simplest template component has the form:
 </div>
 
 ```
+
+## Model unit
+
+each model is a function that returns a stream:
+
+it is a new stream
+
+```js
+import { stream } from "m2"
+
+export default ( { /*...args*/ } ) => 
+    stream(emt => {
+        emt( "something" );
+    })
+```
+, where 
+- stream - ["air-stream"](https://github.com/artifishional/air-stream) object "stream"
+
+or an existing converted stream
+
+```js
+import { stream } from "m2"
+
+export default ( { obtain, /*...args*/ } ) => 
+    obtain("../some/existing-stream/path")
+    .map( count => count + 1 )
+    .controller( 
+        obtain("../some/existing-stream-controller/path"),
+        ({action}) => ({ action, data: "ok" })
+    )
+```
+
+, where 
+- obtain - method of accessing an existing model from the schema
+- args - init options that were specified when accessing the stream
+
+can be specified in the "obtain" method
+
+```js
+obtain("", { argv: 10 })
+```
+
+or right on the path 
+```js
+obtain("./path[argv=10]")
+```
