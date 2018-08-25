@@ -22,3 +22,20 @@ export default () => stream((emt, { hook }) => {
 
 });
 ```
+
+## Template engine
+
+the simplest template component has the form:
+
+```html
+
+<div m2 = '["component-name", { frames: [ [ "update-action-name" ] ] }]'>
+
+    <!-- ...other static content ...-->
+    
+    <span>${argv}</span>
+    <span>static text ${argv.name}</span>
+
+</div>
+
+```
