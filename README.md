@@ -78,7 +78,7 @@ export default ( { obtain, /*...args*/ } ) =>
 can be specified in the "obtain" method
 
 ```js
-obtain("", { argv: 10 })
+obtain("./path", { argv: 10 })
 ```
 
 or right on the path 
