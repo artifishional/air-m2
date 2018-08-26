@@ -25,11 +25,10 @@ export default () => stream((emt, { hook }) => {
 
 ## Template engine
 
-the simplest template component has the form:
+#### Templates definition
 
 ```html
-
-<div m2 = '["component-name", { frames: [ [ "update-action-name" ] ] }]'>
+<div m2 = '["name"]'>
 
     <!-- ...other static content ...-->
     
@@ -37,8 +36,46 @@ the simplest template component has the form:
     <span>static text ${argv.name}</span>
 
 </div>
-
 ```
+
+#### Actions definition
+
+```js
+/*<div m2 = '["name", */
+{ frames: [
+    [ "action-name", { duration: 1/*sec*/ }, 
+       //key-frames 
+       [0/*%*/, { rotate: 10/*deg*/ }],
+       [50, { rotate: 20 }],
+       [100, { rotate: 360 }]
+     ],
+    /*...*/
+]}
+/*]'></div>*/
+```
+
+#### Reactions definition
+
+```js
+/*<div m2 = '["name", */
+{ handlers: {
+    onclick: "action({ key, event, options })" 
+}}
+/*]'></div>*/
+```
+
+where
+- action - stream fallback method
+- key - view-component name
+- options - current view-component options
+- event - system event data
+
+###### List of supported events
+
+- ``` "onclick" ```
+- ``` "onpointermove" ```
+- ``` "onpointerenter" ```
+- ``` "onpointerleave" ```
 
 ## Model unit
 
