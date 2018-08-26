@@ -122,3 +122,17 @@ or right on the path
 ```js
 obtain("./path[argv=10]")
 ```
+
+## Paths
+
+the simplest path has the form:
+
+``` "./cat-a/cat-b/cat-c" ```
+
+###### Supported options
+- ``` "./cat-a" ``` - entry to the directory
+- ``` "./" ``` - current directory
+- ``` "../" ``` - parent directory
+- ``` "./{name: abc, kind: 10}" ``` - directories with a complex name
+- ``` "./cat-a[kind=10]" ``` - passing arguments
+- ``` "./#component-id" ``` - search by id
