@@ -40,6 +40,29 @@ the simplest template component has the form:
 
 ```
 
+#### Reactions definition
+
+```js
+/*<div m2 = '["name", */
+{ handlers: {
+    onclick: "action({ key, event, options })" 
+}}
+/*]'></div>*/
+```
+
+where
+- action - stream fallback method
+- key - view-component name
+- options - current view-component options
+- event - system event data
+
+###### List of supported events
+
+- ``` "onclick" ```
+- ``` "onpointermove" ```
+- ``` "onpointerenter" ```
+- ``` "onpointerleave" ```
+
 ## Model unit
 
 each model is a function that returns a stream:
