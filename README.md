@@ -23,7 +23,7 @@ export default () => stream((emt, { hook }) => {
 });
 ```
 
-## Template engine
+## View engine
 
 #### Templates definition
 
@@ -76,6 +76,36 @@ where
 - ``` "onpointermove" ```
 - ``` "onpointerenter" ```
 - ``` "onpointerleave" ```
+
+#### Coupling with model
+
+you can link your view to the model to get actions and process reactions
+
+```js
+/*<div m2 = '["aurora", */
+{ model: "./path/to/model[key=aurora]" }
+/*]'></div>*/
+```
+any relative path will be calculated relative to the parent view, which is related to the model.
+
+you can use the constant ``` $name ``` as a parameter to pass the current name of the view to the model
+
+```js
+/*<div m2 = '["aurora", */
+{ model: "./path/to/model[key=$name]" }
+/*]'></div>*/
+```
+
+#### Submodules
+
+you can use the included submodules
+
+```html
+<div m2 = '[ "submodule", { source: { path: "./m2unit/submodule_path" } } ]' > </div>
+```
+
+,where 
+ - ``` path ``` - path to the module defined in m2units
 
 ## Model unit
 
