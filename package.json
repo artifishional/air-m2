@@ -10,9 +10,9 @@
   },
   "dependencies": {
     "air-gsap": "^0.2.4",
-    "air-stream": "^0.5.14",
+    "air-stream": "^0.5.21",
     "fontfaceobserver": "^2.0.13",
-    "json5": "^1.0.1"
+    "json5": "^2.0.1"
   },
   "repository": {
     "type": "git",
