@@ -159,7 +159,7 @@ the simplest path has the form:
 
 ``` "./cat-a/cat-b/cat-c" ```
 
-###### Supported options
+###### Supported features
 - ``` "./cat-a" ``` - entry to the directory
 - ``` "./" ``` - current directory
 - ``` "../" ``` - parent directory
