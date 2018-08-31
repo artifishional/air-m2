@@ -1,6 +1,6 @@
 {
   "name": "air-m2",
-  "version": "0.5.5",
+  "version": "0.5.7",
   "description": "",
   "main": "/src/index.js",
   "scripts": {
@@ -10,9 +10,10 @@
   },
   "dependencies": {
     "air-gsap": "^0.2.4",
-    "air-stream": "^0.5.14",
+    "air-stream": "^0.5.21",
     "fontfaceobserver": "^2.0.13",
-    "json5": "^1.0.1"
+    "howler": "^2.0.15",
+    "json5": "^2.0.1"
   },
   "repository": {
     "type": "git",
