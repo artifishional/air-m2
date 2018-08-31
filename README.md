@@ -54,6 +54,58 @@ export default () => stream((emt, { hook }) => {
 /*]'></div>*/
 ```
 
+##### Sound controls
+
+you can use sounds in frames
+
+```js
+/*<div m2 = '["name", */
+{ frames: [
+    [ "action-name", { duration: -1/*immediately*/, sound: "my-sound" }, ],
+    /*...*/
+]}
+/*]'></div>*/
+```
+
+or
+
+```js
+/*<div m2 = '["name", */
+{ frames: [
+    [ "action-name", { duration: 1 }, 
+       [50, { sound: "my-sound" }],
+       [100, { sound: "my-sound2" }]
+     ],
+    /*...*/
+]}
+/*]'></div>*/
+```
+
+, where 
+- ```sound``` - file name without extension from the directory ``` component/res/sounds ```
+
+if you want to use the general sounds for components, you can go up the nesting levels
+
+```sound: "../../my-sound"```
+
+
+if you are going to transfer the name of the sound from the model, you must specify it in the resources used
+
+```js
+/*<div m2 = '["name", */
+{ 
+    resources: [ { type: "sound", rel: "my-sound", name: "alias-name" } ]
+    frames: [ [ "action-name" ] ]
+}
+/*]'></div>*/
+```
+
+, where 
+- ```rel``` - file name without extension from the directory ``` component/res/sounds ```
+- ```name``` - name to be transferred from the model, to example:
+
+``` [ "action-name", { sound: "alias-name" } ] ```
+
 #### Reactions definition
 
 ```js
