@@ -19,12 +19,16 @@ const schtypes = {
 };
 
 let pid = 0;
-function transform( node, item = [] ) {
+function transform( node, item = [], _path ) {
     const schema = new Schema(JSON5.parse( node.getAttribute("m2") ) ).subscription( item ).toJSON();
-    const [name, { source, model = "", template = false, resources = [], handlers: hns = {}, ...props } = {}, ..._item ] = schema;
+    const [name, { source, frames, model = "", template = false, resources: res = [], handlers: hns = {}, ...props } = {}, ..._item ] = schema;
     const md = typeof name === "string" ?
         model.replace("$name", name) :
         model.replace("$name", JSON.stringify(name));
+
+    const resources = frames && frames.reduce((acc, [name, { sound } = {}]) => {
+        return sound ? [...acc, { type: "sound", rel: `${sound}`, name: sound }] : acc
+    }, res) || res;
 
     pid++;
     const handlers = [...node.attributes, ...Object.keys(hns).map( name => ({ name, value: 1, nodeValue: hns[name] }) )]
@@ -32,14 +36,14 @@ function transform( node, item = [] ) {
         .filter(({value}) => value )
         .map( ({ name, nodeValue }) => ({ name: name.replace(/^on/, ""), hn: new Function("event", "options", "action", "key", nodeValue) }) );
     handlers.map( ({name}) => node.removeAttribute("on" + name) );
-    const m2data = [ name, { model: md, handlers, source, template, node, resources, ...props, pid } ];
+    const m2data = [ name, { model: md, frames, handlers, source, template, node, resources, ...props, pid } ];
     node.setAttribute("m2", JSON.stringify([ name, { source, ...props } ]));
-    vertextes( node, m2data, _item );
+    vertextes( node, m2data, _item, _path );
     return m2data;
 }
 
 //todo need refactor
-function vertextes(parent, exist = [], item) {
+function vertextes(parent, exist = [], item, _path) {
     return [...parent.children].reduce( (acc, node) => {
         if(node.tagName === "img") {
             //const [ name, props = {} ] = JSON.parse(node.getAttribute("m2") || "[]");
@@ -54,7 +58,7 @@ function vertextes(parent, exist = [], item) {
             return acc;
         }*/
         if(node.getAttribute("m2")) {
-            const m2data = transform(node, item);
+            const m2data = transform(node, item, _path);
 
             if(!m2data[1].template && exist[1].type !== "switcher") {
                 const placer = document.createElement("div");
@@ -65,7 +69,7 @@ function vertextes(parent, exist = [], item) {
             acc.push( m2data );
         }
         else {
-            vertextes(node, exist, item);
+            vertextes(node, exist, item, _path);
         }
         return acc;
     }, exist);
@@ -92,7 +96,7 @@ export default class Loader {
                 module = combine( [
                     html({path: `${this.rpath}${path}`}),
                     description && json({path: this.rpath + _path + "/description.json"}) || stream( emt => emt( { content: [ "N/A" ] } ) ),
-                ], (html, desc) => ({module: {default: transform(html.content, [ desc.content ]) }, advantages} ));
+                ], (html, desc) => ({module: {default: transform(html.content, [ desc.content ], _path) }, advantages} ));
             }
             else {
                 module = new Observable( emt => {
