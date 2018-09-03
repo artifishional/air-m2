@@ -21,7 +21,16 @@ const statesstream = ( scenesstream, { modelstream } ) =>
 
                         emt( { stream: loaderstream, key: "loader" } );
 
-                        sweep.add(modelschema.obtain(model).at( ( { action, key } ) => {
+                        sweep.add(modelschema.obtain(model).at( ( data ) => {
+
+                            let action, key;
+
+                            if(Array.isArray(data)) {
+                                [ action, { key } ] = data;
+                            }
+                            else {
+                                ({ action, key } = data);
+                            }
 
                             if(action === "change" && curstate !== key) {
 
