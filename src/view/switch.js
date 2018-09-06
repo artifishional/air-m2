@@ -30,8 +30,10 @@ const statesstream = ( scenesstream, { modelstream } ) =>
                             }
                             else {
                                 ({ action, key } = data);
+                                if(Array.isArray(action)) {
+                                    [action, { key} ] = action;
+                                }
                             }
-
                             if(action === "change" && curstate !== key) {
 
                                 clearTimeout(loadertimeout);
