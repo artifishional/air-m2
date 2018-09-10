@@ -3,7 +3,7 @@ import loader from "../loader/resources"
 import { animate } from "air-gsap"
 import { prop } from "../functional"
 
-export default (scenesstream, { modelstream, viewbuilder, ...argv }) =>
+export default (scenesstream, { modelstream, viewbuilder, baseresources = [], ...argv }) =>
 
     stream( (emt, { sweep, over }) => {
 
@@ -17,16 +17,25 @@ export default (scenesstream, { modelstream, viewbuilder, ...argv }) =>
                     item
                 } = sceneschema;
 
-                const modelstream = model && modelschema.obtain(model) || null;
+                const modelstream = model && combine([
+                    modelschema.obtain(model),
+                    modelschema.obtain("#language"),
+                    modelschema.obtain("#currency"),
+                ], (data, language, currency) => {
+                    if(typeof data === "object" && !Array.isArray(data)) {
+                        return { ...data, intl: { currency, language } };
+                    }
+                    else {
+                        return data;
+                    }
+                }) || null;
 
                 sweep.add(
-                    combine([ loader(pack, resources), model && modelstream.first() ].filter(Boolean)
+                    combine([ loader(pack, resources), model && modelstream.ready() ].filter(Boolean)
                 ).at(([resources]) => {
 
-                    const view = viewbuilder(
-                        { key, resources, ...args, ...argv },
-                        modelstream
-                    );
+                    resources = [...resources, ...baseresources].filter(({type}) => type !== "none");
+                    const view = viewbuilder( { key, resources, ...args, ...argv }, modelstream );
 
                     const reactions = frames.filter(([name]) => !["fade-in", "fade-out"].includes(name));
                     if (reactions.length) {
@@ -43,12 +52,14 @@ export default (scenesstream, { modelstream, viewbuilder, ...argv }) =>
                         .map(({key, args: { use, pid } }) => {
                             if(use) {
                                 return sceneschema.obtain(use, {
+                                    baseresources: resources,
                                     modelschema: modelschema.get(model),
                                     pid
                                 })
                             }
                             else {
                                 return sceneschema._obtain({
+                                    baseresources: resources,
                                     route: [key],
                                     modelschema: modelschema.get(model),
                                     pid

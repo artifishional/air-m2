@@ -41,6 +41,7 @@ const statesstream = ( scenesstream, { modelstream } ) =>
 
                                 requirestatehook && sweep.force( requirestatehook );
                                 requirestatestream = sceneschema._obtain( {
+                                    baseresources,
                                     route: [ key ],
                                     modelschema: modelschema.get(model + childrenmodel),
                                 } );
@@ -68,7 +69,7 @@ const statesstream = ( scenesstream, { modelstream } ) =>
     } );
 
 
-export default (scenesstream, { modelstream, viewbuilder }) =>
+export default (scenesstream, { modelstream, viewbuilder, baseresources }) =>
 
     stream( (emt, { sweep }) => {
 
@@ -125,7 +126,7 @@ export default (scenesstream, { modelstream, viewbuilder }) =>
                 }
             }
 
-            sweep.add(statesstream( scenesstream, { modelstream } ).at( ({ stream, key }) => {
+            sweep.add(statesstream( scenesstream, { modelstream, baseresources } ).at( ({ stream, key }) => {
                 if( curstate === stream ) {
                     if(stage === "fade-out") {
                         stage = "idle";
