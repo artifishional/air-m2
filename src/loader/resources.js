@@ -5,6 +5,7 @@ import Sound from "./sound"
 import ObservableImage from "./image"
 import ObservableStyle from "./style"
 import Languages from "./languages"
+import Internalization from "./intl"
 
 export default function ({path}, resources) {
     return Observable.combine( [ ...resources.map( ({type, rel, url, ...args}) => {
@@ -20,6 +21,9 @@ export default function ({path}, resources) {
         }
         else if(type === "style") {
             return ObservableStyle({url: `./m2units/${path}${url}`, ...args})
+        }
+        else if(type === "intl") {
+            return Internalization({url: `./m2units/${path}${url}`, ...args})
         }
         else if(type === "languages") {
             return Languages({url: `./m2units/${path}${url}`, ...args})
