@@ -1,6 +1,6 @@
 import { stream, combine } from "air-stream"
 
-const statesstream = ( scenesstream, { modelstream } ) =>
+const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
 
     stream( (emt, { sweep }) => {
 
