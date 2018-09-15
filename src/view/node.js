@@ -17,13 +17,13 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources = [], ..
                     item
                 } = sceneschema;
 
-                const modelstream = model && combine([
+                const modelstream = modelschema && combine([
                     modelschema.obtain(model),
-                    modelschema.obtain("#language"),
+                    modelschema.obtain("#locale"),
                     modelschema.obtain("#currency"),
-                ], (data, language, currency) => {
+                ], (data, locale, currency) => {
                     if(typeof data === "object" && !Array.isArray(data)) {
-                        return { ...data, intl: { currency, language } };
+                        return { ...data, intl: { currency, locale } };
                     }
                     else {
                         return data;
@@ -34,11 +34,12 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources = [], ..
                     combine([ loader(pack, resources), model && modelstream.ready() ].filter(Boolean)
                 ).at(([resources]) => {
 
-                    resources = [...resources, ...baseresources].filter(({type}) => type !== "none");
+                    resources = resources.length ? [...resources, ...baseresources] : baseresources;
+
                     const view = viewbuilder( { key, resources, ...args, ...argv }, modelstream );
 
                     const reactions = frames.filter(([name]) => !["fade-in", "fade-out"].includes(name));
-                    if (reactions.length) {
+                    if (modelschema) {
                         const hook = animate(view, ["frames", ...reactions], key).on(() => { });
                         sweep.add(hook);
                         sweep.add(modelstream.at(hook));

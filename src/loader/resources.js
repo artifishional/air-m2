@@ -1,5 +1,4 @@
-import {Observable} from "air-stream"
-//import ObservableTexture from "./observable_texture"
+import { stream, combine } from "air-stream"
 import ObservableFont from "./font"
 import Sound from "./sound"
 import ObservableImage from "./image"
@@ -8,7 +7,7 @@ import Languages from "./languages"
 import Internalization from "./intl"
 
 export default function ({path}, resources) {
-    return Observable.combine( [ ...resources.map( ({type, rel, url, ...args}) => {
+    return combine( [ ...resources.map( ({type, rel, url, ...args}) => {
         if(type === "texture") {
             throw "unsupported in current version"
             //return new ObservableTexture({url: `./m2units/${path}${url}` })
@@ -22,7 +21,7 @@ export default function ({path}, resources) {
         else if(type === "style") {
             return ObservableStyle({url: `./m2units/${path}${url}`, ...args})
         }
-        else if(type === "intl") {
+        else if(type === "formatters") {
             return Internalization({url: `./m2units/${path}${url}`, ...args})
         }
         else if(type === "languages") {
@@ -41,6 +40,18 @@ export default function ({path}, resources) {
             throw "unsupported resource type";
         }
     } ),
-        new Observable(emt => emt({type: "none"}))
-    ] )
+        stream(emt => emt({type: "none"}))
+    ], (...res) => res.reduce( (acc, next) => {
+        if(next.type === "none") { }
+        else if(next.type === "intl") {
+            acc.push(...next.content.slice(1).map( ([name, data]) => ({type: "intl", name, data}) ));
+        }
+        else if(next.type === "language") {
+            acc.push(...next.content.slice(1).map( ([name, data]) => ({type: "lang", name, data}) ));
+        }
+        else {
+            acc.push(next);
+        }
+        return acc;
+    }, []))
 }

@@ -27,16 +27,46 @@ export default () => stream((emt, { hook }) => {
 
 #### Templates definition
 
+data transmission from events
 ```html
-<div m2 = '["name"]'>
+<span>{argv}</span>
+``` 
 
-    <!-- ...other static content ...-->
-    
-    <span>${argv}</span>
-    <span>static text ${argv.name}</span>
+the event source must have the form
 
-</div>
+```js 
+{action: [ "name", { argv: "value" } ]}
 ```
+
+the data source can be an object with a nested structure
+
+```html
+<span>{argv.somefield.nested}</span>
+``` 
+
+```js 
+{action: [ "name", { argv: {somefield: {nested: "value"} } } ]}
+```
+
+formatting
+
+```html
+<span>{intl.formatter-resource-name,{argv}}</span>
+``` 
+
+,where ```{argv}``` - data transmission template
+
+the event source must have the form
+
+```js 
+{action: [ "name", { argv: 100 } ]}
+```
+
+localization
+
+```html
+<span>{lang.localization-string-resource-name}</span>
+``` 
 
 #### Actions definition
 
