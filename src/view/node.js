@@ -3,7 +3,7 @@ import loader from "../loader/resources"
 import { animate } from "air-gsap"
 import { prop } from "../functional"
 
-export default (scenesstream, { modelstream, viewbuilder, ...argv }) =>
+export default (scenesstream, { modelstream, viewbuilder, baseresources = [], ...argv }) =>
 
     stream( (emt, { sweep, over }) => {
 
@@ -17,19 +17,29 @@ export default (scenesstream, { modelstream, viewbuilder, ...argv }) =>
                     item
                 } = sceneschema;
 
-                const modelstream = model && modelschema.obtain(model) || null;
+                const modelstream = modelschema && combine([
+                    modelschema.obtain(model),
+                    modelschema.obtain("#locale"),
+                    modelschema.obtain("#currency"),
+                ], (data, locale, currency) => {
+                    if(typeof data === "object" && !Array.isArray(data)) {
+                        return { ...data, intl: { currency, locale } };
+                    }
+                    else {
+                        return data;
+                    }
+                }) || null;
 
                 sweep.add(
-                    combine([ loader(pack, resources), model && modelstream.first() ].filter(Boolean)
+                    combine([ loader(pack, resources), model && modelstream.ready() ].filter(Boolean)
                 ).at(([resources]) => {
 
-                    const view = viewbuilder(
-                        { key, resources, ...args, ...argv },
-                        modelstream
-                    );
+                    resources = resources.length ? [...resources, ...baseresources] : baseresources;
+
+                    const view = viewbuilder( { key, resources, ...args, ...argv }, modelstream );
 
                     const reactions = frames.filter(([name]) => !["fade-in", "fade-out"].includes(name));
-                    if (reactions.length) {
+                    if (modelschema) {
                         const hook = animate(view, ["frames", ...reactions], key).on(() => { });
                         sweep.add(hook);
                         sweep.add(modelstream.at(hook));
@@ -43,12 +53,14 @@ export default (scenesstream, { modelstream, viewbuilder, ...argv }) =>
                         .map(({key, args: { use, pid } }) => {
                             if(use) {
                                 return sceneschema.obtain(use, {
+                                    baseresources: resources,
                                     modelschema: modelschema.get(model),
                                     pid
                                 })
                             }
                             else {
                                 return sceneschema._obtain({
+                                    baseresources: resources,
                                     route: [key],
                                     modelschema: modelschema.get(model),
                                     pid

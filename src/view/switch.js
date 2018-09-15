@@ -1,6 +1,6 @@
 import { stream, combine } from "air-stream"
 
-const statesstream = ( scenesstream, { modelstream } ) =>
+const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
 
     stream( (emt, { sweep }) => {
 
@@ -21,8 +21,19 @@ const statesstream = ( scenesstream, { modelstream } ) =>
 
                         emt( { stream: loaderstream, key: "loader" } );
 
-                        sweep.add(modelschema.obtain(model).at( ( { action, key } ) => {
+                        sweep.add(modelschema.obtain(model).at( ( data ) => {
 
+                            let action, key;
+
+                            if(Array.isArray(data)) {
+                                [ action, { key } ] = data;
+                            }
+                            else {
+                                ({ action, key } = data);
+                                if(Array.isArray(action)) {
+                                    [action, { key} ] = action;
+                                }
+                            }
                             if(action === "change" && curstate !== key) {
 
                                 clearTimeout(loadertimeout);
@@ -30,6 +41,7 @@ const statesstream = ( scenesstream, { modelstream } ) =>
 
                                 requirestatehook && sweep.force( requirestatehook );
                                 requirestatestream = sceneschema._obtain( {
+                                    baseresources,
                                     route: [ key ],
                                     modelschema: modelschema.get(model + childrenmodel),
                                 } );
@@ -57,7 +69,7 @@ const statesstream = ( scenesstream, { modelstream } ) =>
     } );
 
 
-export default (scenesstream, { modelstream, viewbuilder }) =>
+export default (scenesstream, { modelstream, viewbuilder, baseresources }) =>
 
     stream( (emt, { sweep }) => {
 
@@ -114,7 +126,7 @@ export default (scenesstream, { modelstream, viewbuilder }) =>
                 }
             }
 
-            sweep.add(statesstream( scenesstream, { modelstream } ).at( ({ stream, key }) => {
+            sweep.add(statesstream( scenesstream, { modelstream, baseresources } ).at( ({ stream, key }) => {
                 if( curstate === stream ) {
                     if(stage === "fade-out") {
                         stage = "idle";
