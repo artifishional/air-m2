@@ -41,14 +41,15 @@ export default class Creator extends Unit {
                     linkers = advantages.linkers;
 
                     if(typeof advantages.source === "function") {
-                        const stream = advantages.source({
+                        const _stream = advantages.source({
+                            stream,
                             obtain: (route, args) => advantages.obtain(route, { __memory: "unit", ...args }),
                             advantages,
                             ...advantages.args,
                             ...args
                         });
-                        /*@*/if(!(stream instanceof Observable)) throw "return value of unit must be a function:\n" + advantages.source;/*/@*/
-                        over.add(stream.on(emt));
+                        /*@*/if(!(_stream instanceof Observable)) throw "return value of unit must be a function:\n" + advantages.source;/*/@*/
+                        over.add(_stream.on(emt));
                     }
                     else {
 
