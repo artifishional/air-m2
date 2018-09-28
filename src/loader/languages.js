@@ -1,7 +1,27 @@
 import stream from "./xhr"
 
-export default ({url}) => stream({path: url, content: { type: "application/json" }})
+export default ({url}) => stream({path: url, content: { type: "application/xml" }})
     .map( xhr => {
-        const json = JSON.parse(xhr.responseText);
-        return { type: "language", content: json };
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xhr.responseText, "application/xml");
+
+        const content = [ ...doc.querySelector("languages").children].reduce((acc, next) => {
+
+            const lang = next.tagName;
+
+            [ ...next.children ].map( string => {
+                const name = string.getAttribute("name");
+                let exist = acc.find( ([ x ]) => x === name );
+                if(!exist) {
+                    acc.push( exist = [ name, {} ] );
+                }
+                exist[1][lang] = string.textContent;
+            } );
+
+            return acc;
+
+        }, [ "languages" ]);
+
+        return { type: "language", content };
     } );
