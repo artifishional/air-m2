@@ -13,7 +13,7 @@ const mouseEvents = [
 ];
 
 const schtypes = {
-    "js": ".js",
+    "js": "/index.js",
     "json": "/index.json",
     "html": "/index.html",
 };
