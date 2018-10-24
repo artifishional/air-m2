@@ -42,13 +42,15 @@ function transform( node, item = [], _path ) {
     return m2data;
 }
 
+let imgcounter = 0;
+
 //todo need refactor
 function vertextes(parent, exist = [], item, _path) {
-    return [...parent.children].reduce( (acc, node) => {
-        if(node.tagName === "img") {
+    return [...parent.children].reduce( (acc, node, index) => {
+        if(node.tagName === "IMG") {
             //const [ name, props = {} ] = JSON.parse(node.getAttribute("m2") || "[]");
             node.setAttribute("m2", JSON.stringify([
-                "*", { resources: [ {type: "img", url: node.getAttribute("src") } ]}
+                `*${imgcounter++}`, { resources: [ {type: "img", url: node.getAttribute("src") } ]}
             ]));
         }
         /*
