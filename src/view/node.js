@@ -19,11 +19,10 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources = [], ..
 
                 const modelstream = modelschema && combine([
                     modelschema.obtain(model),
-                    modelschema.obtain("#locale"),
-                    modelschema.obtain("#currency"),
-                ], (data, locale, currency) => {
+                    modelschema.obtain("#intl"),
+                ], (data, intl) => {
                     if(typeof data === "object" && !Array.isArray(data)) {
-                        return { ...data, intl: { currency, locale } };
+                        return { ...data, intl };
                     }
                     else {
                         return data;
