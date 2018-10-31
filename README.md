@@ -25,7 +25,7 @@ export default () => stream((emt, { hook }) => {
 
 ## View engine
 
-###Simple
+### Simple
 
 #### Templates definition
 
@@ -161,7 +161,7 @@ where
 - ``` "onpointerenter" ```
 - ``` "onpointerleave" ```
 
-###Switcher
+### Switcher
 
 selects one view state available according to the model.
 
@@ -189,7 +189,7 @@ uses ``` #loader ``` state for preloading
 /*<div m2 = '["loader", { id: "loader" }]'></div>*/
 ```
 
-###Common features
+### Common features
 
 #### Coupling with model
 
