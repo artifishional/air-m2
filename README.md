@@ -25,6 +25,8 @@ export default () => stream((emt, { hook }) => {
 
 ## View engine
 
+###Simple
+
 #### Templates definition
 
 data transmission from events
@@ -158,6 +160,36 @@ where
 - ``` "onpointermove" ```
 - ``` "onpointerenter" ```
 - ``` "onpointerleave" ```
+
+###Switcher
+
+selects one view state available according to the model.
+
+```js
+/*<div m2 = '["name", */ { type: "switcher" } /*]'>
+    <div m2 = '["loader", { id: "loader" }]'></div>
+    <div m2 = '["state1"]'></div>
+    <div m2 = '["state2"]'></div>
+    <div m2 = '["state3"]'></div>
+</div>*/
+```
+
+supports only one default action: ```js "change" ```
+
+```js
+export default ( { /*...args*/ } ) => 
+    stream(emt => {
+        emt( {action: ["change", { key: "state1" }] } );
+    })
+```
+
+uses ``` #loader ``` state for preloading
+
+```js
+/*<div m2 = '["loader", { id: "loader" }]'></div>*/
+```
+
+###Common features
 
 #### Coupling with model
 
