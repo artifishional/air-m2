@@ -52,6 +52,7 @@ function vertextes(parent, exist = [], item, _path) {
             node.setAttribute("m2", JSON.stringify([
                 `*${imgcounter++}`, { resources: [ {type: "img", url: node.getAttribute("src") } ]}
             ]));
+            item = [];
         }
         /*
         if(node.tagName === "link" && node.getAttribute("rel") === "stylesheet") {
