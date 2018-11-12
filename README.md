@@ -157,6 +157,7 @@ where
 ###### List of supported events
 
 - ``` "onclick" ```
+- ``` "onclickoutside" (own event)```
 - ``` "onpointermove" ```
 - ``` "onpointerenter" ```
 - ``` "onpointerleave" ```

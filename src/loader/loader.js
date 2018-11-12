@@ -6,6 +6,7 @@ import { Schema } from "air-schema"
 import JSON5 from "json5"
 
 const mouseEvents = [
+    "onclickoutside",
     "onpointermove",
     "onclick",
     "onpointerenter",
