@@ -161,6 +161,10 @@ where
 - ``` "onpointermove" ```
 - ``` "onpointerenter" ```
 - ``` "onpointerleave" ```
+- ``` "onglobalkeydown" (own event)```
+- ``` "onglobalkeyup" (own event)```
+- ``` "onkeydown" ```
+- ``` "onkeyup" ```
 
 ### Switcher
 
