@@ -10,7 +10,11 @@ const mouseEvents = [
     "onpointermove",
     "onclick",
     "onpointerenter",
-    "onpointerleave"
+    "onpointerleave",
+    "onglobalkeydown",
+    "onglobalkeyup",
+    "onkeydown",
+    "onkeyup",
 ];
 
 const schtypes = {
