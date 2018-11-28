@@ -6,10 +6,15 @@ import { Schema } from "air-schema"
 import JSON5 from "json5"
 
 const mouseEvents = [
+    "onclickoutside",
     "onpointermove",
     "onclick",
     "onpointerenter",
-    "onpointerleave"
+    "onpointerleave",
+    "onglobalkeydown",
+    "onglobalkeyup",
+    "onkeydown",
+    "onkeyup",
 ];
 
 const schtypes = {
@@ -52,6 +57,7 @@ function vertextes(parent, exist = [], item, _path) {
             node.setAttribute("m2", JSON.stringify([
                 `*${imgcounter++}`, { resources: [ {type: "img", url: node.getAttribute("src") } ]}
             ]));
+            item = [];
         }
         /*
         if(node.tagName === "link" && node.getAttribute("rel") === "stylesheet") {
