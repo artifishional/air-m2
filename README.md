@@ -165,6 +165,7 @@ where
 - ``` "onglobalkeyup" (own event)```
 - ``` "onkeydown" ```
 - ``` "onkeyup" ```
+- ``` "onwheel" ```
 
 ### Switcher
 

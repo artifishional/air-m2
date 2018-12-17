@@ -15,6 +15,7 @@ const mouseEvents = [
     "onglobalkeyup",
     "onkeydown",
     "onkeyup",
+    "onwheel",
 ];
 
 const schtypes = {
