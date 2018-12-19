@@ -1,32 +1,16 @@
-<m2 template id = "cell" data = "{
-    chip: data.chips.find(({kind}) => kind === data.cell) || {sum: 0}
-}"></m2>
-
-<m2 data = "{ cell: key, ...data }" key = '{kind: "numbers", numbers: [28, 29]}' >
-
-    <m2 use = "#cell">
-
-        <g transform="translate(183.500000, 620.500000)">
-
-            <rect x = "-12" y = "14" width = "31" height = "31"></rect>
-            <m2
-                keyframes = "[ [ '*', [100, { css: { width: 1 } }] ] ]"
-                props = "{css: { display: data.sum ? '' : 'none' }}"
-            >
-                <g>
-                    <m2 props = "{ href: `#chip${data.stages[0]}` }">
-                        <use x = "-12" y = "16" width = "29" height = "29"></use>
-                    </m2>
-                    <text class="chip-value" transform="translate(2, 34)" text-anchor="middle" >
-                        <tspan class = "chip-text">
-                            <m2 props = "{text: data.sum}"></m2>
-                        </tspan>
-                    </text>
-                </g>
-            </m2>
-
+<unit dir = "./[key]" key = "[{kind: 'numbers', numbers: [7, 8, 10, 11]}]"><!--stream-map = ""-->
+    <g transform="translate(183.500000, 245.500000)">
+        <rect x = "-12" y = "-12" width = "31" height = "31"></rect>
+        <g class = "hide">
+            <setup props = "{ used: argv.sum }"></setup><!-- keyframes = "[]"  -->
+            <use x = "-12" y = "-12" width = "29" height = "29">
+                <setup props = "{ 'xlink:href': argv }"></setup>
+            </use>
+            <text class="chip-value" transform="translate(2, 6)" text-anchor="middle" >
+                <tspan class = "chip-text">
+                    <setup props = "{ text: argv.sum }"></setup>
+                </tspan>
+            </text>
         </g>
-
-    </m2>
-
-</m2>
+    </g>
+</unit>
