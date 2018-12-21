@@ -8,7 +8,7 @@
             </use>
             <text class="chip-value" transform="translate(2, 6)" text-anchor="middle" >
                 <tspan class = "chip-text">
-                    <setup props = "{ text: argv.sum }"></setup>
+                    <setup props = "{ /*argv:*/sum: argv.sum }">{ argv.sum }</setup>
                 </tspan>
             </text>
         </g>

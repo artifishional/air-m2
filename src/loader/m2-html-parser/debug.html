@@ -21,7 +21,7 @@
         <g transform="translate(183.500000, 245.500000)">
             <rect x = "-12" y = "-12" width = "31" height = "31"></rect>
             <g class = "hide">
-                <setup props = "{ used: argv.sum }"></setup><!-- keyframes = "[]"  -->
+                <setup props = "{ used: argv.sum }">setup</setup><!-- keyframes = "[]"  -->
                 <use x = "-12" y = "-12" width = "29" height = "29">
                     <setup props = "{ 'xlink:href': argv }"></setup>
                 </use>
@@ -32,6 +32,9 @@
                 </text>
             </g>
         </g>
+
+
+        <unit use = "./some/path"></unit>
 
         <unit key = "azaza"></unit>
         <unit dir = "./[key=key]" key = 5></unit>

@@ -22,10 +22,18 @@ export default class Parser {
     /**
      *
      * @param {Element} node
-     * @param sqid
+     * @param uqid
      * @param path
+     * @param key
      */
-    static parse( node, { uqid = ++UQID, path = "", key: pkey = null } = {} ) {
+    static parse( node, {
+        uqid, path = "", key: pkey = null, outerProps = {}
+    } = {} ) {
+
+        const targeting = [];
+
+        const acid = ++UQID;
+        uqid = uqid || acid;
 
         const slots = [];
 
@@ -47,39 +55,90 @@ export default class Parser {
         Object.keys( dir ).map( prop => dir[prop] === "key" && (dir[prop] = key) );
 
         const props = {
+            targeting,
+            //slotted sign
+            uqid,
+            //injection slots
             slots,
+            //system unique id
+            acid,
+            //xml target node
+            node,
+            //inherited or inner key
             key,
-            dir
+            //model stream directory path
+            dir,
+            //outer props ( if injected as 'use' )
+            ...outerProps,
+            //related resources
+            resources
         };
 
-        return [
-            uqid,
+        const res = [
+            //sign
+            // key - when it is not inherited from the parent
+            // else - unique id
+            key !== pkey ? key : acid,
             props,
-            ...[...node.children].reduce((acc, next)=> {
+            ...[...node.children].reduce((acc, next) => {
 
-                const sqid = next.use && (path + next.use.toString()) || ++UQID;
+                const use = (next.getAttribute("use") || "").toString();
+                const uqid = use && (path + use) || undefined;
 
                 if(Parser.is( next, "unit" )) {
 
                     const slot = Parser.slot();
-                    slots.push( { slot, sqid } );
                     next.replaceWith( slot );
+
+                    if(use) {
+                        slots.push( { slot, uqid } );
+                        return [ ...acc, Parser.parse(next, { key, path, uqid }) ];
+                    }
+                    else {
+                        slots.push( { slot, uqid } );
+                        return [ ...acc, Parser.parse(next, { key, path, uqid }) ];
+                    }
 
                 }
 
-                else if (Parser.is( next, "img" )) {
-
+                else if (next.tagName === "IMG") {
                     const slot = Parser.slot();
-                    slots.push( { slot, sqid } );
                     next.replaceWith( slot );
-                    resources.push( { type: "image" } );
-
+                    resources.push( { uqid, type: "image", url: next.getAttribute("src") } );
+                    return acc;
                 }
 
-                return [ ...acc, Parser.parse(next, { key, path, uqid }) ];
+                return acc;
 
             }, []),
         ];
+
+        targeting.push(...[node.children].reduce( (acc, next) => {
+            if(Parser.is( next, "setup" )) {
+
+                const keyframes = JSON5.parse(next.getAttribute("keyframes") || "[]");
+
+                let props = next.getAttribute("props");
+
+                if(props) {
+                    const cdc = new Function( "key", "argv", `{return ${props}}` );
+                    props = argv => cdc(key, argv);
+                }
+
+                next.remove();
+
+                return [ ...acc, {
+                    node: next,
+                    keyframes,
+                    props
+                } ];
+
+            }
+
+            return acc;
+        }), []);
+
+        return res;
 
     }
 
