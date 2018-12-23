@@ -15,7 +15,6 @@ const mouseEvents = [
     "onglobalkeyup",
     "onkeydown",
     "onkeyup",
-    "onwheel",
 ];
 
 const schtypes = {
@@ -89,7 +88,6 @@ export default class Loader {
     constructor({path = "m2units/"} = {}) {
         this.rpath = path;
         this.modules = [];
-
     }
 
     obtain(advantages) {
@@ -115,7 +113,7 @@ export default class Loader {
                     } );
                     */
                     include({path: `${this.rpath}${path}`}).then(({module}) => {
-                        emt({module: module || window.m2unit, advantages});
+                        emt({module, advantages});
                     } );
                 } );
             }
