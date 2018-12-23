@@ -1,6 +1,26 @@
 import { routeNormalizer } from "../../utils"
+import events from "../events"
 
 let UQID = 0;
+
+const targeting = ( node ) =>
+    [...node.children].reduce( (acc, next) => {
+        if(Parser.is( next, "setup" )) {
+            const keyframes = JSON5.parse(next.getAttribute("keyframes") || "[]");
+            let props = next.getAttribute("props");
+            if(props) {
+                const cdc = new Function( "key", "argv", `{return ${props}}` );
+                props = argv => cdc(key, argv);
+            }
+            next.remove();
+            return [ ...acc, {
+                node: next,
+                keyframes,
+                props
+            } ];
+        }
+        return acc;
+    }, []);
 
 export default class Parser {
 
@@ -30,8 +50,6 @@ export default class Parser {
         uqid, path = "", key: pkey = null, outerProps = {}
     } = {} ) {
 
-        const targeting = [];
-
         const acid = ++UQID;
         uqid = uqid || acid;
 
@@ -47,14 +65,26 @@ export default class Parser {
         else {
             key = pkey;
         }
+
+        const handlers = [ ...node.attributes ]
+            .filter( attr => events.includes(attr) )
+            .map( ({ name, value }) => ({
+                name: name.replace(/^on/, ""),
+                hn: new Function("event", "options", "action", "key", value )
+            }) );
         
-        let resources = [];
+        const resources = JSON5.parse(node.getAttribute("resources") || "[]");
 
         let dir = node.getAttribute("dir");
         dir = dir && routeNormalizer(dir.toString()) || { route: "" };
-        Object.keys( dir ).map( prop => dir[prop] === "key" && (dir[prop] = key) );
+        Object.keys( dir ).map( prop => dir[prop] === "$key" && (dir[prop] = key) );
 
         const props = {
+            //event handlers
+            handlers,
+            //absolute path
+            path,
+            //settings to props changers ( function )
             targeting,
             //slotted sign
             uqid,
@@ -74,22 +104,18 @@ export default class Parser {
             resources
         };
 
-        const res = [
+        return [
             //sign
             // key - when it is not inherited from the parent
             // else - unique id
             key !== pkey ? key : acid,
             props,
             ...[...node.children].reduce((acc, next) => {
-
                 const use = (next.getAttribute("use") || "").toString();
                 const uqid = use && (path + use) || undefined;
-
                 if(Parser.is( next, "unit" )) {
-
                     const slot = Parser.slot();
                     next.replaceWith( slot );
-
                     if(use) {
                         slots.push( { slot, uqid } );
                         return [ ...acc, Parser.parse(next, { key, path, uqid }) ];
@@ -98,47 +124,16 @@ export default class Parser {
                         slots.push( { slot, uqid } );
                         return [ ...acc, Parser.parse(next, { key, path, uqid }) ];
                     }
-
                 }
-
                 else if (next.tagName === "IMG") {
                     const slot = Parser.slot();
                     next.replaceWith( slot );
                     resources.push( { uqid, type: "image", url: next.getAttribute("src") } );
                     return acc;
                 }
-
                 return acc;
-
             }, []),
         ];
-
-        targeting.push(...[node.children].reduce( (acc, next) => {
-            if(Parser.is( next, "setup" )) {
-
-                const keyframes = JSON5.parse(next.getAttribute("keyframes") || "[]");
-
-                let props = next.getAttribute("props");
-
-                if(props) {
-                    const cdc = new Function( "key", "argv", `{return ${props}}` );
-                    props = argv => cdc(key, argv);
-                }
-
-                next.remove();
-
-                return [ ...acc, {
-                    node: next,
-                    keyframes,
-                    props
-                } ];
-
-            }
-
-            return acc;
-        }), []);
-
-        return res;
 
     }
 

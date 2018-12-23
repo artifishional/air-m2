@@ -48,7 +48,7 @@ export default class Advantages {
      *
      * @param route
      * @returns {*}
-     * @example {route: "./../../state/{type: loto20_80}"}/
+     * @example {route: "./../../state/{key = 55}"}/
      * @param args
      */
     obtain(route = "", args) {
@@ -66,7 +66,6 @@ export default class Advantages {
                     emt({advantages: this, source: this.source});
                 });
             }
-
             else {
                 this._stream = new Observable((emt) => {
                     return this.loader.obtain(this).at(({module, advantages}) => {

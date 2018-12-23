@@ -89,7 +89,7 @@ export default class Loader {
     constructor({path = "m2units/"} = {}) {
         this.rpath = path;
         this.modules = [];
-        window.m2unit = {};
+
     }
 
     obtain(advantages) {
