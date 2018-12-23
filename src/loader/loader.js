@@ -88,7 +88,6 @@ export default class Loader {
     constructor({path = "m2units/"} = {}) {
         this.rpath = path;
         this.modules = [];
-        window.m2unit = {};
     }
 
     obtain(advantages) {
@@ -114,7 +113,7 @@ export default class Loader {
                     } );
                     */
                     include({path: `${this.rpath}${path}`}).then(({module}) => {
-                        emt({module: module || window.m2unit, advantages});
+                        emt({module, advantages});
                     } );
                 } );
             }

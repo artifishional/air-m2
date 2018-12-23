@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+
+<script src="https://unpkg.com/json5@^2.0.0/dist/index.min.js"></script>
+
+<script type = "module">
+
+    import Parser from "./index.js"
+
+    console.log(Parser.parse( document.querySelector("unit") ));
+
+</script>
+
+<body>
+
+    <unit dir = "./[key=key]" key = "[{kind: 'numbers', numbers: [7, 8, 10, 11]}]"><!--stream-map = ""-->
+        <g transform="translate(183.500000, 245.500000)">
+            <rect x = "-12" y = "-12" width = "31" height = "31"></rect>
+            <g class = "hide">
+                <setup props = "{ used: argv.sum }">setup</setup><!-- keyframes = "[]"  -->
+                <use x = "-12" y = "-12" width = "29" height = "29">
+                    <setup props = "{ 'xlink:href': argv }"></setup>
+                </use>
+                <text class="chip-value" transform="translate(2, 6)" text-anchor="middle" >
+                    <tspan class = "chip-text">
+                        <setup props = "{ text: argv.sum }"></setup>
+                    </tspan>
+                </text>
+            </g>
+        </g>
+
+
+        <unit use = "./some/path"></unit>
+
+        <unit key = "azaza"></unit>
+        <unit dir = "./[key=key]" key = 5></unit>
+
+    </unit>
+
+</body>
+</html>
