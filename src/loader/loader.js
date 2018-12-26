@@ -4,18 +4,7 @@ import json from "./json"
 import html from "./html"
 import { Schema } from "air-schema"
 import JSON5 from "json5"
-
-const mouseEvents = [
-    "onclickoutside",
-    "onpointermove",
-    "onclick",
-    "onpointerenter",
-    "onpointerleave",
-    "onglobalkeydown",
-    "onglobalkeyup",
-    "onkeydown",
-    "onkeyup",
-];
+import mouseEvents from "./events"
 
 const schtypes = {
     "js": "/index.js",
