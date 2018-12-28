@@ -1,16 +1,17 @@
-import { routeNormalizer } from "../../utils"
+import { routeNormalizer, routeToString } from "../../utils"
 import events from "../events"
+import JSON5 from "json5"
 
-let UQID = 0;
+let ACID = 0;
 
-export default class Parser {
+export default class Parser extends Array {
 
     constructor( node, {
-        uqid, path = "", key: pkey = null
+        type = "node", path = "", key: pkey = null
     } = {} ) {
+        super();
 
-        const acid = "acid-auto-unique-key-" + ++UQID;
-        uqid = uqid || acid;
+        const acid = "acid-auto-unique-key-" + ++ACID;
 
         let key = node.getAttribute("key");
 
@@ -32,47 +33,77 @@ export default class Parser {
 
         const resources = JSON5.parse(node.getAttribute("resources") || "[]");
 
-        let dir = node.getAttribute("dir");
-        dir = dir && routeNormalizer(dir.toString()) || { route: "" };
-        Object.keys( dir ).map( prop => dir[prop] === "$key" && (dir[prop] = key) );
+        let stream = node.getAttribute("stream");
+        stream = stream && routeNormalizer(stream.toString()) || { route: [] };
+        Object.keys( stream ).map( prop => stream[prop] === "$key" && (stream[prop] = key) );
+        stream = routeToString(stream);
 
+        const template = ["", "false"].includes(node.getAttribute("template"));
+        const sign = key !== pkey ? key : acid;
+        const id = node.getAttribute("id") || "$";
+        let use = (node.getAttribute("use") || "").trim();
+        let [ , source = null ] = use && use.match( /^url\((.*)\)$/ ) || [];
+        source && (use = null);
+        source = source && { path: source, schtype: type === "custom" ? "js" : "html" } || {};
 
-        this.sign = key !== pkey ? key : acid;
-        //event handlers
-        this.handlers = handlers;
-        //absolute path
-        this.path = path;
-        //slotted sign
-        this.uqid = uqid;
-        //system unique id
-        this.acid = acid;
-        //xml target node
-        this.node = node;
-        //inherited or inner key
-        this.key = key;
-        //model stream directory path
-        this.dir = dir;
-        //related resources
-        this.resources = resources;
+        this.push( sign ); //view node tree key
 
-        this.item = [...node.children].reduce((acc, next) => {
-            const use = (next.getAttribute("use") || "").toString();
-            const uqid = use && (path + use) || undefined;
-            if(Parser.is( next, "unit" )) {
-                const parser = new Parser(next, { key, path, uqid });
-                const slot = Parser.slot( parser );
-                next.replaceWith( slot );
-                return [ ...acc, parser ];
-            }
-            else if (next.tagName === "IMG") {
-                next.replaceWith( slot );
-                const slot = Parser.slot( { uqid } );
-                resources.push( { uqid, type: "image", url: next.getAttribute("src") } );
-                return acc;
-            }
-            return acc;
-        }, []);
+        this.push( this.props = {
+            use,            //reused templates path
+            template,       //template node
+            id,             //tree m2 advantages id
+            type,           //view node type [node -> unit, switcher -> tee]
+            source,         //m2 advantages source path if module
+            handlers,       //event handlers
+            path,           //absolute path
+            acid,           //system unique id
+            node,           //xml target node
+            key,            //inherited or inner key
+            model: stream,  //link to model stream todo obsolete io
+            resources,      //related resources
+        } );
 
+        this.push(...[...node.children].reduce((acc, next) =>
+            [...acc, ...Parser.parse( next, this.props )]
+        , []));
+
+    }
+
+    //the workaround is tied to the querySelectorAll,
+    // since it is used to extract replacement slots
+    static parse(next, { resources, path, key }) {
+        const use = (next.getAttribute("use") || "").toString();
+        if(Parser.is( next, "unit" )) {
+            const parser = new Parser(next, { key, path });
+            const slot = Parser.slot( );
+            parser.props.template ? next.remove() : next.replaceWith( slot );
+            return [ parser ];
+        }
+        else if(Parser.is( next, "tee" )) {
+            const parser = new Parser(next, {
+                key, path, type: "switcher"
+            });
+            const slot = Parser.slot( );
+            parser.props.template ? next.remove() : next.replaceWith( slot );
+            return [ parser ];
+        }
+        else if(Parser.is( next, "plug" )) {
+            const parser = new Parser(next, {
+                key, path, type: "custom"
+            });
+            const slot = Parser.slot( );
+            parser.props.template ? next.remove() : next.replaceWith( slot );
+            return [ parser ];
+        }
+        else if (next.tagName === "IMG") {
+            const slot = Parser.img( );
+            next.replaceWith( slot );
+            resources.push( { type: "image", url: next.getAttribute("src") } );
+            return [];
+        }
+        return [...next.children].reduce( (acc, node) =>
+            [...acc, ...Parser.parse(node, { resources, path, key })]
+        , []);
     }
 
     targeting() {
@@ -89,10 +120,12 @@ export default class Parser {
             });
     }
 
-    static slot( { uqid } ) {
-        const res =  document.createElement("M2-SLOT");
-        res.setAttribute("uqid", uqid);
-        return res;
+    static slot( ) {
+        return document.createElement("M2-SLOT");
+    }
+
+    static img() {
+        return document.createElement("M2-RES");
     }
 
     /**
@@ -104,6 +137,10 @@ export default class Parser {
     static is( node, name ) {
         name = name.toUpperCase();
         return [ `M2-${name}`, name ].includes( node.tagName );
+    }
+
+    entity( env ) {
+        return stream();
     }
 
 }

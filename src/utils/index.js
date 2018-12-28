@@ -67,6 +67,14 @@ export function routeNormalizer(route) {
     }
 }
 
+//todo req. to separate the operation on the paths in an entity
+export function routeToString( { route, ...args } ) {
+    const argsKeys = Object.keys(args);
+    return route.join("/") + (
+        argsKeys.length ?
+        `[${argsKeys.map( key => `${key}=${JSON.stringify(args[key])}` ).join(",")}]` : "")
+}
+
 /**
  *
  * @param {Array} schema

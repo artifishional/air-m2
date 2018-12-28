@@ -73,9 +73,9 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources }) =>
 
     stream( (emt, { sweep }) => {
 
-        sweep.add(scenesstream.at( ({ advantages: {key, args: { frames = [], ...args }} }) => {
+        sweep.add(scenesstream.at( ({ advantages: { schema, key, args: { frames = [], ...args }} }) => {
 
-            const child = viewbuilder({key, ...args});
+            const child = viewbuilder({ schema, key, ...args});
 
             const reactions = frames.filter(([name]) => !["fade-in", "fade-out"].includes(name));
             if (reactions.length) {
@@ -91,8 +91,8 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources }) =>
                 hook.add(({action: [action]}) => emt( { key: "pre",  action: `${action}-complete` } ))
             ).at( handle );
             sweep.add(curstatehook);
-            let curstatenode = viewbuilder( { key: "blank" } );
-            child.add(curstatenode);
+            let curstatenode = viewbuilder( { schema: ["curstatenode", { uqid: 0 }], key: "blank" } );
+            child.replace(curstatenode);
             let stage = "idle";
             let requirestate = null;
             let requirestatehook = null;
@@ -109,7 +109,7 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources }) =>
                     //child.removeChild( curstatenode.remove() );
                     curstatenode.remove();
                     //child.addChild( newstatenode );
-                    child.add( newstatenode );
+                    child.replace( newstatenode );
                     curstatenode = newstatenode;
                     curstate = requirestate;
                     requirestate = null;

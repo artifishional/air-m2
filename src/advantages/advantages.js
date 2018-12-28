@@ -10,8 +10,11 @@ export default class Advantages {
         factory,
         loader,
         pack = {path: "./"},
-        schema: [key, {id = "", sign = Advantages.sign, source = {}, ...args}, ...advs]
+        schema
     }) {
+
+        const [key, {id = "", sign = Advantages.sign, source = {}, ...args}, ...advs] = schema;
+
         this.pack = { path: source && source.hasOwnProperty("path") ?
             source.path + "/" : pack.path
         };
@@ -26,6 +29,9 @@ export default class Advantages {
         this.item = advs
             .map(schema => factory.create({pack: this.pack, factory, parent: this, schema, loader}));
         this.args = args;
+
+        this.schema = schema;
+
         this.static = !source.hasOwnProperty("path");
         this.linkers = [];
         this._stream = null;
@@ -77,8 +83,6 @@ export default class Advantages {
                         if (Array.isArray(exist)) {
                             const [, {source, ...args}, ...advs] = schemasNormalizer(exist);
                             source && (advantages.source = source);
-                            //fixme hack pid overwriten
-                            args.pid = advantages.args.pid || args.pid;
                             advantages.args = args;
                             const {factory, loader} = advantages;
                             advantages.item.push(...advs.map(schema =>

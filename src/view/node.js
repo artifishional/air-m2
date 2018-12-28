@@ -11,6 +11,7 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources = [], ..
             ([ { advantages: sceneschema }, {advantages: modelschema} = {} ]) => {
 
                 const {
+                    schema,
                     pack,
                     key,
                     args: { model, resources = [], frames = [], ...args },
@@ -35,7 +36,7 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources = [], ..
 
                     resources = resources.length ? [...resources, ...baseresources] : baseresources;
 
-                    const view = viewbuilder( { key, resources, ...args, ...argv }, modelstream );
+                    const view = viewbuilder( { schema, key, resources, ...args, ...argv }, modelstream );
 
                     const reactions = frames.filter(([name]) => !["fade-in", "fade-out"].includes(name));
                     if (modelschema) {
@@ -49,12 +50,11 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources = [], ..
 
                     const elems = item
                         .filter( ({ args: { template } }) => !template )
-                        .map(({key, args: { use, pid } }) => {
+                        .map(({key, args: { use } }) => {
                             if(use) {
                                 return sceneschema.obtain(use, {
                                     baseresources: resources,
                                     modelschema: modelschema.get(model),
-                                    pid
                                 })
                             }
                             else {
@@ -62,7 +62,6 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources = [], ..
                                     baseresources: resources,
                                     route: [key],
                                     modelschema: modelschema.get(model),
-                                    pid
                                 })
                             }
                         });

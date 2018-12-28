@@ -28,6 +28,9 @@ export default class Creator extends Unit {
                 else if (type === "switcher") {
                     over.add(sceneswitch( scenesstream, { modelstream, viewbuilder: this.viewbuilder, ...argv } ).on( emt ));
                 }
+                else {
+                    throw "unsupported m2 node view type"
+                }
             }))
         );
     }
