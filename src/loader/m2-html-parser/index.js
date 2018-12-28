@@ -25,7 +25,7 @@ export default class Parser extends Array {
         }
 
         const handlers = [ ...node.attributes ]
-            .filter( attr => events.includes(attr) )
+            .filter( ({ name }) => events.includes(name) )
             .map( ({ name, value }) => ({
                 name: name.replace(/^on/, ""),
                 hn: new Function("event", "options", "action", "key", value )
@@ -35,6 +35,7 @@ export default class Parser extends Array {
 
         let stream = node.getAttribute("stream");
         stream = stream && routeNormalizer(stream.toString()) || { route: [] };
+        stream.route = stream.route.map( seg => seg === "$key" ? key :  seg );
         Object.keys( stream ).map( prop => stream[prop] === "$key" && (stream[prop] = key) );
         stream = routeToString(stream);
 
@@ -98,7 +99,7 @@ export default class Parser extends Array {
         else if (next.tagName === "IMG") {
             const slot = Parser.img( );
             next.replaceWith( slot );
-            resources.push( { type: "image", url: next.getAttribute("src") } );
+            resources.push( { type: "img", url: next.getAttribute("src") } );
             return [];
         }
         return [...next.children].reduce( (acc, node) =>

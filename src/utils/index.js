@@ -56,9 +56,9 @@ export function routeNormalizer(route) {
         return {
             route: route.split("/")
             //an empty string includes
-                .map(x => x.replace(/\[.*\]/, ""))
+                .map(x => x.replace(/\[.*]/, ""))
                 .filter(x => !".".includes(x))
-                .map(x => x[0] === "{" ? JSON.parse(x.replace(/[a-zA-Z]\w{1,}/g, x=> `"${x}"`)) : x),
+                .map(x => x[0] === "{" ? JSON.parse(x.replace(/"?([a-zA-Z0-9\-_]+)"?/g, (_, x)=> `"${x}"`)) : x),
             ...argvroute( route ),
         }
     }
@@ -70,7 +70,7 @@ export function routeNormalizer(route) {
 //todo req. to separate the operation on the paths in an entity
 export function routeToString( { route, ...args } ) {
     const argsKeys = Object.keys(args);
-    return route.join("/") + (
+    return route.map(seg => typeof seg === "object" ? JSON.stringify(seg) : seg).join("/") + (
         argsKeys.length ?
         `[${argsKeys.map( key => `${key}=${JSON.stringify(args[key])}` ).join(",")}]` : "")
 }
