@@ -1,4 +1,5 @@
 import { stream, combine } from "air-stream"
+import { equal } from "../utils"
 
 const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
 
@@ -21,40 +22,30 @@ const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
 
                         emt( { stream: loaderstream, key: "loader" } );
 
-                        sweep.add(modelschema.obtain(model).at( ( data ) => {
-
-                            let action, key;
-
-                            if(Array.isArray(data)) {
-                                [ action, { key } ] = data;
-                            }
-                            else {
-                                ({ action, key } = data);
-                                if(Array.isArray(action)) {
-                                    [action, { key} ] = action;
-                                }
-                            }
-                            if(action === "change" && curstate !== key) {
-
+                        sweep.add(modelschema.obtain(model).at( ( [ key ] ) => {
+                            if(!equal(curstate, key)) {
                                 clearTimeout(loadertimeout);
-                                loadertimeout = setTimeout(() => emt( { stream: loaderstream, key: "loader" } ) , 100);
-
+                                loadertimeout = setTimeout(() =>
+                                    emt( { stream: loaderstream, key: "loader" } ), 100);
+                                sweep.add( () => clearTimeout(loadertimeout) );
                                 requirestatehook && sweep.force( requirestatehook );
+                                const view = sceneschema.pickToState( key );
+
+                                if(!view) {
+                                    throw `tee state '${key}' not found for switcher`
+                                }
                                 requirestatestream = sceneschema._obtain( {
                                     baseresources,
-                                    route: [ key ],
+                                    route: [ view.key ],
                                     modelschema: modelschema.get(model + childrenmodel),
                                 } );
                                 sweep.add(requirestatehook = requirestatestream.at( ({action}) => {
-
                                     if(action === "complete") {
                                         clearTimeout(loadertimeout);
                                         curstate = key;
                                         emt( { stream: requirestatestream, key } );
                                     }
-
                                 } ));
-
                             }
 
                         } ));

@@ -1,5 +1,6 @@
 import {Observable, stream} from "air-stream"
 import {routeNormalizer, schemasNormalizer, frommodule} from "../utils/index"
+import { signature } from "../utils"
 
 let uid = 0;
 
@@ -29,9 +30,7 @@ export default class Advantages {
         this.item = advs
             .map(schema => factory.create({pack: this.pack, factory, parent: this, schema, loader}));
         this.args = args;
-
         this.schema = schema;
-
         this.static = !source.hasOwnProperty("path");
         this.linkers = [];
         this._stream = null;
@@ -44,6 +43,12 @@ export default class Advantages {
         else {
             return ({key}) => sign === key;
         }
+    }
+
+    pickToState( state ) {
+        return this.item.find( ({ key }) => {
+            return signature(key, state)
+        } );
     }
 
     findId(id) {
@@ -120,7 +125,7 @@ export default class Advantages {
             else {//todo need layers
                 return stream((emt, { over }) =>
                     over.add(this.stream.at(() => {
-                        const node = this.item.find(this.sign(key));
+                        const node = this.pickToState(key);
                         if (node) {
                             over.add(node._get({route}, from).at(emt));
                         }

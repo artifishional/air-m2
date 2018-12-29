@@ -15,7 +15,7 @@ export default class Parser extends Array {
 
         let key = node.getAttribute("key");
 
-        if(key) {
+        if(key !== null) {
             if(/[`"'{}\]\[]/.test(key)) {
                 key = JSON5.parse(key);
             }
