@@ -23,17 +23,19 @@ const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
                         emt( { stream: loaderstream, key: "loader" } );
 
                         sweep.add(modelschema.obtain(model).at( ( [ key ] ) => {
-                            if(!equal(curstate, key)) {
+
+                            const view = sceneschema.pickToState( key );
+                            if(!view) {
+                                throw `tee state '${key}' not found for switcher`
+                            }
+
+                            if(curstate !== view.key) {
                                 clearTimeout(loadertimeout);
                                 loadertimeout = setTimeout(() =>
                                     emt( { stream: loaderstream, key: "loader" } ), 100);
                                 sweep.add( () => clearTimeout(loadertimeout) );
                                 requirestatehook && sweep.force( requirestatehook );
-                                const view = sceneschema.pickToState( key );
 
-                                if(!view) {
-                                    throw `tee state '${key}' not found for switcher`
-                                }
                                 requirestatestream = sceneschema._obtain( {
                                     baseresources,
                                     route: [ view.key ],
@@ -42,8 +44,8 @@ const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
                                 sweep.add(requirestatehook = requirestatestream.at( ({action}) => {
                                     if(action === "complete") {
                                         clearTimeout(loadertimeout);
-                                        curstate = key;
-                                        emt( { stream: requirestatestream, key } );
+                                        curstate = view.key;
+                                        emt( { stream: requirestatestream, key: view.key } );
                                     }
                                 } ));
                             }
@@ -62,7 +64,11 @@ const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
 
 export default (scenesstream, { modelstream, viewbuilder, baseresources }) =>
 
-    stream( (emt, { sweep }) => {
+    stream( (emt, { sweep, hook }) => {
+
+        hook.add(({action}) => {
+            emt({action: `${action}-complete`,});
+        });
 
         sweep.add(scenesstream.at( ({ advantages: { schema, key, args: { frames = [], ...args }} }) => {
 
@@ -117,7 +123,8 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources }) =>
                 }
             }
 
-            sweep.add(statesstream( scenesstream, { modelstream, baseresources } ).at( ({ stream, key }) => {
+            sweep.add(statesstream( scenesstream, { modelstream, baseresources } )
+                .at( ({ stream, key }) => {
                 if( curstate === stream ) {
                     if(stage === "fade-out") {
                         stage = "idle";
