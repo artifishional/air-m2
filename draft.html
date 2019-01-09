@@ -1,4 +1,4 @@
-<unit dir = "./[key]" key = "[{kind: 'numbers', numbers: [7, 8, 10, 11]}]"><!--stream-map = ""-->
+<unit stream = "./[key]" key = "[{kind: 'numbers', numbers: [7, 8, 10, 11]}]"><!--stream-map = ""-->
     <g transform="translate(183.500000, 245.500000)">
         <rect x = "-12" y = "-12" width = "31" height = "31"></rect>
         <g class = "hide">
@@ -20,6 +20,18 @@
 "./[key]"
 "./[key = key, someone = 10]"
 
+//current form
+
+<tee>
+
+    <unit key = 1></unit>
+    <unit key = 2></unit>
+    <unit key = 3></unit>
+
+</tee>
+
+//next draft with included tee manager ( every view has its own loader ( if not pre-loaded form ) )
+
 
 <unit resources = '[
     { type: "style", url: "res/css/cover.css" },
@@ -28,75 +40,29 @@
 
     <plug key = player use = url(./player) template stream = #player/></plug>
 
-    <tee stream = ./session/games/current/mw>
+    <unit tee stream = ./session/games/current/mw>
 
-        <tee key = nested-tee>
-            <unit key = 1></unit>
-            <unit key = 2></unit>
-            <unit key = 3></unit>
-        </tee>
+        //with preload (preload form doesn't need a loader unit)
+        <unit preload tee key = 1></unit>
+        <unit preload tee key = 2></unit>
+        <unit preload tee key = 3></unit>
 
         <unit key = loader use = ./master/loader></unit>
         <unit key = '{name: "alpha1"}' stream = ../../ >
             <unit use = url(./session/games/current/mw)></unit>
         </unit>
 
-    </tee>
+    </unit>
 
 </unit>
 
-<dock stream = "././">
+//full
+<setup keyframes='[[ "*", { duration: 300 }, [ 1, { css: {  } } ] ]]'>
 
-    <unit></unit>
+        //only default action last key-frame
+        <setup keyframes='{ css: {} }'></setup>
 
-</dock>
-
-<script>
-
-
+</setup>
 
 
 
-
-
-
-    const data = [
-        [
-
-            { type: "card", a: 10, i: 15 },
-            { type: "card", b: 20, i: 15 },
-            { type: "card", a: 10, i: 15 },
-            { type: "card", b: 20, i: 15 },
-            { type: "card", a: 10, i: 15 },
-            { type: "card", b: 20, i: 15 },
-            { type: "card", a: 10, i: 15 },
-            { type: "card", b: 20, i: 15 },
-            { type: "card", a: 10, i: 15 },
-            { type: "card", b: 20, i: 15 },
-            { type: "card", b: 20, i: 15 },
-
-        ],
-            { action: [ "add", { a: 10 } ] }
-    ];
-
-
-
-
-
-
-    //шаблоны доступны по ключам
-
-    //если шаблон наследует родительский поток, то каждый элемент будет создан
-    //из фабрики, согласно переданному ключу из верхнего потока
-
-    //каждому ключу контейнер добавляет
-
-
-
-
-
-
-
-
-
-</script>

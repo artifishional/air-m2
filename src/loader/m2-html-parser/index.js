@@ -2,6 +2,8 @@ import { routeNormalizer, routeToString } from "../../utils"
 import events from "../events"
 import JSON5 from "json5"
 
+const CUT_FRAMES_REG = /\[\s*["'](.+?)["']\s*,((?:\s*{.+?}\s*,\s*)?\s*(?:\[.+?])) ]/g;
+
 let ACID = 0;
 
 export default class Parser extends Array {
@@ -67,15 +69,60 @@ export default class Parser extends Array {
             resources,      //related resources
         } );
 
-        this.push(...[...node.childNodes].reduce((acc, next) =>
+        [...node.childNodes].map( next => Parser.setup( next, this.props ));
+
+        this.push(...[...node.children].reduce((acc, next) =>
             [...acc, ...Parser.parse( next, this.props )]
         , []));
 
     }
 
+    static setup( next, { keyframes } ) {
+        if(next.nodeType === 3 && !Parser.is( next.parentNode, "setup" )) {
+            const templates = next.nodeValue.match(/{(?:intl|lang|argv).+?}/g);
+            templates && next.replaceWith( ...templates.map(
+                text => {
+                    if(!keyframes.find(([name]) => name === "*")) {
+                        keyframes.push( [ "*", [ 100 ] ] );
+                    }
+                    const res = document.createElement("setup");
+                    res.textContent = text;
+                    return res;
+                }
+            ));
+        }
+        if(Parser.is( next, "setup" )) {
+            if(!Parser.is( next.parentNode.parentNode, "unit" ) ) {
+                const replaced = next.parentNode;
+                const unit = document.createElement("unit");
+                replaced.replaceWith( unit );
+                unit.append( replaced );
+            }
+            let keyframesAttribute = next.getAttribute("keyframes");
+            if(keyframesAttribute) {
+
+                if(keyframesAttribute.indexOf("[") < 0) {
+                    keyframesAttribute = `[[ "*", {}, [100, ${keyframesAttribute}]]]`
+                }
+
+                keyframesAttribute.replace(CUT_FRAMES_REG, (all, action, fn) => {
+                    let exist = keyframes.findIndex(([x]) => x === action);
+                    if(exist < 0) {
+                        exist = keyframes.length;
+                    }
+                    keyframes[exist] = [ action, new Function("{argv}", `return ["${action}", ${fn}]`) ];
+                });
+
+            }
+        }
+        return [...next.childNodes].map( node =>
+            Parser.setup(node, { keyframes })
+        );
+    }
+
     //the workaround is tied to the querySelectorAll,
     // since it is used to extract replacement slots
-    static parse(next, { keyframes, resources, path, key }) {
+    static parse(next, { resources, path, key }) {
         if(Parser.is( next, "unit" )) {
             const parser = new Parser(next, { key, path });
             const slot = Parser.slot( );
@@ -105,21 +152,8 @@ export default class Parser extends Array {
             return [];
         }
         else if(next.tagName === "STYLE") { }
-        else if(next.nodeType === 3) {
-            const templates = next.nodeValue.match(/{(?:intl|lang|argv).+?}/g);
-            templates && next.replaceWith( ...templates.map(
-                text => {
-                    if(!keyframes.find(([name]) => name === "*")) {
-                        keyframes.push( [ "*", [ 100 ] ] );
-                    }
-                    const res = document.createElement("setup");
-                    res.textContent = text;
-                    return res;
-                }
-            ));
-        }
-        return [...next.childNodes].reduce( (acc, node) =>
-            [...acc, ...Parser.parse(node, { keyframes, resources, path, key })]
+        return [...next.children].reduce( (acc, node) =>
+            [...acc, ...Parser.parse(node, { resources, path, key })]
         , []);
     }
 /*
