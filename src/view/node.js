@@ -14,7 +14,7 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources = [], ..
                     schema,
                     pack,
                     key,
-                    args: { model, resources = [], frames = [], ...args },
+                    args: { model, resources = [], keyframes = [], ...args },
                     item
                 } = sceneschema;
 
@@ -23,10 +23,13 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources = [], ..
                     modelschema.obtain("#intl"),
                 ], (data, intl) => {
                     if(typeof data === "object" && !Array.isArray(data)) {
-                        return { ...data, intl };
+                        return { action: [ "*", { argv: data }], intl };
+                    }
+                    else if(Array.isArray(data)) {
+                        return { action: [ data[1] || "*", { argv: data[0]} ], intl };
                     }
                     else {
-                        return data;
+                        return { action: [ "*", { argv: data } ], intl } ;
                     }
                 }) || null;
 
@@ -38,15 +41,15 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources = [], ..
 
                     const view = viewbuilder( { schema, key, resources, ...args, ...argv }, modelstream );
 
-                    const reactions = frames.filter(([name]) => !["fade-in", "fade-out"].includes(name));
-                    if (modelschema) {
-                        const hook = animate(view, ["frames", ...reactions], key).on(() => { });
+                    const reactions = keyframes.filter(([name]) => !["fade-in", "fade-out"].includes(name));
+                    if (reactions.length && modelschema) {
+                        const hook = animate(view, ["keyframes", ...reactions], key).on(() => { });
                         sweep.add(hook);
                         sweep.add(modelstream.at(hook));
                     }
 
-                    const effects = frames.filter(([name]) => ["fade-in", "fade-out"].includes(name));
-                    const _animate = animate(view, ["frames", ...effects], key);
+                    const effects = keyframes.filter(([name]) => ["fade-in", "fade-out"].includes(name));
+                    const _animate = animate(view, ["keyframes", ...effects], key);
 
                     const elems = item
                         .filter( ({ args: { template } }) => !template )

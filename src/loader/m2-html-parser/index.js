@@ -47,9 +47,12 @@ export default class Parser extends Array {
         source && (use = null);
         source = source && { path: source, schtype: type === "custom" ? "js" : "html" } || {};
 
+        const keyframes = [];
+
         this.push( sign ); //view node tree key
 
         this.push( this.props = {
+            keyframes,      //animation ( data ) settings
             use,            //reused templates path
             template,       //template node
             id,             //tree m2 advantages id
@@ -64,7 +67,7 @@ export default class Parser extends Array {
             resources,      //related resources
         } );
 
-        this.push(...[...node.children].reduce((acc, next) =>
+        this.push(...[...node.childNodes].reduce((acc, next) =>
             [...acc, ...Parser.parse( next, this.props )]
         , []));
 
@@ -72,8 +75,7 @@ export default class Parser extends Array {
 
     //the workaround is tied to the querySelectorAll,
     // since it is used to extract replacement slots
-    static parse(next, { resources, path, key }) {
-        const use = (next.getAttribute("use") || "").toString();
+    static parse(next, { keyframes, resources, path, key }) {
         if(Parser.is( next, "unit" )) {
             const parser = new Parser(next, { key, path });
             const slot = Parser.slot( );
@@ -102,11 +104,25 @@ export default class Parser extends Array {
             resources.push( { type: "img", url: next.getAttribute("src") } );
             return [];
         }
-        return [...next.children].reduce( (acc, node) =>
-            [...acc, ...Parser.parse(node, { resources, path, key })]
+        else if(next.tagName === "STYLE") { }
+        else if(next.nodeType === 3) {
+            const templates = next.nodeValue.match(/{(?:intl|lang|argv).+?}/g);
+            templates && next.replaceWith( ...templates.map(
+                text => {
+                    if(!keyframes.find(([name]) => name === "*")) {
+                        keyframes.push( [ "*", [ 100 ] ] );
+                    }
+                    const res = document.createElement("setup");
+                    res.textContent = text;
+                    return res;
+                }
+            ));
+        }
+        return [...next.childNodes].reduce( (acc, node) =>
+            [...acc, ...Parser.parse(node, { keyframes, resources, path, key })]
         , []);
     }
-
+/*
     targeting() {
         return [...this.node.querySelectorAll( "SETUP,M2-SETUP" )]
             .map(node => {
@@ -119,7 +135,7 @@ export default class Parser extends Array {
                 node.remove();
                 return { node, keyframes, props };
             });
-    }
+    }*/
 
     static slot( ) {
         return document.createElement("M2-SLOT");
