@@ -26,7 +26,7 @@ export default (scenesstream, { parentModelStream = null, modelstream, viewbuild
                         return { action: [ "*", { argv: data }], intl };
                     }
                     else if(Array.isArray(data)) {
-                        return { action: [ data[1] || "*", { argv: data[0]} ], intl };
+                        return { action: [ data[1] && data[1][0] || "*", { argv: data[0]} ], intl };
                     }
                     else {
                         return { action: [ "*", { argv: data } ], intl } ;

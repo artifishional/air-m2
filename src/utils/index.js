@@ -47,7 +47,7 @@ export function argvroute( route ) {
         .match( /\[.*\]/ ) || ["{}"])[0]
         .replace(/\[(.*)\]/, (_, x) => `{${x}}` )
         .replace("=", ":")
-        .replace(/\"{0,1}([a-zA-Z]{1,77})\"{0,1}/g, (_, x) => `"${x}"`)
+        .replace(/\"{0,1}([$0-9\-_a-zA-Z]{1,77})\"{0,1}/g, (_, x) => `"${x}"`)
     );
 }
 
@@ -58,7 +58,7 @@ export function routeNormalizer(route) {
             //an empty string includes
                 .map(x => x.replace(/\[.*]/, ""))
                 .filter(x => !".".includes(x))
-                .map(x => x[0] === "{" ? JSON.parse(x.replace(/"?([a-zA-Z0-9\-_]+)"?/g, (_, x)=> `"${x}"`)) : x),
+                .map(x => x[0] === "{" ? JSON.parse(x.replace(/"?([$a-zA-Z0-9\-_]+)"?/g, (_, x)=> `"${x}"`)) : x),
             ...argvroute( route ),
         }
     }

@@ -2,7 +2,7 @@ import { routeNormalizer, routeToString } from "../../utils"
 import events from "../events"
 import JSON5 from "json5"
 
-const CUT_FRAMES_REG = /\[\s*["'](.+?)["']\s*,((?:\s*{.+?}\s*,\s*)?\s*(?:\[.+?])) ]/g;
+const CUT_FRAMES_REG = /\[\s*["'](.+?)["']\s*,((?:\s*{.+?}\s*,\s*)?\s*(?:\[.+?]))\s*]/gs;
 
 let ACID = 0;
 
@@ -30,7 +30,7 @@ export default class Parser extends Array {
             .filter( ({ name }) => events.includes(name) )
             .map( ({ name, value }) => ({
                 name: name.replace(/^on/, ""),
-                hn: new Function("event", "options", "action", "key", value )
+                hn: new Function("event", "options", "request", "key", value )
             }) );
 
         const resources = JSON5.parse(node.getAttribute("resources") || "[]");
@@ -82,9 +82,6 @@ export default class Parser extends Array {
             const templates = next.nodeValue.match(/{(?:intl|lang|argv).+?}/g);
             templates && next.replaceWith( ...templates.map(
                 text => {
-                    if(!keyframes.find(([name]) => name === "*")) {
-                        keyframes.push( [ "*", [ 100 ] ] );
-                    }
                     const res = document.createElement("setup");
                     res.textContent = text;
                     return res;
@@ -98,25 +95,35 @@ export default class Parser extends Array {
                 replaced.replaceWith( unit );
                 unit.append( replaced );
             }
-            let keyframesAttribute = next.getAttribute("keyframes");
-            if(keyframesAttribute) {
+            else {
 
-                if(keyframesAttribute.indexOf("[") < 0) {
-                    keyframesAttribute = `[[ "*", {}, [100, ${keyframesAttribute}]]]`
+                if(next.textContent) {
+                    if(!keyframes.find(([name]) => name === "*")) {
+                        keyframes.push( [ "*", [ 100 ] ] );
+                    }
                 }
 
-                keyframesAttribute.replace(CUT_FRAMES_REG, (all, action, fn) => {
-                    let exist = keyframes.findIndex(([x]) => x === action);
-                    if(exist < 0) {
-                        exist = keyframes.length;
+                let keyframesAttribute = next.getAttribute("keyframes");
+                if(keyframesAttribute) {
+
+                    if(keyframesAttribute.indexOf("[") < 0) {
+                        keyframesAttribute = `[[ "*", {}, [100, ${keyframesAttribute}]]]`
                     }
-                    keyframes[exist] = [ action, new Function("{argv}", `return ["${action}", ${fn}]`) ];
-                });
+
+                    keyframesAttribute.replace(CUT_FRAMES_REG, (all, action, fn) => {
+                        let exist = keyframes.findIndex(([x]) => x === action);
+                        if(exist < 0) {
+                            exist = keyframes.length;
+                        }
+                        keyframes[exist] = [ action, new Function("{argv}", `return ["${action}", ${fn}]`) ];
+                    });
+
+                }
 
             }
         }
         return [...next.childNodes].map( node =>
-            Parser.setup(node, { keyframes })
+            !Parser.is( node, "unit" ) && Parser.setup(node, { keyframes })
         );
     }
 
