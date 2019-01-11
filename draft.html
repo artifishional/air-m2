@@ -66,3 +66,66 @@
 
 
 
+
+<!-- define abstract tooltip component -->
+<unit template key=tooltip
+      onpointerenter = request(["over"])
+      onpointerleave = request(["leave"])
+>
+    <script>
+
+        import {stream} from "m2"
+
+        export default (/*{ key }*/) =>
+            stream(
+                (emt, {hook}) => {
+                    let state = { on: false };
+                    emt( [ state ] );
+                    hook.add(( { action } ) => {
+                        if(action === "over") {
+                            state = { on: true };
+                        }
+                        else {
+                            state = { on: false };
+                        }
+                        emt( [ state, [ action ] ] );
+                    })
+                }
+            )
+
+    </script>
+
+    <div>
+        <unit
+                key = body
+                onpointerenter = request(["over"])
+                onpointerleave = request(["leave"])
+        ></unit>
+    </div>
+    <unit tee = {on:true} stream = "./" key = tooltip></unit>
+
+</unit>
+
+<!-- define custom tooltip body -->
+<unit template key=tooltip-body>
+    <div>
+        <unit key = body></unit>
+        <setup keyframes = "[ 'fade-in', {delay: 3, duration: 0.3}, [1, {opacity: 1}] ]"></setup>
+        <setup keyframes = "[ 'fade-out', {duration: 0.1}, [0, {opacity: 0}] ]"></setup>
+    </div>
+</unit>
+
+<!-- use complex -->
+<unit use = tooltip>
+    <unit key = body>
+        <button> </button>
+    </unit>
+    <unit key = tooltip use = tooltip-body>
+        <unit key = body>
+            <div class="tooltip-wrap">
+                <unit tee = {on:true}>{lang.toolbar-hint-on}</unit>
+                <unit tee = {on:false}>{lang.toolbar-hint-off}</unit>
+            </div>
+        </unit>
+    </unit>
+</unit>
