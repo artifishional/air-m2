@@ -3,11 +3,11 @@ import loader from "../loader/resources"
 import { animate } from "air-gsap"
 import { prop } from "../functional"
 
-export default (scenesstream, { parentModelStream = null, modelstream, viewbuilder, baseresources = [], ...argv }) =>
+export default (scenesstream, { parentModelStream = null, modelstream: ms, viewbuilder, baseresources = [], ...argv }) =>
 
     stream( (emt, { sweep, over }) => {
 
-        sweep.add(combine([scenesstream, modelstream].filter(x=>x)).at(
+        sweep.add(combine([scenesstream, ms].filter(x=>x)).at(
             ([ { advantages: sceneschema }, {advantages: modelschema} = {} ]) => {
 
                 const {
@@ -59,7 +59,7 @@ export default (scenesstream, { parentModelStream = null, modelstream, viewbuild
                                 return sceneschema.obtain(use, {
                                     baseresources: resources,
                                     parentModelStream: modelstream,
-                                    modelschema: modelschema.get(model),
+                                    modelschema: model ? modelschema.get(model) : ms,
                                 })
                             }
                             else {
@@ -67,7 +67,7 @@ export default (scenesstream, { parentModelStream = null, modelstream, viewbuild
                                     baseresources: resources,
                                     parentModelStream: modelstream,
                                     route: [key],
-                                    modelschema: modelschema.get(model),
+                                    modelschema: model ? modelschema.get(model) : ms,
                                 })
                             }
                         });

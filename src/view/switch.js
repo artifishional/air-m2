@@ -1,7 +1,7 @@
 import { stream, combine } from "air-stream"
 import { equal } from "../utils"
 
-const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
+const statesstream = ( scenesstream, { parentModelStream, modelstream, baseresources } ) =>
 
     stream( (emt, { sweep }) => {
 
@@ -22,14 +22,31 @@ const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
 
                         emt( { stream: loaderstream, key: "loader" } );
 
-                        sweep.add(modelschema.obtain(model).at( ( [ key ] ) => {
+                        sweep.add( (!parentModelStream || model ? modelschema.obtain(model) : parentModelStream)
+                            .at( ( data ) => {
+
+                                let key;
+
+                                //todo obsolete
+                                if( data.hasOwnProperty("action") ) {
+                                    key = data.action[1].argv;
+                                }
+                                else {
+                                    [ key ] = data;
+                                }
 
                             const view = sceneschema.pickToState( key );
                             if(!view) {
                                 throw `tee state '${key}' not found for switcher`
                             }
 
+
                             if(curstate !== view.key) {
+
+                                console.log(view.key);
+
+                                curstate = view.key;
+
                                 clearTimeout(loadertimeout);
                                 loadertimeout = setTimeout(() =>
                                     emt( { stream: loaderstream, key: "loader" } ), 100);
@@ -38,13 +55,13 @@ const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
 
                                 requirestatestream = sceneschema._obtain( {
                                     baseresources,
+                                    parentModelStream,
                                     route: [ view.key ],
-                                    modelschema: modelschema.get(model + childrenmodel),
+                                    modelschema: modelschema.get(model),
                                 } );
                                 sweep.add(requirestatehook = requirestatestream.at( ({action}) => {
                                     if(action === "complete") {
                                         clearTimeout(loadertimeout);
-                                        curstate = view.key;
                                         emt( { stream: requirestatestream, key: view.key } );
                                     }
                                 } ));
@@ -62,7 +79,7 @@ const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
     } );
 
 
-export default (scenesstream, { modelstream, viewbuilder, baseresources }) =>
+export default (scenesstream, { parentModelStream, modelstream, viewbuilder, baseresources }) =>
 
     stream( (emt, { sweep, hook }) => {
 
@@ -96,6 +113,7 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources }) =>
                     stage = "idle";
                     //child.removeChild( curstatenode.remove() );
                     curstatenode.remove();
+                    curstatenode.clear();
                     //child.addChild( newstatenode );
                     child.replace( newstatenode );
                     curstatenode = newstatenode;
@@ -114,7 +132,7 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources }) =>
                 }
             }
 
-            sweep.add(statesstream( scenesstream, { modelstream, baseresources } )
+            sweep.add(statesstream( scenesstream, { parentModelStream, modelstream, baseresources } )
                 .at( ({ stream, key }) => {
                 if( curstate === stream ) {
                     if(stage === "fade-out") {

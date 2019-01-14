@@ -115,7 +115,8 @@ export default class Parser extends Array {
                         if(exist < 0) {
                             exist = keyframes.length;
                         }
-                        keyframes[exist] = [ action, new Function("{argv}", `return ["${action}", ${fn}]`) ];
+                        const handler = new Function("argv", `return ["${action}", ${fn}]`);
+                        keyframes[exist] = [ action, ({argv} = {}) => handler(argv) ];
                     });
 
                 }
