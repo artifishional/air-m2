@@ -16,8 +16,8 @@ export default class Loader {
         this.modules = [];
     }
 
-    obtain(advantages) {
-        const {source: {path: _path, schtype = "js"}} = advantages;
+    obtain(src) {
+        const { source: {path: _path, schtype = "js"} } = src;
         const path = _path + schtypes[schtype];
         const exist = this.modules.find( ({ path: _path }) => path === _path );
         if(exist) {
@@ -27,11 +27,7 @@ export default class Loader {
             let module = null;
             if (schtype === "html") {
                 module = html({path: `${this.rpath}${path}`})
-                    .map( html => ({
-                        module: {
-                            default: new Parser( html.content, { path: this.rpath } )
-                        }, advantages
-                    }) )
+                    .map( html => src.lift( { module: html.content }, src ))
             }
             else {
                 module = new Observable( emt => {
@@ -41,7 +37,7 @@ export default class Loader {
                     } );
                     */
                     include({path: `${this.rpath}${path}`}).then(({module}) => {
-                        emt({module, advantages});
+                        emt( src.lift({ module }, src ));
                     } );
                 } );
             }

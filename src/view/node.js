@@ -3,7 +3,12 @@ import loader from "../loader/resources"
 import { animate } from "air-gsap"
 import { prop } from "../functional"
 
-export default (scenesstream, { parentModelStream = null, modelstream: ms, viewbuilder, baseresources = [], ...argv }) =>
+export default (scenesstream, {
+    parent: { modelstream: pModelStream = null, resources: pResources = [] } = {},
+    modelstream: ms,
+    viewbuilder,
+    ...argv
+}) =>
 
     stream( (emt, { sweep, over }) => {
 
@@ -18,7 +23,7 @@ export default (scenesstream, { parentModelStream = null, modelstream: ms, viewb
                     item
                 } = sceneschema;
                 
-                const modelstream = model || !parentModelStream ? modelschema && combine([
+                const modelstream = model || !pModelStream ? modelschema && combine([
                     modelschema.obtain(model),
                     modelschema.obtain("#intl"),
                 ], (data, intl) => {
@@ -31,13 +36,13 @@ export default (scenesstream, { parentModelStream = null, modelstream: ms, viewb
                     else {
                         return { action: [ "*", { argv: data } ], intl } ;
                     }
-                }) || null : parentModelStream;
+                }) || null : pModelStream;
 
                 sweep.add(
                     combine([ loader(pack, resources), modelstream && modelstream.ready() ].filter(Boolean)
                 ).at(([resources]) => {
 
-                    resources = resources.length ? [...resources, ...baseresources] : baseresources;
+                    resources = resources.length ? [...resources, ...pResources] : pResources;
 
                     const view = viewbuilder( { schema, key, resources, ...args, ...argv }, modelstream );
 
@@ -57,15 +62,13 @@ export default (scenesstream, { parentModelStream = null, modelstream: ms, viewb
                         .map(({key, args: { use } }) => {
                             if(use) {
                                 return sceneschema.obtain(use, {
-                                    baseresources: resources,
-                                    parentModelStream: modelstream,
+                                    parent: { resources, modelstream },
                                     modelschema: model ? modelschema.get(model) : ms,
                                 })
                             }
                             else {
                                 return sceneschema._obtain({
-                                    baseresources: resources,
-                                    parentModelStream: modelstream,
+                                    parent: { resources, modelstream },
                                     route: [key],
                                     modelschema: model ? modelschema.get(model) : ms,
                                 })

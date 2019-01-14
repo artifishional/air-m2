@@ -1,24 +1,29 @@
 import {Observable, stream} from "air-stream"
+import { Schema } from "air-schema"
 import {routeNormalizer, schemasNormalizer, frommodule} from "../utils/index"
 import { signature } from "../utils"
 
 let uid = 0;
 
-export default class Advantages {
+export default class Advantages extends Schema {
 
     constructor({
-        parent,
         factory,
         loader,
         pack = {path: "./"},
         schema
-    }) {
+    }, src) {
 
         const [key, {id = "", sign = Advantages.sign, source = {}, ...args}, ...advs] = schema;
+
+        super( [ key ], src );
 
         this.pack = { path: source && source.hasOwnProperty("path") ?
             source.path + "/" : pack.path
         };
+
+        this.advantages = this;
+
         this.id = `#${id}`;
         this.uid = uid++;
         this.key = key;
@@ -26,12 +31,17 @@ export default class Advantages {
         this.sign = sign;
         this.loader = loader;
         this.source = source;
-        this.parent = parent;
+        this.parent = src;
         this.item = advs
             .map(schema => factory.create({pack: this.pack, factory, parent: this, schema, loader}));
         this.args = args;
         this.schema = schema;
+
+        //todo @deprecated
         this.static = !source.hasOwnProperty("path");
+
+        this.isready = !source.hasOwnProperty("path");
+
         this.linkers = [];
         this._stream = null;
     }
@@ -54,6 +64,10 @@ export default class Advantages {
     findId(id) {
         return this.item.find( ({id: _id}) => _id === id );
     }
+    
+    lift( data ) {
+        return new Advantages( data );
+    }
 
     /**
      *
@@ -72,15 +86,20 @@ export default class Advantages {
 
     get stream() {
         if(!this._stream) {
-            if(this.static) {
-                this._stream = new Observable(emt => {
-                    emt({advantages: this, source: this.source});
-                });
+            if(this.isready) {
+                this._stream = new Observable(emt => emt(this));
             }
             else {
                 this._stream = new Observable((emt) => {
-                    return this.loader.obtain(this).at(({module, advantages}) => {
+                    return this.loader.obtain(this).at(({ schema }) => {
                         /*locked cache*/this.stream.on( () => {} );
+
+                        this.merge( schema );
+
+
+
+
+/*
                         let exist = module[this.source.name || "default"];
                         if(!Array.isArray(exist) && typeof exist === "object") {
                             exist = frommodule(exist);
@@ -101,8 +120,10 @@ export default class Advantages {
                         }
                         else {
                             advantages.source = exist;
-                        }
-                        emt({advantages, source: advantages.source});
+                        }*/
+
+
+                        emt(this);
                     });
                 });
             }
