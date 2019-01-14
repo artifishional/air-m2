@@ -108,6 +108,7 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources }) =>
                     stage = "idle";
                     //child.removeChild( curstatenode.remove() );
                     curstatenode.remove();
+                    curstatenode.clear();
                     //child.addChild( newstatenode );
                     child.add( newstatenode );
                     curstatenode = newstatenode;
