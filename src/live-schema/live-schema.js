@@ -2,43 +2,58 @@ import {Observable, stream} from "air-stream"
 import { Schema } from "air-schema"
 import {routeNormalizer, schemasNormalizer, frommodule} from "../utils/index"
 import { signature } from "../utils"
+import { Loader } from "air-m2/src/loader"
 
-let uid = 0;
+export default class LiveSchema extends Schema {
 
-export default class Advantages extends Schema {
+    constructor([
+        key, {
+            id = "",
+            pack = {path: "./"},
+            source,
+        }, ...item], src = {}) {
 
-    constructor({
-        factory,
-        loader,
-        pack = {path: "./"},
-        schema
-    }, src) {
+        if(!(src instanceof Schema)) src.props = src;
 
-        const [key, {id = "", sign = Advantages.sign, source = {}, ...args}, ...advs] = this;
+        //const [key, {id = "", source = {}, ...args}, ...advs] = this;
 
-        super( [ key ], src );
+        super( [ key, {
+            pack: { path: source && source.hasOwnProperty("path") ? source.path + "/" : src.prop.pack.path },
+            source,
+        }, ...item ] );
 
-        this.pack = { path: source && source.hasOwnProperty("path") ?
-            source.path + "/" : pack.path
-        };
+        this.src = src;
 
+        //obsolete
         this.advantages = this;
 
+        //this.source = source;
+
+
         this.id = `#${id}`;
-        this.uid = uid++;
-        this.key = key;
-        this.factory = factory;
-        this.sign = sign;
-        this.loader = loader;
-        this.source = source;
+
+
+        //this.uid = uid++;
+
+
+        //this.key = key;
+        //this.factory = factory;
+
+        //this.sign = sign;
+
+        //this.loader = src.loader;
+        //this.factory = src.factory;
+
+        this.layers = [ this ];
+
         this.parent = src;
-        this.item = advs
-            .map(schema => factory.create({pack: this.pack, factory, parent: this, schema, loader}));
-        this.args = args;
-        this.schema = schema;
+        /*this.item = advs
+            .map(schema => factory.create({pack: this.pack, factory, parent: this, schema, loader}));*/
+        //this.args = args;
+        //this.schema = schema;
 
         //todo @deprecated
-        this.static = !source.hasOwnProperty("path");
+        //this.static = !source.hasOwnProperty("path");
 
         this.isready = !source.hasOwnProperty("path");
 
@@ -64,9 +79,66 @@ export default class Advantages extends Schema {
     findId(id) {
         return this.item.find( ({id: _id}) => _id === id );
     }
-    
+
     lift( data ) {
-        return new Advantages( data, this );
+        return new this.constructor( data, this );
+    }
+
+    load( emt ) {
+
+        const last = this.layers.slice( -1 )[0];
+
+
+        if( last ) {
+            
+        }
+
+
+
+
+        return Loader.default.obtain(this).at(( schema ) => {
+            /*locked cache*/this.stream.on( () => {} );
+
+            this.merge( schema );
+
+            if( !this.prop.source.hasOwnProperty("path") ) {
+                this.isready = true;
+                emt(this);
+            }
+            else {
+
+                return this.stream();
+
+            }
+
+
+
+
+            /*
+                                    let exist = module[this.source.name || "default"];
+                                    if(!Array.isArray(exist) && typeof exist === "object") {
+                                        exist = frommodule(exist);
+                                    }
+                                    if (Array.isArray(exist)) {
+                                        const [, {source, ...args}, ...advs] = schemasNormalizer(exist);
+                                        source && (advantages.source = source);
+                                        advantages.args = args;
+                                        const {factory, loader} = advantages;
+                                        advantages.item.push(...advs.map(schema =>
+                                            factory.create({
+                                                pack: advantages.pack,
+                                                factory,
+                                                parent: advantages,
+                                                schema,
+                                                loader
+                                            })));
+                                    }
+                                    else {
+                                        advantages.source = exist;
+                                    }*/
+
+
+        });
     }
 
     /**
@@ -91,10 +163,20 @@ export default class Advantages extends Schema {
             }
             else {
                 this._stream = new Observable((emt) => {
-                    return this.loader.obtain(this).at(({ schema }) => {
+                    return Loader.default.obtain(this).at(( schema ) => {
                         /*locked cache*/this.stream.on( () => {} );
 
                         this.merge( schema );
+
+                        if( !this.prop.source.hasOwnProperty("path") ) {
+                            this.isready = true;
+                            emt(this);
+                        }
+                        else {
+
+                            return this.stream();
+
+                        }
 
 
 
@@ -123,7 +205,6 @@ export default class Advantages extends Schema {
                         }*/
 
 
-                        emt(this);
                     });
                 });
             }

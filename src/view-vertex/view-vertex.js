@@ -1,17 +1,15 @@
 import { stream } from "air-stream"
-import scenenode from "./../view/node"
+import { LiveSchema } from "air-m2/src/live-schema"
+import scenenode from "./node"
 import sceneswitch from "./switch"
-import Factory from "./factory"
-import Unit from "../advantages/unit"
 
-export default class Creator extends Unit {
+export default class ViewVertex extends LiveSchema {
 
     constructor({
         viewbuilder,
-        factory = new Factory( { viewbuilder, Creator } ),
         ...args
     }) {
-        super({ factory, ...args });
+        super({ ...args });
         this.viewbuilder = viewbuilder;
     }
 

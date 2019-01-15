@@ -1,13 +1,13 @@
-import {Observable} from "air-stream"
+/*import {Observable} from "air-stream"
 import {routeNormalizer} from "../utils/index";
 
 /**
  *
- * @param {Advantages} advantages
+ * @param {LiveSchema} advantages
  * @param {String} item Node with switchable states
  * @param {String|Object} target Data source
  * @returns {*}
- */
+ *//*
 export default function ({advantages, routes: { item, target } }) {
 
     return advantages
@@ -17,4 +17,4 @@ export default function ({advantages, routes: { item, target } }) {
         )
         //.unique();
 
-}
+}*/

@@ -1,6 +1,6 @@
-import Advantages from "./advantages"
+/*import LiveSchema from "./live-schema"
 
-export default class Container extends Advantages {
+export default class Container extends LiveSchema {
 
     constructor(
         { schema: [ key, {sign = Container.sign, ...args}, ...advs ], ...options }
@@ -13,7 +13,7 @@ export default class Container extends Advantages {
     }
 
 }
-
+*/
 
 /*
 

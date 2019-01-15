@@ -1,5 +1,4 @@
-import Advantages from "../advantages/advantages";
-import Container from "../advantages/container"
+/*import LiveSchema from "../advantages/advantages"
 
 export default class Factory {
 
@@ -12,4 +11,4 @@ export default class Factory {
         return new this.Creator( options );
     }
 
-}
+}*/

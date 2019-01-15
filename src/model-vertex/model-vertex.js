@@ -1,6 +1,6 @@
-import Unit from "../advantages/unit"
+import { LiveSchema } from "../live-schema"
 import {stream, Observable} from "air-stream"
-import Factory from "./factory"
+import Parser from "./parser"
 
 function equal( sign, elem ) {
     if(Array.isArray(sign)) {
@@ -19,11 +19,17 @@ function find(cache, args) {
     return cache.find( ({ sign }) => equal( sign, args ));
 }
 
-export default class Creator extends Unit {
+const parser = new Parser();
 
-    constructor({...args}) {
-        super({ factory: new Factory( { Creator } ), ...args});
+export default class ModelVertex extends LiveSchema {
+
+    constructor(data, src) {
+        super(data, src);
         this.__cache = [];
+    }
+
+    parser( data ) {
+        return parser.parse( data );
     }
 
     use(src, args) {

@@ -1,4 +1,4 @@
-import Advantages from "../advantages/advantages";
+/*import { LiveSchema } from "../LiveSchema"
 
 export default class Factory {
 
@@ -13,4 +13,4 @@ export default class Factory {
         return new this.Creator( { ...options, viewbuilder } );
     }
 
-}
+}*/

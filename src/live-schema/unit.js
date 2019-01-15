@@ -1,14 +1,12 @@
-import Advantages from "./advantages";
-import Loader from "../loader/loader";
-import Factory from "../model/factory";
+/*import LiveSchema from "./advantages"
+import Loader from "../loader/loader"
+import Factory from "../model/factory"
 import {schemasNormalizer} from "../utils/index"
 
-export default class Unit extends Advantages {
+export default class Unit extends LiveSchema {
 
     constructor({
         parent = null,
-        loader = Loader.default,
-        factory = Factory.default,
         pack,
         schema: _schema,
     }) {
@@ -23,4 +21,4 @@ export default class Unit extends Advantages {
         });
     }
 
-}
+}*/
