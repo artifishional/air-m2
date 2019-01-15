@@ -14,7 +14,7 @@ export default class Advantages extends Schema {
         schema
     }, src) {
 
-        const [key, {id = "", sign = Advantages.sign, source = {}, ...args}, ...advs] = schema;
+        const [key, {id = "", sign = Advantages.sign, source = {}, ...args}, ...advs] = this;
 
         super( [ key ], src );
 
@@ -66,7 +66,7 @@ export default class Advantages extends Schema {
     }
     
     lift( data ) {
-        return new Advantages( data );
+        return new Advantages( data, this );
     }
 
     /**

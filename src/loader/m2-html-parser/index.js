@@ -1,12 +1,13 @@
 import { routeNormalizer, routeToString } from "../../utils"
 import events from "../events"
 import JSON5 from "json5"
+import { Schema } from "air-schema"
 
 const CUT_FRAMES_REG = /\[\s*["'](.+?)["']\s*,((?:\s*{.+?}\s*,\s*)?\s*(?:\[.+?]))\s*]/gs;
 
 let ACID = 0;
 
-export default class Parser extends Array {
+export default class Parser extends Schema {
 
     constructor( node, {
         type = "node", path = "", key: pkey = null
