@@ -19,8 +19,6 @@ function find(cache, args) {
     return cache.find( ({ sign }) => equal( sign, args ));
 }
 
-const parser = new Parser();
-
 export default class ModelVertex extends LiveSchema {
 
     constructor(data, src) {
@@ -28,8 +26,8 @@ export default class ModelVertex extends LiveSchema {
         this.__cache = [];
     }
 
-    parser( data ) {
-        return parser.parse( data );
+    getParser( data ) {
+        return new Parser( data );
     }
 
     use(src, args) {

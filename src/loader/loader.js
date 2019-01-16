@@ -1,7 +1,7 @@
 import {Observable} from "air-stream"
+import { Schema } from "air-schema"
 import include from "./script_like_promise"
 import html from "./html"
-import Parser from "./m2-html-parser"
 
 const schtypes = {
     "js": "/index.js",
@@ -27,7 +27,7 @@ export default class Loader {
             let module = null;
             if (schtype === "html") {
                 module = html({path: `${this.rpath}${path}`})
-                    .map( html => src.parser({ module: html.content }, src) )
+                    .map( html => src.getParser({ module: html.content }) )
             }
             else {
                 module = new Observable( emt => {
@@ -37,7 +37,7 @@ export default class Loader {
                     } );
                     */
                     include({path: `${this.rpath}${path}`}).then(({module}) => {
-                        emt( src.parser({ module }, src ));
+                        emt( src.getParser( { module } ));
                     } );
                 } );
             }

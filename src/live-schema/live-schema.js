@@ -1,4 +1,4 @@
-import {Observable, stream} from "air-stream"
+import { stream } from "air-stream"
 import { Schema } from "air-schema"
 import {routeNormalizer, schemasNormalizer, frommodule} from "../utils/index"
 import { signature } from "../utils"
@@ -12,6 +12,10 @@ export default class LiveSchema extends Schema {
             pack = {path: "./"},
             source,
         }, ...item], src = {}) {
+
+        if(source === undefined) {
+            throw "azaz";
+        }
 
         if(!(src instanceof Schema)) src.props = src;
 
@@ -29,33 +33,18 @@ export default class LiveSchema extends Schema {
 
         //this.source = source;
 
-
         this.id = `#${id}`;
-
-
-        //this.uid = uid++;
-
 
         //this.key = key;
         //this.factory = factory;
 
         //this.sign = sign;
 
-        //this.loader = src.loader;
         //this.factory = src.factory;
 
-        this.layers = [ this ];
-
-        this.parent = src;
-        /*this.item = advs
-            .map(schema => factory.create({pack: this.pack, factory, parent: this, schema, loader}));*/
+        //this.parent = src;
         //this.args = args;
         //this.schema = schema;
-
-        //todo @deprecated
-        //this.static = !source.hasOwnProperty("path");
-
-        this.isready = !source.hasOwnProperty("path");
 
         this.linkers = [];
         this._stream = null;
@@ -71,74 +60,28 @@ export default class LiveSchema extends Schema {
     }
 
     pickToState( state ) {
-        return this.item.find( ({ key }) => {
-            return signature(key, state)
-        } );
+        return this.item.find( ([ key ]) => signature(key, state) );
     }
 
     findId(id) {
-        return this.item.find( ({id: _id}) => _id === id );
+        return this.item.find( ({prop}) => prop.id === id );
     }
 
     lift( data ) {
         return new this.constructor( data, this );
     }
 
-    load( emt ) {
-
+    load( emt, { sweep } ) {
         const last = this.layers.slice( -1 )[0];
-
-
-        if( last ) {
-            
+        if( last.prop.source.hasOwnProperty("path") ) {
+            sweep.add(Loader.default.obtain(this).at(( schema ) => {
+                this.merge( schema );
+                this.load( emt, { sweep } );
+            }));
         }
-
-
-
-
-        return Loader.default.obtain(this).at(( schema ) => {
-            /*locked cache*/this.stream.on( () => {} );
-
-            this.merge( schema );
-
-            if( !this.prop.source.hasOwnProperty("path") ) {
-                this.isready = true;
-                emt(this);
-            }
-            else {
-
-                return this.stream();
-
-            }
-
-
-
-
-            /*
-                                    let exist = module[this.source.name || "default"];
-                                    if(!Array.isArray(exist) && typeof exist === "object") {
-                                        exist = frommodule(exist);
-                                    }
-                                    if (Array.isArray(exist)) {
-                                        const [, {source, ...args}, ...advs] = schemasNormalizer(exist);
-                                        source && (advantages.source = source);
-                                        advantages.args = args;
-                                        const {factory, loader} = advantages;
-                                        advantages.item.push(...advs.map(schema =>
-                                            factory.create({
-                                                pack: advantages.pack,
-                                                factory,
-                                                parent: advantages,
-                                                schema,
-                                                loader
-                                            })));
-                                    }
-                                    else {
-                                        advantages.source = exist;
-                                    }*/
-
-
-        });
+        else {
+            emt( this );
+        }
     }
 
     /**
@@ -157,59 +100,7 @@ export default class LiveSchema extends Schema {
     }
 
     get stream() {
-        if(!this._stream) {
-            if(this.isready) {
-                this._stream = new Observable(emt => emt(this));
-            }
-            else {
-                this._stream = new Observable((emt) => {
-                    return Loader.default.obtain(this).at(( schema ) => {
-                        /*locked cache*/this.stream.on( () => {} );
-
-                        this.merge( schema );
-
-                        if( !this.prop.source.hasOwnProperty("path") ) {
-                            this.isready = true;
-                            emt(this);
-                        }
-                        else {
-
-                            return this.stream();
-
-                        }
-
-
-
-
-/*
-                        let exist = module[this.source.name || "default"];
-                        if(!Array.isArray(exist) && typeof exist === "object") {
-                            exist = frommodule(exist);
-                        }
-                        if (Array.isArray(exist)) {
-                            const [, {source, ...args}, ...advs] = schemasNormalizer(exist);
-                            source && (advantages.source = source);
-                            advantages.args = args;
-                            const {factory, loader} = advantages;
-                            advantages.item.push(...advs.map(schema =>
-                                factory.create({
-                                    pack: advantages.pack,
-                                    factory,
-                                    parent: advantages,
-                                    schema,
-                                    loader
-                                })));
-                        }
-                        else {
-                            advantages.source = exist;
-                        }*/
-
-
-                    });
-                });
-            }
-        }
-        return this._stream;
+        return this._stream || (this._stream = stream( this.load, this ));
     }
 
     _get({route: [key, ...route]}, from = {src: this, route: [key, ...route] }) {

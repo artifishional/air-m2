@@ -1,19 +1,29 @@
-import {Schema} from "air-schema"
+import { Schema } from "air-schema"
 
-export default class Parser {
+export default class Parser extends Schema {
 
-    parse({ module }) {
+    constructor(props) {
+        super(props);
+    }
+
+    parseData( { module } ) {
         let exist = module.default;
         if(!Array.isArray(exist) && typeof exist === "object") {
             exist = this.frommodule(exist);
         }
-        if (Array.isArray(exist)) {
-            return exist ;
-        }
+        if (Array.isArray(exist)) { }
         else {
-            return [ "*", { source: exist } ];
+            exist = [ "main", { source: exist } ];
         }
         return exist;
+    }
+
+    parseProperties( { source = {}, ...prop } ) {
+        return { source, ...prop };
+    }
+
+    parseChildren( item ) {
+        return item;
     }
 
     frommodule(module, _key = "main") {
