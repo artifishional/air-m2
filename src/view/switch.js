@@ -37,7 +37,10 @@ const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
                             if(action === "change" && curstate !== key) {
 
                                 clearTimeout(loadertimeout);
-                                loadertimeout = setTimeout(() => emt( { stream: loaderstream, key: "loader" } ) , 100);
+                                loadertimeout = setTimeout(() => {
+                                    curstate = null;
+                                    emt( { stream: loaderstream, key: "loader" } )
+                                } , 100);
 
                                 requirestatehook && sweep.force( requirestatehook );
                                 requirestatestream = sceneschema._obtain( {
