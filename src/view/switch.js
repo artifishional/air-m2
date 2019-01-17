@@ -71,7 +71,11 @@ const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
 
 export default (scenesstream, { modelstream, viewbuilder, baseresources }) =>
 
-    stream( (emt, { sweep }) => {
+    stream( (emt, { sweep, hook }) => {
+
+        hook.add(({action}) => {
+            emt({action: `${action}-complete`,});
+        });
 
         sweep.add(scenesstream.at( ({ advantages: {key, args: { frames = [], ...args }} }) => {
 
