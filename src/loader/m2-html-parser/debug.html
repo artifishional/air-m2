@@ -11,7 +11,7 @@
 
     import Parser from "./index.js"
 
-    console.log(Parser.parse( document.querySelector("unit") ));
+    console.log(new Parser( document.querySelector("unit") ));
 
 </script>
 
@@ -37,7 +37,7 @@
         <unit use = "./some/path"></unit>
 
         <unit key = "azaza"></unit>
-        <unit dir = "./[key=key]" key = 5></unit>
+        <unit key = 5 dir = "./[key=key]"></unit>
 
     </unit>
 

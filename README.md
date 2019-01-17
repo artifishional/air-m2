@@ -157,12 +157,12 @@ where
 ###### List of supported events
 
 - ``` "onclick" ```
-- ``` "onclickoutside" (own event)```
+- ``` "onclickoutside" (synthetic)```
 - ``` "onpointermove" ```
 - ``` "onpointerenter" ```
 - ``` "onpointerleave" ```
-- ``` "onglobalkeydown" (own event)```
-- ``` "onglobalkeyup" (own event)```
+- ``` "onglobalkeydown" (synthetic)```
+- ``` "onglobalkeyup" (synthetic)```
 - ``` "onkeydown" ```
 - ``` "onkeyup" ```
 - ``` "onwheel" ```

@@ -19,3 +19,83 @@
 
 "./[key]"
 "./[key = key, someone = 10]"
+
+
+<unit resources = '[
+    { type: "style", url: "res/css/cover.css" },
+    { type: "formatters", url: "res/formatters.json" },
+]'>
+
+    <plug key = player use = url(./player) template stream = #player/></plug>
+
+    <tee stream = ./session/games/current/mw>
+
+        <tee key = nested-tee>
+            <unit key = 1></unit>
+            <unit key = 2></unit>
+            <unit key = 3></unit>
+        </tee>
+
+        <unit key = loader use = ./master/loader></unit>
+        <unit key = '{name: "alpha1"}' stream = ../../ >
+            <unit use = url(./session/games/current/mw)></unit>
+        </unit>
+
+    </tee>
+
+</unit>
+
+<dock stream = "././">
+
+    <unit></unit>
+
+</dock>
+
+<script>
+
+
+
+
+
+
+
+
+    const data = [
+        [
+
+            { type: "card", a: 10, i: 15 },
+            { type: "card", b: 20, i: 15 },
+            { type: "card", a: 10, i: 15 },
+            { type: "card", b: 20, i: 15 },
+            { type: "card", a: 10, i: 15 },
+            { type: "card", b: 20, i: 15 },
+            { type: "card", a: 10, i: 15 },
+            { type: "card", b: 20, i: 15 },
+            { expanded: true, type: "card", a: 10, i: 15 },
+            { type: "card", b: 20, i: 15 },
+            { type: "card", b: 20, i: 15 },
+
+        ], { add: [ { a: 10 }
+        ] } ]
+
+
+
+
+
+
+    //шаблоны доступны по ключам
+
+    //если шаблон наследует родительский поток, то каждый элемент будет создан
+    //из фабрики, согласно переданному ключу из верхнего потока
+
+    //каждому ключу контейнер добавляет
+
+
+
+
+
+
+
+
+
+</script>
