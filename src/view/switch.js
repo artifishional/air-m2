@@ -151,11 +151,11 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources }) =>
                             requirestate = null;
                         }
                         requirestate = stream;
-                        sweep.add(requirestatehook = requirestate.at( ({...args}) => {
-                            //fixme temporary solution controller problem
-                            const id = setTimeout( () => handle({ ...args, key, stream }) );
-                            sweep.add(() => clearTimeout(id));
+                        sweep.add( requirestatehook = requirestate.connectable( ({...args}) => {
+                            handle({ ...args, key, stream });
                         } ));
+	                    requirestatehook.connect();
+                   
                     }
                 }
             } ));
