@@ -37,7 +37,10 @@ const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
                             if(action === "change" && curstate !== key) {
 
                                 clearTimeout(loadertimeout);
-                                loadertimeout = setTimeout(() => emt( { stream: loaderstream, key: "loader" } ) , 100);
+                                loadertimeout = setTimeout(() => {
+                                    curstate = null;
+                                    emt( { stream: loaderstream, key: "loader" } )
+                                } , 100);
 
                                 requirestatehook && sweep.force( requirestatehook );
                                 requirestatestream = sceneschema._obtain( {
@@ -148,11 +151,11 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources }) =>
                             requirestate = null;
                         }
                         requirestate = stream;
-                        sweep.add(requirestatehook = requirestate.at( ({...args}) => {
-                            //fixme temporary solution controller problem
-                            const id = setTimeout( () => handle({ ...args, key, stream }) );
-                            sweep.add(() => clearTimeout(id));
+                        sweep.add( requirestatehook = requirestate.connectable( ({...args}) => {
+                            handle({ ...args, key, stream });
                         } ));
+	                    requirestatehook.connect();
+                   
                     }
                 }
             } ));
