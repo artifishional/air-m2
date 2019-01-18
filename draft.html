@@ -59,73 +59,113 @@
 //full
 <setup keyframes='[[ "*", { duration: 300 }, [ 1, { css: {  } } ] ]]'>
 
-        //only default action last key-frame
-        <setup keyframes='{ css: {} }'></setup>
+    //only default action last key-frame
+    <setup keyframes='{ css: {} }'></setup>
 
 </setup>
 
 
+<unit key = accordion>
+    <unit copy key = node>
+        <unit key = body></unit>
+    </unit>
+</unit>
 
 
 <!-- define abstract tooltip component -->
-<unit template key=tooltip
+<unit template key = my-tooltip
       onpointerenter = request(["over"])
       onpointerleave = request(["leave"])
 >
+
     <script>
 
-        import {stream} from "m2"
+		import {stream} from "m2"
 
-        export default (/*{ key }*/) =>
-            stream(
-                (emt, {hook}) => {
-                    let state = { on: false };
-                    emt( [ state ] );
-                    hook.add(( { action } ) => {
-                        if(action === "over") {
-                            state = { on: true };
-                        }
-                        else {
-                            state = { on: false };
-                        }
-                        emt( [ state, [ action ] ] );
-                    })
-                }
-            )
+		export default (/*{ key }*/) =>
+			controller()
+				.reducer( [{ on: false }], ([{ on }], { request }) => {
+					if(request ===  "over") {
+						on = true;
+					}
+					else if( request === "leave" ) {
+						on = false;
+					}
+					return [{ on }, { request }];
+				} );
 
     </script>
 
-    <div>
-        <unit
-                key = body
-                onpointerenter = request(["over"])
-                onpointerleave = request(["leave"])
-        ></unit>
-    </div>
-    <unit tee = {on:true} stream = "./" key = tooltip></unit>
+    <unit key = tooltip tee = {on:true}></unit>
 
 </unit>
 
-<!-- define custom tooltip body -->
-<unit template key=tooltip-body>
-    <div>
-        <unit key = body></unit>
-        <setup keyframes = "[ 'fade-in', {delay: 3, duration: 0.3}, [1, {opacity: 1}] ]"></setup>
-        <setup keyframes = "[ 'fade-out', {duration: 0.1}, [0, {opacity: 0}] ]"></setup>
-    </div>
-</unit>
 
-<!-- use complex -->
-<unit use = tooltip>
-    <unit key = body>
-        <button> </button>
+
+<unit template key = customized-tooltip-body-component use = ./my-tooltip>
+    <unit key = tooltip>
+        <setup template key = tooltip-container-animation-settings>
+            <keyframe action = fade-in props = {delay:3,duration:0.3}>
+                <!--    <keyframe action = fade-in props = {delay:3,duration:dur}>  "dur" from argv-->
+                <!--    <keyframe action = fade-in props = {delay:3,duration}>  "dur" from argv-->
+                <key offset = 1 props = {css:{opacity:1}} />
+                <!--  default offset settings - [1] - 100%, [2] - 0%-100% [>2] k = index*100%/count -->
+            </keyframe>
+            <keyframe action = fade-out props = {delay:3,duration:0.1}>
+                <key offset = 1 props = {css:{opacity:0}} />
+            </keyframe>
+        </setup>
     </unit>
-    <unit key = tooltip use = tooltip-body>
+</unit>
+
+<!-- How should the settings get inside the "div.btn-tooltip" container?  -->
+
+<!-- use component -->
+
+<unit use = ./customized-body-tooltip-component>
+    <div>
         <unit key = body>
-            <div class="tooltip-wrap">
-                <unit tee = {on:true}>{lang.toolbar-hint-on}</unit>
-                <unit tee = {on:false}>{lang.toolbar-hint-off}</unit>
+            <button type = button>
+                <unit tee = {on:true}>
+                    <svg viewBox="0 0 40 40">
+                        <path d="M24,9 L24,11 L28.999,11 L28.999,15.999 L30.999,15.999 L30.999,9 L24,9 Z M9,9 L9,15.999 L10.999,15.999 L10.999,11 L16,11 L16,9 L9,9 Z M28.999,23.999 L28.999,29 L24,29 L24,31 L30.999,31 L30.999,23.999 L28.999,23.999 Z M9,23.999 L9,31 L16,31 L16,29 L10.999,29 L10.999,23.999 L9,23.999 Z" id="path-111"></path>
+                    </svg>
+                </unit>
+                <unit tee = {on:false}>
+                    <svg viewBox="0 0 40 40">
+                        <path d="M24,9 L24,15.999 L30.999,15.999 L30.999,13.999 L26,13.999 L26,9 L24,9 Z M14,9 L14,13.999 L9,13.999 L9,15.999 L16,15.999 L16,9 L14,9 Z M24,23.999 L24,31 L26,31 L26,25.999 L30.999,25.999 L30.999,23.999 L24,23.999 Z M9,23.999 L9,25.999 L14,25.999 L14,31 L16,31 L16,23.999 L9,23.999 Z" id="path-111-2"></path>
+                    </svg>
+                </unit>
+            </button>
+        </unit>
+        <unit key = tooltip>
+            <div style = "opacity:0">
+                <div class = tooltip-wrap>
+                    <unit tee = {on:true}>{lang.toolbar-hint-on}</unit>
+                    <unit tee = {on:false}>{lang.toolbar-hint-off}</unit>
+                </div>
             </div>
         </unit>
-    </unit>
+    </div>
 </unit>
+
+<!-- result -->
+
+<div class = tooltip>
+    <div style = "opacity:0">
+        <div class="btn-tooltip-wrap">
+            <unit tee = {on:true}>{lang.toolbar-hint-on}</unit>
+            <unit tee = {on:false}>{lang.toolbar-hint-off}</unit>
+        </div>
+    </div>
+    <button type = button>
+        <svg viewBox="0 0 40 40">
+            <path d="M24,9 L24,11 L28.999,11 L28.999,15.999 L30.999,15.999 L30.999,9 L24,9 Z M9,9 L9,15.999 L10.999,15.999 L10.999,11 L16,11 L16,9 L9,9 Z M28.999,23.999 L28.999,29 L24,29 L24,31 L30.999,31 L30.999,23.999 L28.999,23.999 Z M9,23.999 L9,31 L16,31 L16,29 L10.999,29 L10.999,23.999 L9,23.999 Z" id="path-111"></path>
+        </svg>
+        <svg viewBox="0 0 40 40">
+            <path d="M24,9 L24,15.999 L30.999,15.999 L30.999,13.999 L26,13.999 L26,9 L24,9 Z M14,9 L14,13.999 L9,13.999 L9,15.999 L16,15.999 L16,9 L14,9 Z M24,23.999 L24,31 L26,31 L26,25.999 L30.999,25.999 L30.999,23.999 L24,23.999 Z M9,23.999 L9,25.999 L14,25.999 L14,31 L16,31 L16,23.999 L9,23.999 Z" id="path-111-2"></path>
+        </svg>
+    </button>
+</div>
+
+<!-- html standart tags are invisible -->
