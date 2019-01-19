@@ -75,58 +75,67 @@
 <!-- define abstract tooltip component -->
 <unit template key = my-tooltip>
 
-    <script>
+    <unit key = main>
 
-		import {stream} from "m2"
+        <script>
 
-		export default (/*{ key, eid }*/) =>
-			controller()
-				.reducer( [{ on: false }], ([{ on }], { request }) => {
-					if(request ===  "over") {
-						on = true;
-					}
-					else if( request === "leave" ) {
-						on = false;
-					}
-					return [{ on }, { request }];
-				} );
+            import {stream} from "m2"
 
-    </script>
+            export default (/*{ key, eid }*/) =>
+                controller()
+                    .reducer( [{ on: false }], ([{ on }], { request }) => {
+                        if(request ===  "over") {
+                            on = true;
+                        }
+                        else if( request === "leave" ) {
+                            on = false;
+                        }
+                        return [{ on }, { request }];
+                    } );
 
-    <setup  stream = .
-            key = main-setup
-            onpointerenter = request(["over"])
-            onpointerleave = request(["leave"])
-    ></setup>
-    <unit stream = . key = tooltip tee = {on:true}></unit>
+        </script>
 
-    <!-- if stream not empty then it's work in current place -->
-    <!-- entity id when component is reusable (template) -->
+        <unit
+            key = body
+            stream = .
+        >
+            <setup
+                    onpointerenter = request(["over"])
+                    onpointerleave = request(["leave"])
+            ></setup>
+        </unit>
+        <unit stream = . key = tooltip tee = {on:true}></unit>
+
+        <!-- if stream not empty then it's work in current place -->
+        <!-- entity id when component is reusable (template) -->
+
+    </unit>
 
 </unit>
 
 
 
 <unit template key = customized-tooltip-component use = ./my-tooltip>
-    <unit key = tooltip>
-        <div style = "opacity:0">
-            <setup template key = container-animation-setup>
-                <keyframe action = fade-in prop = {delay:3,duration:0.3}>
-                    <!--    <keyframe action = fade-in prop = {delay:3,duration:(x)}>  "x" from argv-->
-                    <!--    <keyframe action = fade-in prop = {delay:3,duration:(y)}>  "y" from argv-->
-                    <key offset = 1 prop = {css:{opacity:1}} />
-                    <!--  default offset settings - [1] - 100%, [2] - 0%-100% [>2] k = index*100%/count -->
-                </keyframe>
-                <keyframe action = fade-out prop = {delay:3,duration:0.1}>
-                    <key offset = 1 prop = {css:{opacity:0}} />
-                </keyframe>
-            </setup>
-            <div class = tooltip-wrap>
-                <unit tee = {on:true} use = lang/toolbar-hint-on></unit>
-                <unit tee = {on:false} use = lang/toolbar-hint-off></unit>
-            </div>
-        </div>
-    </unit>
+    <div>
+        <unit key = main>
+            <unit key = tooltip>
+                <div style = "opacity:0">
+                    <setup template key = container-animation-setup>
+                        <keyframe action = fade-in prop = {delay:3,duration:0.3}>
+                            <!--    <keyframe action = fade-in prop = {delay:3,duration:(x)}>  "x" from argv-->
+                            <!--    <keyframe action = fade-in prop = {delay:3,duration:(y)}>  "y" from argv-->
+                            <key offset = 1 prop = {css:{opacity:1}} />
+                            <!--  default offset settings - [1] - 100%, [2] - 0%-100% [>2] k = index*100%/count -->
+                        </keyframe>
+                        <keyframe action = fade-out prop = {delay:3,duration:0.1}>
+                            <key offset = 1 prop = {css:{opacity:0}} />
+                        </keyframe>
+                    </setup>
+                    <unit key = body></unit>
+                </div>
+            </unit>
+        </unit>
+    </div>
 </unit>
 
 <!-- define languages -->
@@ -146,7 +155,7 @@
 <!-- use component -->
 
 <unit use = ./customized-tooltip-component>
-    <div>
+    <unit key = main>
         <setup key = main-setup></setup>
         <unit key = body>
             <button type = button>
@@ -162,7 +171,15 @@
                 </unit>
             </button>
         </unit>
-    </div>
+        <unit key = tooltip>
+            <unit key = body>
+                <div class = tooltip-wrap>
+                    <unit tee = {on:true} use = lang/toolbar-hint-on></unit>
+                    <unit tee = {on:false} use = lang/toolbar-hint-off></unit>
+                </div>
+            </unit>
+        </unit>
+    </unit>
 </unit>
 
 <!-- result -->
