@@ -1,25 +1,29 @@
 import { stream, combine } from "air-stream"
 
-const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
+const statesstream = (scenesstream, { modelstream, viewbuilder, baseresources }) =>
 
     stream( (emt, { sweep }) => {
 
         sweep.add(combine([scenesstream, modelstream]).at(
             ([ { advantages: sceneschema }, {advantages: modelschema} ]) => {
-                const { args: { model, childrenmodel = "" } } = sceneschema;
-
+                const { key, args: { model, childrenmodel = "", ...args } } = sceneschema;
+	
+	            const child = viewbuilder({key, ...args});
+                
                 let curstate = null;
                 let requirestatehook = null;
                 let loadertimeout = null;
                 let requirestatestream = null;
+                let curChild = null;
 
                 const loaderstream = sceneschema.obtain("#loader");
 
-                sweep.add( loaderstream.at( ({action}) => {
+                sweep.add( loaderstream.at( ({action, node}) => {
 
                     if(action === "complete") {
-
-                        emt( { stream: loaderstream, key: "loader" } );
+	
+	                    child.add( curChild = node );
+                        emt( { action: "complete", node: child } );
 
                         sweep.add(modelschema.obtain(model).at( ( data ) => {
 
@@ -39,7 +43,9 @@ const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
                                 clearTimeout(loadertimeout);
                                 loadertimeout = setTimeout(() => {
                                     curstate = null;
-                                    emt( { stream: loaderstream, key: "loader" } )
+                                    //emt( { stream: loaderstream, key: "loader", node } )
+	                                curChild.remove();
+	                                child.add( curChild = node );
                                 } , 100);
 
                                 requirestatehook && sweep.force( requirestatehook );
@@ -48,12 +54,22 @@ const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
                                     route: [ key ],
                                     modelschema: modelschema.get(model + childrenmodel),
                                 } );
-                                sweep.add(requirestatehook = requirestatestream.at( ({action}) => {
+	
+	                            requirestatestream.$key = key;
+                                
+                                sweep.add(requirestatehook = requirestatestream.at( ({action, node}) => {
 
                                     if(action === "complete") {
                                         clearTimeout(loadertimeout);
                                         curstate = key;
-                                        emt( { stream: requirestatestream, key } );
+	
+	                                    requirestatehook( { key, action: [ "fade-in" ]} );
+	
+	                                    curChild.remove();
+	                                    child.add( curChild = node );
+	                                    
+                                        //emt( { stream: requirestatestream, key, node } );
+                                        
                                     }
 
                                 } ));
@@ -71,7 +87,9 @@ const statesstream = ( scenesstream, { modelstream, baseresources } ) =>
 
     } );
 
+export default statesstream;
 
+/*
 export default (scenesstream, { modelstream, viewbuilder, baseresources }) =>
 
     stream( (emt, { sweep, hook }) => {
@@ -134,32 +152,41 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources }) =>
                 }
             }
 
-            sweep.add(statesstream( scenesstream, { modelstream, baseresources } ).at( ({ stream, key }) => {
-                if( curstate === stream ) {
-                    if(stage === "fade-out") {
-                        stage = "idle";
-                        curstatehook( { action: ["fade-in"] } );
-                        //there is no need to load a new state
-                        sweep.force(requirestatehook);
-                        requirestate = null;
-                    }
-                }
-                else {
-                    if(requirestate !== stream) {
-                        if(requirestate) {
-                            sweep.force(requirestatehook);
-                            requirestate = null;
-                        }
-                        requirestate = stream;
-                        sweep.add( requirestatehook = requirestate.connectable( ({...args}) => {
-                            handle({ ...args, key, stream });
-                        } ));
-	                    requirestatehook.connect();
-                   
-                    }
-                }
+            sweep.add(statesstream( scenesstream, { modelstream, baseresources } ).at( ({ stream, key, node }) => {
+	
+	            console.log( node.getAttribute("db-name"), stream.$key );
+	
+	            
+	            
+	            function handle( { action, node, key, stream } ) {
+		            if(action === "fade-out-complete") {
+			            sweep.force(curstatehook);
+			            curstatehook = requirestatehook;
+			            //sweep.add(curstatehook = requirestatehook);
+			            stage = "idle";
+			            //child.removeChild( curstatenode.remove() );
+			            curstatenode.remove();
+			            curstatenode.clear();
+			            //child.addChild( newstatenode );
+			            child.add( newstatenode );
+			            curstatenode = newstatenode;
+			            curstate = requirestate;
+			            requirestate = null;
+			            curstatehook( { key, action: [ "fade-in" ]} );
+		            }
+		            else if(action === "complete" && stream === requirestate) {
+			            newstatenode = node;
+			            stage = "fade-out";
+			            curstatehook( { key, action: [ "fade-out" ]} );
+			            if(!loaded) {
+				            emt( { key, action: "complete", node: child} );
+				            loaded = true;
+			            }
+		            }
+	            }
+        
             } ));
 
         } ));
 
-    });
+    });*/

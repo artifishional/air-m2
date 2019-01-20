@@ -80,12 +80,12 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources = [], ..
                         emt( { action: "complete", node: view } );
                     }
                     sweep.add(() => view.clear());
-                    sweep.add(combine(all.map( obs => obs.filter(prop("action").eq("fade-in-complete")) )).at(
+                    /*sweep.add(combine(all.map( obs => obs.filter(prop("action").eq("fade-in-complete")) )).at(
                         () => emt( {action: "fade-in-complete"} )
-                    ));
-                    sweep.add(combine(all.map( obs => obs.filter(prop("action").eq("fade-out-complete")) )).at(
+                    ));*/
+                    /*sweep.add(combine(all.map( obs => obs.filter(prop("action").eq("fade-out-complete")) )).at(
                         () => emt( {action: "fade-out-complete"} )
-                    ));
+                    ));*/
                 }));
 
             }
