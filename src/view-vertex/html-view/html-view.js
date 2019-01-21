@@ -3,6 +3,7 @@ import { routeNormalizer, routeToString } from "../../utils"
 import events from "../events"
 import JSON5 from "json5"
 import { LiveSchema } from "../../live-schema"
+import resource from "../../loader/resource"
 
 const CUT_FRAMES_REG = /\[\s*["'](.+?)["']\s*,((?:\s*{.+?}\s*,\s*)?\s*(?:\[.+?]))\s*]/gs;
 let UNIQUE_VIEW_KEY = 0;
@@ -17,7 +18,13 @@ export default class HTMLView extends LiveSchema {
 	}
 	
 	createEntity( { modelschema, ...args } ) {
-		return stream( emt => {
+		return stream( (emt, { sweep }) => {
+
+			sweep.add(combine( this.prop.resources ).at( ( resources ) => {
+
+				debugger;
+
+			} ));
 			
 			const target = document.createDocumentFragment();
 			target.append( ...this.layers.map( ({ prop: { node } }) => node.cloneNode(true) ) );
@@ -88,8 +95,6 @@ export default class HTMLView extends LiveSchema {
 				hn: new Function("event", "options", "request", "key", value )
 			}) );
 		
-		const resources = JSON5.parse(node.getAttribute("resources") || "[]");
-		
 		let stream = node.getAttribute("stream");
 		stream = stream && routeNormalizer(stream.toString()) || { route: [] };
 		stream.route = stream.route.map( seg => seg === "$key" ? key :  seg );
@@ -117,10 +122,12 @@ export default class HTMLView extends LiveSchema {
 			node,           //xml target node
 			key,            //inherited or inner key
 			model: stream,  //link to model stream todo obsolete io
-			resources,      //related resources
+			//resources,      //related resources
 		};
 		
 		const res = src && src.lift( [ key, prop ], src ) || new HTMLView( [ key, prop ], src );
+		
+		debugger;
 		
 		[...node.childNodes].map( next => setup( next, res.prop ));
 		
@@ -130,14 +137,18 @@ export default class HTMLView extends LiveSchema {
 		
 		res.prop.node = document.createDocumentFragment();
 		res.prop.node.append( ...node.children );
-		
+
+		res.prop.resources = JSON5
+			.parse(node.getAttribute("resources") || "[]")
+			.map( x => resource(res.prop.pack, x) );
+
 		return res;
 		
 	}
 	
 	mergeProperties( name, value ) {
-		if(["node", "template", "node"].includes(name)) {
-			return this.prop.node;
+		if(["node", "template", "pack", "source"].includes(name)) {
+			return this.prop[name];
 		}
 		else {
 			return super.mergeProperties( name, value );

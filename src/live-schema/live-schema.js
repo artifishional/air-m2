@@ -9,12 +9,12 @@ export default class LiveSchema extends Schema {
     constructor([ key, { id = "", source = {}, ...prop }, ...item], src = null) {
         super( [ key, {
 	        id,
+            source,
+            ...prop,
             pack: {
                 path: source.hasOwnProperty("path") ?
                     source.path + "/" : src && src.prop.pack.path || "./"
             },
-            source,
-            ...prop,
         }, ...item ] );
         this.src = src;
         this.isready = !source.hasOwnProperty("path");
