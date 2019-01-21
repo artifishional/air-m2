@@ -1,8 +1,8 @@
 import { stream } from "air-stream"
 import { Schema } from "air-schema"
-import {routeNormalizer, schemasNormalizer, frommodule} from "../utils/index"
+import {routeNormalizer} from "../utils/index"
 import { signature, equal } from "../utils"
-import { Loader } from "air-m2/src/loader"
+import { Loader } from "../loader"
 
 export default class LiveSchema extends Schema {
 
@@ -22,13 +22,13 @@ export default class LiveSchema extends Schema {
         this.entities = [];
         this._stream = null;
     }
-    
-    mergeProperies( name, value ) {
+	
+	mergeProperties( name, value ) {
         if(name === "source") {
             return this.prop.source;
         }
         else {
-            return super.mergeProperies( name, value );
+            return super.mergeProperties( name, value );
         }
     }
 

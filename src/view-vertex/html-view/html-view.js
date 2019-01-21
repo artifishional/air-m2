@@ -135,12 +135,12 @@ export default class HTMLView extends LiveSchema {
 		
 	}
 	
-	mergeProperies( name, value ) {
-		if(("node", "template", "node").includes(name)) {
+	mergeProperties( name, value ) {
+		if(["node", "template", "node"].includes(name)) {
 			return this.prop.node;
 		}
 		else {
-			return super.mergeProperies( name, value );
+			return super.mergeProperties( name, value );
 		}
 	}
 	/*
@@ -258,10 +258,3 @@ function parseChildren(next, { resources, path, key }, src) {
 			[...acc, ...parseChildren(node, { resources, path, key }, src)]
 		, []);
 }
-/*
-const createDocumentFragment = document.createDocumentFragment;
-
-document.createDocumentFragment	= () => {
-	debugger;
-	return createDocumentFragment.call(document);
-};*/

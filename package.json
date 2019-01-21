@@ -9,6 +9,7 @@
     "minor": "npm version minor && npm publish && git push origin"
   },
   "dependencies": {
+    "air-schema": "^0.1.5",
     "air-gsap": "^0.2.4",
     "air-stream": "^0.6.0",
     "fontfaceobserver": "^2.0.13",
