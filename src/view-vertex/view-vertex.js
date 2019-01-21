@@ -1,19 +1,11 @@
-import { stream } from "air-stream"
+/*import { stream } from "air-stream"
 import { LiveSchema } from "air-m2/src/live-schema"
 import scenenode from "./node"
 import sceneswitch from "./switch"
 
 export default class ViewVertex extends LiveSchema {
-
-    constructor({
-        viewbuilder,
-        ...args
-    }) {
-        super({ ...args });
-        this.viewbuilder = viewbuilder;
-    }
-
-    maintainer(scenesstream, { modelschema: modelstream, viewbuilder, ...argv }) {
+	
+	maintainer(scenesstream, { modelschema: modelstream, viewbuilder, ...argv }) {
         return stream((emt, {over}) =>
             over.add(scenesstream.at((view) => {
                 const {advantages: { args: { type = "node" } } } = view;
@@ -33,4 +25,4 @@ export default class ViewVertex extends LiveSchema {
         );
     }
 
-}
+}*/

@@ -104,7 +104,9 @@ export const equal = (a, b) => {
         if(Array.isArray(a)) {
             return a.length === b.length && a.every( (a, i) => equal( a, b[i] ) );
         }
-        else if(typeof a === "object" && a !== null && b !== null) {
+        else if(
+            typeof a === "object" && a !== null && b !== null && a.constructor === Object
+        ) {
             const keysA = Object.keys(a);
             const keysB = Object.keys(b);
             return keysA.length === keysB.length &&

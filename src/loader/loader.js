@@ -1,5 +1,4 @@
-import {Observable} from "air-stream"
-import { Schema } from "air-schema"
+import { stream } from "air-stream"
 import include from "./script_like_promise"
 import html from "./html"
 
@@ -27,17 +26,17 @@ export default class Loader {
             let module = null;
             if (schtype === "html") {
                 module = html({path: `${this.rpath}${path}`})
-                    .map( html => src.getParser({ module: html.content }) )
+                    .map( html => html.content )
             }
             else {
-                module = new Observable( emt => {
+                module = stream( emt => {
                     /*todo es6 dynamic
                     eval(`import("./${this.rpath}${path}")`).then(module => {
                         emt({data: module});
                     } );
                     */
                     include({path: `${this.rpath}${path}`}).then(({module}) => {
-                        emt( src.getParser( { module } ));
+                        emt( module );
                     } );
                 } );
             }

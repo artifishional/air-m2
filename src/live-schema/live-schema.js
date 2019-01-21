@@ -1,61 +1,34 @@
 import { stream } from "air-stream"
 import { Schema } from "air-schema"
 import {routeNormalizer, schemasNormalizer, frommodule} from "../utils/index"
-import { signature } from "../utils"
+import { signature, equal } from "../utils"
 import { Loader } from "air-m2/src/loader"
 
 export default class LiveSchema extends Schema {
 
-    constructor([
-        key, {
-            id = "",
-            pack = {path: "./"},
-            source,
-        }, ...item], src = {}) {
-
-        if(source === undefined) {
-            throw "azaz";
-        }
-
-        if(!(src instanceof Schema)) src.props = src;
-
-        //const [key, {id = "", source = {}, ...args}, ...advs] = this;
-
+    constructor([ key, { id = "", source = {}, ...prop }, ...item], src = null) {
         super( [ key, {
-            pack: { path: source && source.hasOwnProperty("path") ? source.path + "/" : src.prop.pack.path },
+	        id,
+            pack: {
+                path: source.hasOwnProperty("path") ?
+                    source.path + "/" : src && src.prop.pack.path || "./"
+            },
             source,
+            ...prop,
         }, ...item ] );
-
         this.src = src;
-
-        //obsolete
-        this.advantages = this;
-
-        //this.source = source;
-
+        this.isready = !source.hasOwnProperty("path");
         this.id = `#${id}`;
-
-        //this.key = key;
-        //this.factory = factory;
-
-        //this.sign = sign;
-
-        //this.factory = src.factory;
-
-        //this.parent = src;
-        //this.args = args;
-        //this.schema = schema;
-
-        this.linkers = [];
+        this.entities = [];
         this._stream = null;
     }
-
-    static sign(sign) {
-        if(typeof sign === "object") {
-            return ({key}) => Object.keys(sign).every( prop => sign[prop] === key[prop] );
+    
+    mergeProperies( name, value ) {
+        if(name === "source") {
+            return this.prop.source;
         }
         else {
-            return ({key}) => sign === key;
+            return super.mergeProperies( name, value );
         }
     }
 
@@ -67,15 +40,12 @@ export default class LiveSchema extends Schema {
         return this.item.find( ({prop}) => prop.id === id );
     }
 
-    lift( data ) {
-        return new this.constructor( data, this );
-    }
-
     load( emt, { sweep } ) {
-        const last = this.layers.slice( -1 )[0];
-        if( last.prop.source.hasOwnProperty("path") ) {
-            sweep.add(Loader.default.obtain(this).at(( schema ) => {
-                this.merge( schema );
+        const nextToLoad = this.layers.find( ( { isready } ) => !isready );
+        if( nextToLoad ) {
+            sweep.add(Loader.default.obtain( nextToLoad ).at(( data ) => {
+	            nextToLoad.isready = true;
+                this.appendData( data );
                 this.load( emt, { sweep } );
             }));
         }
@@ -115,7 +85,7 @@ export default class LiveSchema extends Schema {
             if (key === "..") {
                 return this.parent._get({route}, from);
             }
-            else {//todo need layers
+            else {
                 return stream((emt, { over }) =>
                     over.add(this.stream.at(() => {
                         const node = this.pickToState(key);
@@ -133,21 +103,24 @@ export default class LiveSchema extends Schema {
             return this.stream;
         }
     }
+	
+	createEntity() { throw "io" }
+    
+    entity( args ) {
+        let exist = this.entities.find( ({ signature }) => equal( signature, args ) );
+        if(!exist) {
+            exist = this.createEntity( args );
+	        this.entities.push( exist );
+        }
+        return exist;
+    }
 
     _obtain({route, ...args}) {
         return stream( (emt, { over, sweep }) =>
             sweep.add(this._get( {route} ).at((evt, src) => {
-                over.add(evt.advantages.maintainer(this._get( {route} ), args).on(emt));
+                over.add(evt.entity(args).at(emt));
             }))
         );
-    }
-
-    toSCHEMA() {
-        return [this.key, {
-            id: this.uid,
-            linkers: this.linkers,
-            source: this.source, ...this.args
-        }, ...this.item.map(ch => ch.toSCHEMA())];
     }
 
 }
