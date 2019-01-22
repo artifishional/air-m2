@@ -161,6 +161,8 @@ where
 - ``` "onpointermove" ```
 - ``` "onpointerenter" ```
 - ``` "onpointerleave" ```
+- ``` "onpointerup" ```
+- ``` "onpointerdown" ```
 - ``` "onglobalkeydown" (synthetic)```
 - ``` "onglobalkeyup" (synthetic)```
 - ``` "onkeydown" ```

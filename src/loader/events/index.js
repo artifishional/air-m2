@@ -9,4 +9,6 @@ export default [
     "onkeydown",
     "onkeyup",
     "onwheel",
+    "onpointerup",
+    "onpointerdown",
 ];
