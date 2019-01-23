@@ -26,7 +26,7 @@ export default class Loader {
             let module = null;
             if (schtype === "html") {
                 module = html({path: `${this.rpath}${path}`})
-                    .map( html => html.content )
+                    .map( html => ({ data: html.content, pack: { path: _path + "/" } }) )
             }
             else {
                 module = stream( emt => {
@@ -36,7 +36,7 @@ export default class Loader {
                     } );
                     */
                     include({path: `${this.rpath}${path}`}).then(({module}) => {
-                        emt( module );
+                        emt( { data: module, pack: { path: _path + "/" } } );
                     } );
                 } );
             }

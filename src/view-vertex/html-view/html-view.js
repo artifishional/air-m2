@@ -20,9 +20,13 @@ export default class HTMLView extends LiveSchema {
 	createEntity( { modelschema, ...args } ) {
 		return stream( (emt, { sweep }) => {
 
-			sweep.add(combine( this.prop.resources ).at( ( resources ) => {
+		    if(!this.prop.preload) {
 
-				debugger;
+		        
+
+            }
+
+			sweep.add( combine( this.prop.resources ).at( ( resources ) => {
 
 			} ));
 			
@@ -63,13 +67,11 @@ export default class HTMLView extends LiveSchema {
 		} );
 	}
 	
-	parse(node, src) {
-		return this.constructor.parse( node, src );
+	parse(node, src, { pack } ) {
+		return this.constructor.parse( node, src, { pack } );
 	}
 	
-	static parse( node, src, {
-		type = "node",
-	} = {} ) {
+	static parse( node, src, { pack, type = "unit" } ) {
 		
 		if(!(node instanceof Element)) {
 			return new HTMLView( ["", {}], src, { createEntity: node } );
@@ -101,7 +103,7 @@ export default class HTMLView extends LiveSchema {
 		Object.keys( stream ).map( prop => stream[prop] === "$key" && (stream[prop] = key) );
 		stream = routeToString(stream);
 		
-		const template = ["", "false"].includes(node.getAttribute("template"));
+		const template = ["", "true"].includes(node.getAttribute("template"));
 		const id = node.getAttribute("id") || "$";
 		let use = (node.getAttribute("use") || "").trim();
 		let [ , source = null ] = use && use.match( /^url\((.*)\)$/ ) || [];
@@ -109,8 +111,20 @@ export default class HTMLView extends LiveSchema {
 		source = source && { path: source, schtype: type === "custom" ? "js" : "html" } || {};
 		
 		const keyframes = [];
-		
+
+        const resources =
+            [ ...src && src.prop.resources || [], ...JSON5
+                .parse(node.getAttribute("resources") || "[]")
+                .map( x => resource(pack, x) )
+            ]
+
+        const tee = null;
+        const preload = [!tee && null, "", "true"].includes(node.getAttribute("tee"));
+
 		const prop = {
+            tee,            //switch mode
+            preload,        //must be fully loaded before readiness
+            pack,           //current package
 			keyframes,      //animation ( data ) settings
 			use,            //reused templates path
 			template,       //template node
@@ -122,12 +136,10 @@ export default class HTMLView extends LiveSchema {
 			node,           //xml target node
 			key,            //inherited or inner key
 			model: stream,  //link to model stream todo obsolete io
-			//resources,      //related resources
+			resources,      //related resources
 		};
 		
 		const res = src && src.lift( [ key, prop ], src ) || new HTMLView( [ key, prop ], src );
-		
-		debugger;
 		
 		[...node.childNodes].map( next => setup( next, res.prop ));
 		
@@ -137,10 +149,6 @@ export default class HTMLView extends LiveSchema {
 		
 		res.prop.node = document.createDocumentFragment();
 		res.prop.node.append( ...node.children );
-
-		res.prop.resources = JSON5
-			.parse(node.getAttribute("resources") || "[]")
-			.map( x => resource(res.prop.pack, x) );
 
 		return res;
 		
@@ -245,14 +253,14 @@ function is( node, name ) {
 // since it is used to extract replacement slots
 function parseChildren(next, { resources, path, key }, src) {
 	if(is( next, "unit" )) {
-		const parser = HTMLView.parse(next, src);
+		const parser = HTMLView.parse(next, src, { pack: src.prop.pack });
 		const _slot = slot( );
 		parser.prop.template ? next.remove() : next.replaceWith( _slot );
 		return [ parser ];
 	}
 	else if(is( next, "plug" )) {
 		const parser = HTMLView.parse(next, src, {
-			key, path, type: "custom"
+			key, path, type: "custom", pack: src.prop.pack
 		});
 		const _slot = slot( );
 		parser.prop.template ? next.remove() : next.replaceWith( _slot );

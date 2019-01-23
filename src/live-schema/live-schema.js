@@ -6,14 +6,14 @@ import { Loader } from "../loader"
 
 export default class LiveSchema extends Schema {
 
-    constructor([ key, { id = "", source = {}, ...prop }, ...item], src = null) {
+    constructor([ key, { id = "", source = {}, pack, ...prop }, ...item], src = null) {
         super( [ key, {
 	        id,
             source,
             ...prop,
             pack: {
-                path: source.hasOwnProperty("path") ?
-                    source.path + "/" : src && src.prop.pack.path || "./"
+                path: pack && pack.path || (source.hasOwnProperty("path") ?
+                    source.path + "/" : src && src.prop.pack.path || "./")
             },
         }, ...item ] );
         this.src = src;
@@ -40,12 +40,17 @@ export default class LiveSchema extends Schema {
         return this.item.find( ({prop}) => prop.id === id );
     }
 
+    /**
+     * todo temporary solution
+     * the parser should create layers with packages
+     */
+
     load( emt, { sweep } ) {
         const nextToLoad = this.layers.find( ( { isready } ) => !isready );
         if( nextToLoad ) {
-            sweep.add(Loader.default.obtain( nextToLoad ).at(( data ) => {
+            sweep.add(Loader.default.obtain( nextToLoad ).at(( { data, pack } ) => {
 	            nextToLoad.isready = true;
-                this.appendData( data );
+                this.appendData( { data, pack } );
                 this.load( emt, { sweep } );
             }));
         }
