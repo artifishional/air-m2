@@ -87,6 +87,13 @@ export default class LiveSchema extends Schema {
                 if(!this.parent) throw `module "#${key}" not found from ${from}`;
                 return this.parent._get({route: [key, ...route]}, from);
             }
+            else if(key[0] === "(") {
+                if(this.key === key) return this._get({route}, from);
+                const exist = this.findSignature(key);
+                if(exist) return exist._get({route}, from);
+                if(!this.parent) throw `module "#${key}" not found from ${from}`;
+                return this.parent._get({route: [key, ...route]}, from);
+            }
             if (key === "..") {
                 return this.parent._get({route}, from);
             }

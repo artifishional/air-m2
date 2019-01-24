@@ -8,6 +8,9 @@ import resource from "../../loader/resource"
 const CUT_FRAMES_REG = /\[\s*["'](.+?)["']\s*,((?:\s*{.+?}\s*,\s*)?\s*(?:\[.+?]))\s*]/gs;
 let UNIQUE_VIEW_KEY = 0;
 
+
+
+
 export default class HTMLView extends LiveSchema {
 	
 	constructor( args, src, { createEntity = null } = {} ) {
@@ -16,53 +19,125 @@ export default class HTMLView extends LiveSchema {
 		this.prop.source.schtype = this.prop.source.schtype || "html";
 		this.prop.node = this.prop.node || document.createDocumentFragment();
 	}
-	
+
 	createEntity( { modelschema, ...args } ) {
-		return stream( (emt, { sweep }) => {
+		if(this.prop.tee || !this.prop.preload) {
+			return this.createTeeEntity( { modelschema, ...args } );
+		}
+		else {
+			return this.createTeeEntity( { modelschema, ...args } );
+		}
+	}
 
-		    if(!this.prop.preload) {
+	createTeeEntity( { modelschema, ...args } ) {
+		return stream( (emt, { sweep, hook }) => {
 
-		        
+			let state = { stage: 0, target: null };
+			let reqState = { stage: 1 };
+			let loaderTarget = null;
+			let loaderHook = null;
 
-            }
+			const localName = typeof this.key === "object" ? JSON.stringify(this.key) : this.key;
+			const target = document.createDocumentFragment();
+			const begin = document.createComment(`BEGIN TEE ${localName} BEGIN`);
+			const end = document.createComment(`END TEE ${localName} END`);
+			target.prepend(begin);
+			target.append(end);
 
-			sweep.add( combine( this.prop.resources ).at( ( resources ) => {
+			if(!this.prop.preload) {
 
-			} ));
+				sweep.add( loaderHook = this.obtain( "#loader" )
+					.at( ([ { stage, target } ]) => {
+						if(state.stage === 0 && stage > 0) {
+							loaderTarget = target;
+							state = { ...state, stage: 1, };
+							begin.after( target );
+							emt( [ state ] );
+						}
+					} )
+				);
+
+			}
+
+			sweep.add( this.createNodeEntity({ modelschema, ...args })
+				.at( ([ { target } ]) => {
+					if(reqState && reqState.stage === 1) {
+
+						if(this.prop.preload) {
+							sweep.force(loaderHook);
+							loaderTarget && loaderTarget.remove();
+						}
+
+						reqState = null;
+						state = { stage: 1, ...state };
+
+						emt( [ state ] );
+					}
+				} )
+			);
+
+
+		});
+	}
+
+	createNodeEntity( { modelschema, ...args } ) {
+
+		return stream( (emt, { sweep, hook }) => {
 			
+			let state = { stage: 0, target: null };
+			let reqState = { stage: 1 };
+
+			const resourcesStream = combine( this.prop.resources );
+			//resourcesStream.at( ( resources ) => { } );
+
 			const target = document.createDocumentFragment();
 			target.append( ...this.layers.map( ({ prop: { node } }) => node.cloneNode(true) ) );
-			
+
+			state.target = target;
+
 			//const target = this.prop.node.cloneNode( true );
 			
 			const localName = typeof this.key === "object" ? JSON.stringify(this.key) : this.key;
 			
-			const begin = document.createComment(`BEGIN ${localName} BEGIN`);
-			const end = document.createComment(`END ${localName} END`);
+			const begin = document.createComment(`BEGIN NODE ${localName} BEGIN`);
+			const end = document.createComment(`END NODE ${localName} END`);
 			
 			target.prepend(begin);
 			target.append(end);
 			
-			combine(this.item
-				.filter( ({ prop: { template } }) => !template )
-				.map(x => x.obtain( "", { modelschema } ))).at( (evt) => {
-				
-				const slots = target.querySelectorAll(`M2-SLOT`);
-				
-				const children = evt.map( ( { node: { target } } ) => target );
-				if(slots.length) {
-					children.map( (target, index) => {
-						slots[index].replaceWith( target );
-					} );
+			const chidrenStream = combine(
+				this.item
+					.filter( ({ prop: { template } }) => !template )
+					.map(x => x.obtain( "", { modelschema } ))
+			);
+
+			const commonStream = combine( [ chidrenStream, resourcesStream ] );
+			sweep.add( commonStream.at( ([ children ]) => {
+				if(reqState && reqState.stage === 1) {
+
+					if(this.preload) {
+						sweep.force(loaderHook);
+						loaderTarget && loaderTarget.remove();
+					}
+
+					reqState = null;
+					state = { stage: 1, ...state };
+
+					const slots = target.querySelectorAll(`M2-SLOT`);
+					const _children = children.map( ( [{ target }] ) => target );
+					if(slots.length) {
+						_children.map( (target, index) => {
+							slots[index].replaceWith( target );
+						} );
+					}
+					else {
+						begin.after( ..._children );
+					}
+
+					emt( [ state ] );
 				}
-				else {
-					begin.after( ...children );
-				}
-				
-				
-				emt( { action: "complete", node: { target } } );
-			
-			} );
+			} ));
+
 		
 		} );
 	}
