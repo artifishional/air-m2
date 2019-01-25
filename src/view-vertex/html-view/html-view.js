@@ -1,5 +1,5 @@
 import { stream, combine } from "air-stream"
-import { routeNormalizer, routeToString } from "../../utils"
+import {equal, routeNormalizer, routeToString, signature} from "../../utils"
 import events from "../events"
 import JSON5 from "json5"
 import { LiveSchema } from "../../live-schema"
@@ -8,8 +8,30 @@ import resource from "../../loader/resource"
 const CUT_FRAMES_REG = /\[\s*["'](.+?)["']\s*,((?:\s*{.+?}\s*,\s*)?\s*(?:\[.+?]))\s*]/gs;
 let UNIQUE_VIEW_KEY = 0;
 
-
-
+class Path {
+	
+	constructor({ route = [], ...args } = {}) {
+		this.route = route;
+		this._args(args);
+	}
+	
+	_args(args) {
+		Object.assign(this, args);
+	}
+	
+	static concat(...paths) {
+		debugger;
+		return paths.reduce( (acc, { route, ...args }) =>
+			(acc._args(args), acc.route.concat( route ), acc),
+			new Path,
+		);
+	}
+	
+	concat(...paths) {
+		return Path.concat(this, ...paths);
+	}
+	
+}
 
 export default class HTMLView extends LiveSchema {
 	
@@ -25,27 +47,26 @@ export default class HTMLView extends LiveSchema {
 			return this.createTeeEntity( { modelschema, ...args } );
 		}
 		else {
-			return this.createTeeEntity( { modelschema, ...args } );
+			return this.createNodeEntity( { modelschema, ...args } );
 		}
 	}
 
-	createTeeEntity( { modelschema, ...args } ) {
+	createTeeEntity( { modelschema, streamPath = "", ...args } ) {
+		streamPath = streamPath.concat( "/", this.prop.stream );
 		return stream( (emt, { sweep, hook }) => {
-
-			let state = { stage: 0, target: null };
+			let state = { stage: 0, target: null, active: false };
 			let reqState = { stage: 1 };
 			let loaderTarget = null;
 			let loaderHook = null;
-
+			let childHook = null;
 			const localName = typeof this.key === "object" ? JSON.stringify(this.key) : this.key;
 			const target = document.createDocumentFragment();
-			const begin = document.createComment(`BEGIN TEE ${localName} BEGIN`);
-			const end = document.createComment(`END TEE ${localName} END`);
+			state.target = target;
+			const begin = createSystemBoundNode("begin", "tee", localName);
+			const end = createSystemBoundNode("end", "tee", localName);
 			target.prepend(begin);
 			target.append(end);
-
 			if(!this.prop.preload) {
-
 				sweep.add( loaderHook = this.obtain( "#loader" )
 					.at( ([ { stage, target } ]) => {
 						if(state.stage === 0 && stage > 0) {
@@ -56,32 +77,41 @@ export default class HTMLView extends LiveSchema {
 						}
 					} )
 				);
-
 			}
-
-			sweep.add( this.createNodeEntity({ modelschema, ...args })
-				.at( ([ { target } ]) => {
-					if(reqState && reqState.stage === 1) {
-
-						if(this.prop.preload) {
-							sweep.force(loaderHook);
-							loaderTarget && loaderTarget.remove();
+			sweep.add( modelschema.at( modelschema => {
+				sweep.add( modelschema.obtain( streamPath ).at( ([ data ]) => {
+					const active = signature(this.prop.tee, data);
+					if(active !== state.active) {
+						if(active) {
+							sweep.add( childHook = this.createNodeEntity({ modelschema, ...args })
+								.at( ([ { target } ]) => {
+									if(reqState && reqState.stage === 1) {
+										if(!this.prop.preload) {
+											sweep.force(loaderHook);
+											loaderTarget && loaderTarget.remove();
+										}
+										begin.after( target );
+										reqState = null;
+										state = { stage: 1, ...state };
+										emt( [ state ] );
+									}
+								} )
+							);
 						}
-
-						reqState = null;
-						state = { stage: 1, ...state };
-
-						emt( [ state ] );
+						else {
+							childHook && sweep.force( childHook );
+							childHook = null;
+							clearNodeBeetwen( begin, end );
+						}
+						state = { ...state, active };
 					}
-				} )
-			);
-
-
+				} ) );
+			} ) );
 		});
 	}
 
-	createNodeEntity( { modelschema, ...args } ) {
-
+	createNodeEntity( { modelschema, streamPath = "", ...args } ) {
+		streamPath = streamPath.concat( "/", this.prop.stream );
 		return stream( (emt, { sweep, hook }) => {
 			
 			let state = { stage: 0, target: null };
@@ -99,8 +129,8 @@ export default class HTMLView extends LiveSchema {
 			
 			const localName = typeof this.key === "object" ? JSON.stringify(this.key) : this.key;
 			
-			const begin = document.createComment(`BEGIN NODE ${localName} BEGIN`);
-			const end = document.createComment(`END NODE ${localName} END`);
+			const begin = createSystemBoundNode("begin", "unit", localName);
+			const end = createSystemBoundNode("end", "unit", localName);
 			
 			target.prepend(begin);
 			target.append(end);
@@ -108,20 +138,19 @@ export default class HTMLView extends LiveSchema {
 			const chidrenStream = combine(
 				this.item
 					.filter( ({ prop: { template } }) => !template )
-					.map(x => x.obtain( "", { modelschema } ))
+					.map(x => x.obtain( "", { modelschema, streamPath } ))
 			);
 
 			const commonStream = combine( [ chidrenStream, resourcesStream ] );
-			sweep.add( commonStream.at( ([ children ]) => {
+			sweep.add( commonStream.at( ([ children, resources ]) => {
 				if(reqState && reqState.stage === 1) {
-
-					if(this.preload) {
-						sweep.force(loaderHook);
-						loaderTarget && loaderTarget.remove();
-					}
-
+					
 					reqState = null;
 					state = { stage: 1, ...state };
+					
+					const imgs = resources.filter( ({ type }) => type === "img" );
+					[...target.querySelectorAll(`M2-IMG`)]
+						.map( (target, i) => target.replaceWith( imgs[i].image ) );
 
 					const slots = target.querySelectorAll(`M2-SLOT`);
 					const _children = children.map( ( [{ target }] ) => target );
@@ -174,7 +203,7 @@ export default class HTMLView extends LiveSchema {
 		
 		let stream = node.getAttribute("stream");
 		stream = stream && routeNormalizer(stream.toString()) || { route: [] };
-		stream.route = stream.route.map( seg => seg === "$key" ? key :  seg );
+		stream.route = stream.route.map( seg => seg === "$key" ? key : seg );
 		Object.keys( stream ).map( prop => stream[prop] === "$key" && (stream[prop] = key) );
 		stream = routeToString(stream);
 		
@@ -192,8 +221,8 @@ export default class HTMLView extends LiveSchema {
                 .parse(node.getAttribute("resources") || "[]")
                 .map( x => resource(pack, x) )
             ]
-
-        const tee = null;
+		
+        const tee = cuttee(node, key);
         const preload = [!tee && null, "", "true"].includes(node.getAttribute("tee"));
 
 		const prop = {
@@ -210,7 +239,7 @@ export default class HTMLView extends LiveSchema {
 			path,           //absolute path
 			node,           //xml target node
 			key,            //inherited or inner key
-			model: stream,  //link to model stream todo obsolete io
+			stream,         //link to model stream todo obsolete io
 			resources,      //related resources
 		};
 		
@@ -230,7 +259,7 @@ export default class HTMLView extends LiveSchema {
 	}
 	
 	mergeProperties( name, value ) {
-		if(["node", "template", "pack", "source"].includes(name)) {
+		if(["node", "template", "pack", "source", "tee"].includes(name)) {
 			return this.prop[name];
 		}
 		else {
@@ -252,6 +281,22 @@ export default class HTMLView extends LiveSchema {
 				});
 		}*/
 	
+}
+
+function cuttee(node, key) {
+	const rawTee = node.getAttribute("tee");
+	if(rawTee === null) {
+		return null;
+	}
+	else if(rawTee === "") {
+		return key;
+	}
+	else if(rawTee[0] === "{") {
+		return JSON5.parse(rawTee);
+	}
+	else {
+		return rawTee;
+	}
 }
 
 function setup( next, { keyframes } ) {
@@ -310,7 +355,7 @@ function slot( ) {
 }
 
 function img() {
-	return document.createElement("M2-RES");
+	return document.createElement("M2-IMG");
 }
 
 /**
@@ -322,6 +367,12 @@ function img() {
 function is( node, name ) {
 	name = name.toUpperCase();
 	return [ `M2-${name}`, name ].includes( node.tagName );
+}
+
+function createSystemBoundNode( point, species, label ) {
+	return document.createComment(
+		`${point} ${species} ${label} ${point}`.toUpperCase()
+	);
 }
 
 //the workaround is tied to the querySelectorAll,
@@ -344,11 +395,19 @@ function parseChildren(next, { resources, path, key }, src) {
 	else if (next.tagName === "IMG") {
 		const _slot = img( );
 		next.replaceWith( _slot );
-		resources.push( { type: "img", url: next.getAttribute("src") } );
+		resources.push(
+			resource(src.prop.pack, { type: "img", url: next.getAttribute("src") })
+		);
 		return [];
 	}
 	else if(next.tagName === "STYLE") { }
 	return [...next.children].reduce( (acc, node) =>
 			[...acc, ...parseChildren(node, { resources, path, key }, src)]
 		, []);
+}
+
+function clearNodeBeetwen(begin, end) {
+	while (begin = begin.nextSibling !== end) {
+		begin.remove();
+	};
 }

@@ -16,20 +16,11 @@ export default class LiveSchema extends Schema {
                     source.path + "/" : src && src.prop.pack.path || "./")
             },
         }, ...item ] );
-        this.src = src;
+        this.src = this.parent = src;
         this.isready = !source.hasOwnProperty("path");
         this.id = `#${id}`;
         this.entities = [];
         this._stream = null;
-    }
-	
-	mergeProperties( name, value ) {
-        if(name === "source") {
-            return this.prop.source;
-        }
-        else {
-            return super.mergeProperties( name, value );
-        }
     }
 
     pickToState( state ) {
@@ -130,7 +121,7 @@ export default class LiveSchema extends Schema {
     _obtain({route, ...args}) {
         return stream( (emt, { over, sweep }) =>
             sweep.add(this._get( {route} ).at((evt, src) => {
-                over.add(evt.entity(args).at(emt));
+                over.add(evt.entity(args).on(emt));
             }))
         );
     }

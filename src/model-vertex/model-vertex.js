@@ -20,7 +20,7 @@ function frommodule(module, _key = "main") {
 }
 
 export default class ModelVertex extends LiveSchema {
- 
+	
 	parse( module, src ) {
 		let exist = null;
 	    if(Array.isArray(module)) {
@@ -41,16 +41,20 @@ export default class ModelVertex extends LiveSchema {
 			item.unshift( prop );
 			prop = {};
         }
-		const res = new ModelVertex([
-		    key, prop, ...item.map( module => this.parse( module, this ) )
-        ], src);
+		const res = new ModelVertex([ key, prop ], src);
+		res.append(...item.map( module => this.parse( module, res) ));
 		return res;
 	}
 	
 	createEntity( args ) {
 		return stream( (emt, { over }) => {
-            if(typeof this.source === "function") {
-                const _stream = this.source({
+			
+			if(this.key === "state") {
+				debugger;
+			}
+			
+            if(typeof this.prop.source === "function") {
+                const _stream = this.prop.source({
                     obtain: (route, args) => this.obtain(route, { ...args }),
                     schema: this,
                     ...this.prop,
