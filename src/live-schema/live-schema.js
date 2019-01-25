@@ -6,21 +6,29 @@ import { Loader } from "../loader"
 
 export default class LiveSchema extends Schema {
 
-    constructor([ key, { id = "", source = {}, pack, ...prop }, ...item], src = null) {
+    constructor([ key, { id = "", use = {}, pack, ...prop }, ...item], src = null) {
         super( [ key, {
 	        id,
-            source,
             ...prop,
+            use,
             pack: {
-                path: pack && pack.path || (source.hasOwnProperty("path") ?
-                    source.path + "/" : src && src.prop.pack.path || "./")
+                path: pack && pack.path || (use.hasOwnProperty("path") ?
+                    use.path + "/" : src && src.prop.pack.path || "./")
             },
         }, ...item ] );
         this.src = this.parent = src;
-        this.isready = !source.hasOwnProperty("path");
-        this.id = `#${id}`;
+        this.isready = !use.hasOwnProperty("path");
         this.entities = [];
         this._stream = null;
+    }
+
+    mergeProperties( name, value ) {
+        if(["use"].includes(name)) {
+            return this.prop[name];
+        }
+        else {
+            return super.mergeProperties( name, value );
+        }
     }
 
     pickToState( state ) {
@@ -73,7 +81,7 @@ export default class LiveSchema extends Schema {
         if (key) {
             if(key[0] === "#") {
                 if(this.id === key) return this._get({route}, from);
-                const exist = this.findId(key);
+                const exist = this.findId(key.substr(1));
                 if(exist) return exist._get({route}, from);
                 if(!this.parent) throw `module "#${key}" not found from ${from}`;
                 return this.parent._get({route: [key, ...route]}, from);
@@ -109,10 +117,10 @@ export default class LiveSchema extends Schema {
 	
 	createEntity() { throw "io" }
     
-    entity( args ) {
+    entity( { $ = {}, ...args } ) {
         let exist = this.entities.find( ({ signature }) => equal( signature, args ) );
         if(!exist) {
-            exist = this.createEntity( args );
+            exist = this.createEntity( { $, ...args } );
 	        this.entities.push( exist );
         }
         return exist;

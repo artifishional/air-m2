@@ -38,20 +38,20 @@ export default class HTMLView extends LiveSchema {
 	constructor( args, src, { createEntity = null } = {} ) {
 		super( args, src );
 		createEntity && (this.createEntity = createEntity);
-		this.prop.source.schtype = this.prop.source.schtype || "html";
+		this.prop.use.schtype = this.prop.use.schtype || "html";
 		this.prop.node = this.prop.node || document.createDocumentFragment();
 	}
 
-	createEntity( { modelschema, ...args } ) {
+	createEntity( args ) {
 		if(this.prop.tee || !this.prop.preload) {
-			return this.createTeeEntity( { modelschema, ...args } );
+			return this.createTeeEntity( args );
 		}
 		else {
-			return this.createNodeEntity( { modelschema, ...args } );
+			return this.createNodeEntity( args );
 		}
 	}
 
-	createTeeEntity( { modelschema, streamPath = "", ...args } ) {
+	createTeeEntity( { $: { modelschema, streamPath = "" }, ...args } ) {
 		streamPath = streamPath.concat( "/", this.prop.stream );
 		return stream( (emt, { sweep, hook }) => {
 			let state = { stage: 0, target: null, active: false };
@@ -80,10 +80,14 @@ export default class HTMLView extends LiveSchema {
 			}
 			sweep.add( modelschema.at( modelschema => {
 				sweep.add( modelschema.obtain( streamPath ).at( ([ data ]) => {
+
+					debugger;
+
+
 					const active = signature(this.prop.tee, data);
 					if(active !== state.active) {
 						if(active) {
-							sweep.add( childHook = this.createNodeEntity({ modelschema, ...args })
+							sweep.add( childHook = this.createNodeEntity({ $: { modelschema }, ...args })
 								.at( ([ { target } ]) => {
 									if(reqState && reqState.stage === 1) {
 										if(!this.prop.preload) {
@@ -110,7 +114,7 @@ export default class HTMLView extends LiveSchema {
 		});
 	}
 
-	createNodeEntity( { modelschema, streamPath = "", ...args } ) {
+	createNodeEntity( { $: { modelschema, streamPath = "" }, ...args } ) {
 		streamPath = streamPath.concat( "/", this.prop.stream );
 		return stream( (emt, { sweep, hook }) => {
 			
@@ -138,7 +142,7 @@ export default class HTMLView extends LiveSchema {
 			const chidrenStream = combine(
 				this.item
 					.filter( ({ prop: { template } }) => !template )
-					.map(x => x.obtain( "", { modelschema, streamPath } ))
+					.map(x => x.obtain( "", { $: { modelschema, streamPath } } ))
 			);
 
 			const commonStream = combine( [ chidrenStream, resourcesStream ] );
@@ -211,9 +215,9 @@ export default class HTMLView extends LiveSchema {
 		const id = node.getAttribute("id") || "$";
 		let use = (node.getAttribute("use") || "").trim();
 		let [ , source = null ] = use && use.match( /^url\((.*)\)$/ ) || [];
-		source && (use = null);
-		source = source && { path: source, schtype: type === "custom" ? "js" : "html" } || {};
-		
+
+		use = source && { path: source, schtype: type === "custom" ? "js" : "html" } || { };
+
 		const keyframes = [];
 
         const resources =

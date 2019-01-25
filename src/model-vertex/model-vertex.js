@@ -20,7 +20,11 @@ function frommodule(module, _key = "main") {
 }
 
 export default class ModelVertex extends LiveSchema {
-	
+
+	constructor([ key, { source = () => stream( emt => `empty point ${key}` ), ...prop }, ...item], src) {
+		super([ key, { source, ...prop }, ...item], src);
+	}
+
 	parse( module, src ) {
 		let exist = null;
 	    if(Array.isArray(module)) {
@@ -47,26 +51,11 @@ export default class ModelVertex extends LiveSchema {
 	}
 	
 	createEntity( args ) {
-		return stream( (emt, { over }) => {
-			
-			if(this.key === "state") {
-				debugger;
-			}
-			
-            if(typeof this.prop.source === "function") {
-                const _stream = this.prop.source({
-                    obtain: (route, args) => this.obtain(route, { ...args }),
-                    schema: this,
-                    ...this.prop,
-                    ...args
-                });
-                /*@*/if(!(_stream instanceof Observable))
-                    throw "return value of unit must be a function:\n" + this.prop.source;/*/@*/
-                over.add(_stream.on(emt));
-            }
-            else {
-	            emt(null); //empty vertex
-            }
+		return this.prop.source({
+			obtain: (route, args) => this.obtain(route, { ...args }),
+			schema: this,
+			...this.prop,
+			...args
 		});
     }
 

@@ -16,7 +16,8 @@ export default class Loader {
     }
 
     obtain(src) {
-        const { prop: { source: {path: _path, schtype = "js"} } } = src;
+        const { prop: { use: {path: _path, schtype = "js"} } } = src;
+        if(!_path) throw "'path' param is required";
         const path = _path + schtypes[schtype];
         const exist = this.modules.find( ({ path: _path }) => path === _path );
         if(exist) {
