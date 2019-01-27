@@ -23,7 +23,7 @@ export default class LiveSchema extends Schema {
     }
 
     mergeProperties( name, value ) {
-        if(["use"].includes(name)) {
+        if(["use", "id"].includes(name)) {
             return this.prop[name];
         }
         else {
@@ -120,10 +120,13 @@ export default class LiveSchema extends Schema {
     entity( { $ = {}, ...args } ) {
         let exist = this.entities.find( ({ signature }) => equal( signature, args ) );
         if(!exist) {
-            exist = this.createEntity( { $, ...args } );
+            exist = {
+                entity: this.createEntity( { $, ...args } ),
+	            signature: args,
+            };
 	        this.entities.push( exist );
         }
-        return exist;
+        return exist.entity;
     }
 
     _obtain({route, ...args}) {

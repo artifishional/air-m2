@@ -1,5 +1,5 @@
 import { LiveSchema } from "../live-schema"
-import {stream, Observable} from "air-stream"
+import { stream } from "air-stream"
 
 function frommodule(module, _key = "main") {
 	return [ _key,
@@ -54,7 +54,7 @@ export default class ModelVertex extends LiveSchema {
 		return this.prop.source({
 			obtain: (route, args) => this.obtain(route, { ...args }),
 			schema: this,
-			...this.prop,
+			stream,
 			...args
 		});
     }
