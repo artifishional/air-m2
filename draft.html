@@ -75,36 +75,34 @@
 <!-- define abstract tooltip component -->
 <unit template key = my-tooltip>
 
+    <script>
 
+        import { controller } from "m2"
 
-        <script>
+        export default (/*{ key, eid }*/) =>
+            controller()
+                .reducer( [{ on: false }], ([{ on }], { request }) => {
+                    if(request ===  "over") {
+                        on = true;
+                    }
+                    else if( request === "leave" ) {
+                        on = false;
+                    }
+                    return [{ on }, { request }];
+                } );
 
-            import {stream} from "m2"
+    </script>
 
-            export default (/*{ key, eid }*/) =>
-                controller()
-                    .reducer( [{ on: false }], ([{ on }], { request }) => {
-                        if(request ===  "over") {
-                            on = true;
-                        }
-                        else if( request === "leave" ) {
-                            on = false;
-                        }
-                        return [{ on }, { request }];
-                    } );
+    <unit
+        key = body
+        onpointerenter = request(["over"])
+        onpointerleave = request(["leave"])
+    >
+    </unit>
+    <unit key = tooltip tee = {on:true}></unit>
 
-        </script>
-
-        <unit
-            key = body
-            onpointerenter = request(["over"])
-            onpointerleave = request(["leave"])
-        >
-        </unit>
-        <unit stream = . key = tooltip tee = {on:true}></unit>
-
-        <!-- if stream not empty then it's work in current place -->
-        <!-- entity id when component is reusable (template) -->
+    <!-- if stream not empty then it's work in current place -->
+    <!-- entity id when component is reusable (template) -->
 
 </unit>
 
