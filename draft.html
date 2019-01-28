@@ -131,12 +131,12 @@
 
 <!-- define languages -->
 
-<unit template key = lang>
+<unit stream = intl template key = lang use = ../(lang)>
 
     <unit key = toolbar-hint-off>
-        <unit tee = {lang:'en'}><unit>{(x)}</unit></unit>
-        <unit tee = {lang:'kz'}><unit>{(x)}</unit></unit>
-        <unit tee = {lang:'ru'}><unit>{(x)}</unit></unit>
+        <unit tee = {lang:'en'} child-stream = ^>{(x)}</unit>
+        <unit tee = {lang:'kz'} child-stream = ^>{(x)}</unit>
+        <unit tee = {lang:'ru'} child-stream = ^>{(x)}</unit>
     </unit>
 
 </unit>
@@ -164,8 +164,8 @@
         <unit key = tooltip>
             <unit key = body>
                 <div class = tooltip-wrap>
-                    <unit tee = {on:true} use = lang/toolbar-hint-on></unit>
-                    <unit tee = {on:false} use = lang/toolbar-hint-off></unit>
+                    <unit tee = {on:true} use = lang/toolbar-hint-on />
+                    <unit tee = {on:false} use = lang/toolbar-hint-off />
                 </div>
             </unit>
         </unit>
