@@ -6,14 +6,14 @@ import { Loader } from "../loader"
 
 export default class LiveSchema extends Schema {
 
-    constructor([ key, { id = "", use = {}, pack, ...prop }, ...item], src = null) {
+    constructor([ key, { id = "", use = {}, pack, ...prop }, ...item], src = { acid: -1 }) {
         super( [ key, {
 	        id,
             ...prop,
             use,
             pack: {
                 path: pack && pack.path || (use.hasOwnProperty("path") ?
-                    use.path + "/" : src && src.prop.pack.path || "./")
+                    use.path + "/" : src.acid > 0 && src.prop.pack.path || "./")
             },
         }, ...item ] );
         this.src = this.parent = src;

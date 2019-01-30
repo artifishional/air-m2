@@ -39,23 +39,50 @@ export default class HTMLView extends LiveSchema {
 		super( args, src );
 		createEntity && (this.createEntity = createEntity);
 		this.prop.use.schtype = this.prop.use.schtype || "html";
+		this.prop.stream = this.prop.stream || "";
 		this.prop.node = this.prop.node || document.createDocumentFragment();
 	}
 
-	createEntity( { $: { modelschema }, ...args } ) {
+	createEntity( { $: { modelschema, layers: layers = new Map( [ [ -1, modelschema ] ] ) }, ...args } ) {
 		return stream( (emt, { over, sweep }) => {
-			sweep.add( modelschema.get( this.prop.stream ).at( ( modelschema ) => {
+			const clayers = new Map(this.layers.map(
+				({ acid: _acid, src: { acid }, prop: { stream } }, i, arr) => {
+					if(stream[0] === "^") {
+						const eLayer =
+							arr.slice(0, i).find( ({ prop: { stream } }) => stream[0] !== "^" );
+						if(!eLayer) {
+							throw `the first view layer cannot refer to the predecessor stream`
+						}
+						const { src: { acid }, prop: { stream: pstream } } = eLayer;
+						return [_acid, layers.get(acid).get( pstream + stream.substr(1) )];
+					}
+					else {
+						return [_acid, layers.get(acid).get(stream)];
+					}
+				}
+			));
+			sweep.add( combine(
+				[...clayers].map( ([, layer ]) => layer ),
+				(...layers) => new Map([ ...clayers].map( ([ acid ], i) => [acid, layers[i]] ))
+			).at( ( layers ) => {
 				if(this.prop.tee || !this.prop.preload) {
-					over.add(this.createTeeEntity( { $: { modelschema }, ...args } ).on(emt));
+					over.add(this.createTeeEntity( { $: { modelschema, layers }, ...args } ).on(emt));
 				}
 				else {
-					over.add(this.createNodeEntity( { $: { modelschema }, ...args } ).on(emt));
+					over.add(this.createNodeEntity( { $: { modelschema, layers }, ...args } ).on(emt));
 				}
 			} ) );
 		} );
 	}
+	
+	createEntityLayer( { $: { layers }, ...args } ) {
+		combine(this.layers.map( ({ prop: { stream } }) => stream ));
+	}
 
-	createTeeEntity( { $: { modelschema }, ...args } ) {
+	createTeeEntity( { $: { layers }, ...args } ) {
+		
+		const modelschema = layers.get(this.acid);
+		
 		return stream( (emt, { sweep, hook }) => {
 			let state = { stage: 0, target: null, active: false };
 			let reqState = { stage: 1 };
@@ -81,7 +108,7 @@ export default class HTMLView extends LiveSchema {
 				);
 			}
 			
-			const view = this.createNodeEntity({ $: { modelschema }, ...args });
+			const view = this.createNodeEntity({ $: { modelschema, layers }, ...args });
 			
 			sweep.add( modelschema.obtain( ).at( ([ data ]) => {
 				const active = signature(this.prop.tee, data);
@@ -117,61 +144,33 @@ export default class HTMLView extends LiveSchema {
 		});
 	}
 	
-	createActiveEntity( { $: { modelschema }, ...args } ) {
-		
+	createChildrenEntities( { $: { modelschema }, ...args } ) {
 		return stream( (emt, { sweep, hook }) => {
-			
-			let state = { stage: 0, target: null };
-			let reqState = { stage: 1 };
-			
-			const resourcesStream = combine( this.prop.resources );
-			
-			const target = document.createDocumentFragment();
-			target.append( ...this.layers.map( ({ prop: { node } }) => node.cloneNode(true) ) );
-			
-			state.target = target;
-			
-			//const target = this.prop.node.cloneNode( true );
-			
-			const begin = this.createSystemBoundNode("begin", "active");
-			const end = this.createSystemBoundNode("end", "active");
-			
-			target.prepend(begin);
-			target.append(end);
 			
 			const chidrenStream = combine(
 				this.item
 					.filter( ({ prop: { template } }) => !template )
-					.map(x => x.obtain( "", { $: { modelschema } } ))
+					.map(x => x.obtain( "", { $: { modelschema, layers } } ))
 			);
 			
-			const commonStream = combine( [ chidrenStream, resourcesStream ] );
-			sweep.add( commonStream.at( ([ children, resources ]) => {
-				if(reqState && reqState.stage === 1) {
-					reqState = null;
-					state = { stage: 1, ...state };
-					const imgs = resources.filter( ({ type }) => type === "img" );
-					[...target.querySelectorAll(`M2-IMG`)]
-						.map( (target, i) => target.replaceWith( imgs[i].image ) );
-					const slots = target.querySelectorAll(`M2-SLOT`);
-					const _children = children.map( ( [{ target }] ) => target );
-					if(slots.length) {
-						_children.map( (target, index) => {
-							slots[index].replaceWith( target );
-						} );
+			sweep.add(chidrenStream.at((children) => {
+				if (children.every( ({ stage }) => stage === 1 )) {
+					const slots = target.querySelectorAll(`slot`);
+					const _children = children.map(([{target}]) => target);
+					if (slots.length) {
+						_children.map((target, index) => {
+							slots[index].replaceWith(target);
+						});
+					} else {
+						begin.after(..._children);
 					}
-					else {
-						begin.after( ..._children );
-					}
-					emt( [ state ] );
 				}
-			} ));
+			}));
 			
-			
-		} );
+		});
 	}
 
-	createNodeEntity( { $: { modelschema }, ...args } ) {
+	createNodeEntity( { $: { modelschema, layers }, ...args } ) {
 	
 		return stream( (emt, { sweep, hook }) => {
 			
@@ -196,7 +195,7 @@ export default class HTMLView extends LiveSchema {
 			const chidrenStream = combine(
 				this.item
 					.filter( ({ prop: { template } }) => !template )
-					.map(x => x.obtain( "", { $: { modelschema } } ))
+					.map(x => x.obtain( "", { $: { modelschema, layers } } ))
 			);
 
 			const commonStream = combine( [ chidrenStream, resourcesStream ] );
@@ -205,9 +204,9 @@ export default class HTMLView extends LiveSchema {
 					reqState = null;
 					state = { stage: 1, ...state };
 					const imgs = resources.filter( ({ type }) => type === "img" );
-					[...target.querySelectorAll(`M2-IMG`)]
+					[...target.querySelectorAll(`m2-img`)]
 						.map( (target, i) => target.replaceWith( imgs[i].image ) );
-					const slots = target.querySelectorAll(`M2-SLOT`);
+					const slots = target.querySelectorAll(`slot`);
 					const _children = children.map( ( [{ target }] ) => target );
 					if(slots.length) {
 						_children.map( (target, index) => {
@@ -279,7 +278,7 @@ export default class HTMLView extends LiveSchema {
 		const keyframes = [];
 
         const resources =
-            [ ...src && src.prop.resources || [], ...JSON5
+            [ ...(src.acid > -1 && src.prop.resources || []), ...JSON5
                 .parse(node.getAttribute("resources") || "[]")
                 .map( x => resource(pack, x) )
             ]
@@ -305,7 +304,7 @@ export default class HTMLView extends LiveSchema {
 			resources,      //related resources
 		};
 		
-		const res = src && src.lift( [ key, prop ], src ) || new HTMLView( [ key, prop ], src );
+		const res = src.acid > -1 && src.lift( [ key, prop ], src ) || new HTMLView( [ key, prop ], src );
 		
 		[...node.childNodes].map( next => setup( next, res.prop ));
 		
@@ -323,7 +322,8 @@ export default class HTMLView extends LiveSchema {
 	mergeProperties( name, value ) {
 		
 		if(name === "stream") {
-			return value || this.prop.stream || "";
+			//return value || this.prop.stream || "";
+			return this.prop.stream;
 		}
 		
 		if(["node", "template", "pack", "source", "tee"].includes(name)) {
@@ -418,11 +418,11 @@ function setup( next, { keyframes } ) {
 }
 
 function slot( ) {
-	return document.createElement("M2-SLOT");
+	return document.createElement("slot");
 }
 
 function img() {
-	return document.createElement("M2-IMG");
+	return document.createElement("m2-img");
 }
 
 /**
@@ -470,5 +470,5 @@ function parseChildren(next, { resources, path, key }, src) {
 function clearNodeBeetwen(begin, end) {
 	while (begin.nextSibling !== end) {
 		begin.nextSibling.remove();
-	};
+	}
 }
