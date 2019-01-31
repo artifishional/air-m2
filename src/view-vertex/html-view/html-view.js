@@ -40,11 +40,13 @@ export default class HTMLView extends LiveSchema {
 		createEntity && (this.createEntity = createEntity);
 		this.prop.use.schtype = this.prop.use.schtype || "html";
 		this.prop.stream = this.prop.stream || "";
+		this.prop.tee = this.prop.tee || [];
 		this.prop.node = this.prop.node || document.createDocumentFragment();
 	}
 
 	createEntity( { $: { modelschema, layers: layers = new Map( [ [ -1, modelschema ] ] ) }, ...args } ) {
-		return stream( (emt, { over, sweep }) => {
+		return stream( (emt, { sweep, over }) => {
+			let state = { stage: 0, target: null, active: false };
 			const clayers = new Map(this.layers.map(
 				({ acid: _acid, src: { acid }, prop: { stream } }, i, arr) => {
 					if(stream[0] === "^") {
@@ -61,75 +63,107 @@ export default class HTMLView extends LiveSchema {
 					}
 				}
 			));
+
 			sweep.add( combine(
 				[...clayers].map( ([, layer ]) => layer ),
 				(...layers) => new Map([ ...clayers].map( ([ acid ], i) => [acid, layers[i]] ))
 			).at( ( layers ) => {
-				if(this.prop.tee || !this.prop.preload) {
-					over.add(this.createTeeEntity( { $: { modelschema, layers }, ...args } ).on(emt));
+				if(this.prop.tee.length || !this.prop.preload) {
+					over.add(this.createTeeEntity( { $: { layers }, ...args } ).on(emt));
 				}
 				else {
-					over.add(this.createNodeEntity( { $: { modelschema, layers }, ...args } ).on(emt));
+					over.add(this.createNextLayers( { $: { layers }, ...args } ).on(emt));
 				}
 			} ) );
+
 		} );
 	}
-	
-	createEntityLayer( { $: { layers }, ...args } ) {
-		combine(this.layers.map( ({ prop: { stream } }) => stream ));
+
+	createNextLayers( { $: { layers }, ...args } ) {
+		return stream( (emt, { sweep }) => {
+
+			const container = {
+				target: document.createDocumentFragment(),
+				begin: this.createSystemBoundNode("begin", "layers"),
+				end: this.createSystemBoundNode("end", "layers"),
+			};
+
+			//todo repeated slots
+			container.target.append(
+				container.begin,
+				...this.layers.map( ({ prop: { node } }) => node.cloneNode(true) ),
+				container.end,
+			);
+
+			sweep.add( combine( [
+				this.createNodeEntity( { $: { container, layers }, ...args } ),
+				this.createChildrenEntity( { $: { container, layers }, ...args } ),
+			] ).at( comps => {
+				if( comps.every( ([ { stage } ]) => stage === 1 ) ) {
+					emt( [ { stage: 1, target: container.target } ] );
+				}
+			}) );
+
+		} );
 	}
 
 	createTeeEntity( { $: { layers }, ...args } ) {
-		
-		const modelschema = layers.get(this.acid);
-		
+
+		//выбрать те слои с данными, в которых присутсвует tee
+		const modelschema = combine(
+			[...layers].map( ([,layer]) => layer.obtain() ),
+			(...layers) => [Object.assign({}, ...layers.map(([state]) => state) )]
+		);
+
 		return stream( (emt, { sweep, hook }) => {
-			let state = { stage: 0, target: null, active: false };
+
+			let state = { stage: 0, active: false, target: null };
 			let reqState = { stage: 1 };
 			let loaderTarget = null;
 			let loaderHook = null;
 			let childHook = null;
-			const target = document.createDocumentFragment();
-			state.target = target;
-			const begin = this.createSystemBoundNode("begin", "tee");
-			const end = this.createSystemBoundNode("end", "tee");
-			target.prepend(begin);
-			target.append(end);
+
+			const container = {
+				target: state.target = document.createDocumentFragment(),
+				begin: this.createSystemBoundNode("begin", "entity"),
+				end: this.createSystemBoundNode("end", "entity"),
+			};
+
+			//todo repeated slots
+			container.target.append( container.begin, container.end );
+
 			if(!this.prop.preload) {
 				sweep.add( loaderHook = this.obtain( "#loader" )
 					.at( ([ { stage, target } ]) => {
 						if(state.stage === 0 && stage > 0) {
 							loaderTarget = target;
 							state = { ...state, stage: 1, };
-							begin.after( target );
+							container.begin.after( target );
 							emt( [ state ] );
 						}
 					} )
 				);
 			}
-			
-			const view = this.createNodeEntity({ $: { modelschema, layers }, ...args });
-			
-			sweep.add( modelschema.obtain( ).at( ([ data ]) => {
-				const active = signature(this.prop.tee, data);
+			const view = this.createNextLayers( { $: { layers }, ...args } );
+			sweep.add( modelschema.at( ([ data ]) => {
+				const active = this.prop.tee.every(tee => signature(tee, data));
 				if(active !== state.active) {
 					state = { ...state, active };
 					if(active) {
 						sweep.add( childHook = view
 							.at( ([ { target } ]) => {
-								begin.after( target );
+								container.begin.after( target );
 							} )
 						);
 					}
 					else {
-						clearNodeBeetwen( begin, end );
+						clearContainer( container );
 						childHook && sweep.force( childHook );
 						childHook = null;
 					}
 				}
 			} ) );
-			
-			sweep.add( combine([ modelschema.obtain( ).ready(), view ]).at( ([ data ]) => {
+			sweep.add( combine([ modelschema.ready(), view ]).at( ([ data ]) => {
 				if(reqState && reqState.stage === 1) {
 					if(!this.prop.preload) {
 						sweep.force(loaderHook);
@@ -140,72 +174,22 @@ export default class HTMLView extends LiveSchema {
 					emt( [ state ] );
 				}
 			} ) );
-			
-		});
-	}
-	
-	createChildrenEntities( { $: { modelschema }, ...args } ) {
-		return stream( (emt, { sweep, hook }) => {
-			
-			const chidrenStream = combine(
-				this.item
-					.filter( ({ prop: { template } }) => !template )
-					.map(x => x.obtain( "", { $: { modelschema, layers } } ))
-			);
-			
-			sweep.add(chidrenStream.at((children) => {
-				if (children.every( ({ stage }) => stage === 1 )) {
-					const slots = target.querySelectorAll(`slot`);
-					const _children = children.map(([{target}]) => target);
-					if (slots.length) {
-						_children.map((target, index) => {
-							slots[index].replaceWith(target);
-						});
-					} else {
-						begin.after(..._children);
-					}
-				}
-			}));
-			
 		});
 	}
 
-	createNodeEntity( { $: { modelschema, layers }, ...args } ) {
-	
+	createChildrenEntity( { $: { container: { target, begin }, layers }, ...args } ) {
 		return stream( (emt, { sweep, hook }) => {
-			
-			let state = { stage: 0, target: null };
+			let state = { stage: 0 };
 			let reqState = { stage: 1 };
-
-			const resourcesStream = combine( this.prop.resources );
-
-			const target = document.createDocumentFragment();
-			target.append( ...this.layers.map( ({ prop: { node } }) => node.cloneNode(true) ) );
-
-			state.target = target;
-
-			//const target = this.prop.node.cloneNode( true );
-			
-			const begin = this.createSystemBoundNode("begin", "unit");
-			const end = this.createSystemBoundNode("end", "unit");
-			
-			target.prepend(begin);
-			target.append(end);
-			
 			const chidrenStream = combine(
 				this.item
 					.filter( ({ prop: { template } }) => !template )
-					.map(x => x.obtain( "", { $: { modelschema, layers } } ))
+					.map(x => x.obtain( "", { $: { layers } } ))
 			);
-
-			const commonStream = combine( [ chidrenStream, resourcesStream ] );
-			sweep.add( commonStream.at( ([ children, resources ]) => {
+			sweep.add( chidrenStream.at( ( children ) => {
 				if(reqState && reqState.stage === 1) {
 					reqState = null;
-					state = { stage: 1, ...state };
-					const imgs = resources.filter( ({ type }) => type === "img" );
-					[...target.querySelectorAll(`m2-img`)]
-						.map( (target, i) => target.replaceWith( imgs[i].image ) );
+					state = { ...state, stage: 1 };
 					const slots = target.querySelectorAll(`slot`);
 					const _children = children.map( ( [{ target }] ) => target );
 					if(slots.length) {
@@ -219,8 +203,23 @@ export default class HTMLView extends LiveSchema {
 					emt( [ state ] );
 				}
 			} ));
+		} );
+	}
 
-		
+	createNodeEntity( { $: { container: { target }, modelschema }, ...args } ) {
+		return stream( (emt, { sweep, hook }) => {
+			let state = { stage: 0, target };
+			let reqState = { stage: 1 };
+			sweep.add( combine( this.prop.resources ).at( ( resources ) => {
+				if(reqState && reqState.stage === 1) {
+					reqState = null;
+					state = { ...state, stage: 1 };
+					const imgs = resources.filter( ({ type }) => type === "img" );
+					[...target.querySelectorAll(`m2-img`)]
+						.map( (target, i) => target.replaceWith( imgs[i].image ) );
+					emt( [ state ] );
+				}
+			} ));
 		} );
 	}
 	
@@ -325,8 +324,12 @@ export default class HTMLView extends LiveSchema {
 			//return value || this.prop.stream || "";
 			return this.prop.stream;
 		}
+
+		else if( name == "tee" ) {
+			return [ ...this.prop.tee, ...value];
+		}
 		
-		if(["node", "template", "pack", "source", "tee"].includes(name)) {
+		else if(["node", "template", "pack", "source"].includes(name)) {
 			return this.prop[name];
 		}
 		else {
@@ -353,16 +356,16 @@ export default class HTMLView extends LiveSchema {
 function cuttee(node, key) {
 	const rawTee = node.getAttribute("tee");
 	if(rawTee === null) {
-		return null;
+		return [];
 	}
 	else if(rawTee === "") {
-		return key;
+		return [ key ];
 	}
 	else if(rawTee[0] === "{") {
-		return JSON5.parse(rawTee);
+		return [ JSON5.parse(rawTee) ];
 	}
 	else {
-		return rawTee;
+		return [ rawTee ];
 	}
 }
 
@@ -467,7 +470,7 @@ function parseChildren(next, { resources, path, key }, src) {
 		, []);
 }
 
-function clearNodeBeetwen(begin, end) {
+function clearContainer({ begin, end }) {
 	while (begin.nextSibling !== end) {
 		begin.nextSibling.remove();
 	}
