@@ -65,6 +65,10 @@
 </setup>
 
 
+//define plugin
+<plugin use = ""/>
+
+
 <unit key = accordion>
     <unit copy key = node>
         <unit key = body></unit>
@@ -131,12 +135,12 @@
 
 <!-- define languages -->
 
-<unit stream = intl template key = lang use = ../(lang)>
+<unit stream = #intl template key = lang use = ../(lang)>
 
     <unit key = toolbar-hint-off>
-        <unit tee = {lang:'en'} child-stream = ^>{(x)}</unit>
-        <unit tee = {lang:'kz'} child-stream = ^>{(x)}</unit>
-        <unit tee = {lang:'ru'} child-stream = ^>{(x)}</unit>
+        <u t = {lang:"en"}><u stream=^>{(x)}</u></u>
+        <u t = {lang:"kz"}><u stream=^>{(x)}</u></u>
+        <u t = {lang:"ru"}><u stream=^>{(x)}</u></u>
     </unit>
 
 </unit>
@@ -177,8 +181,8 @@
 <div class = tooltip>
     <div style = "opacity:0">
         <div class="btn-tooltip-wrap">
-            <unit tee = {on:true}>{lang.toolbar-hint-on}</unit>
-            <unit tee = {on:false}>{lang.toolbar-hint-off}</unit>
+            <unit tee = {on:true}>hint-on</unit>
+            <unit tee = {on:false}>hint-off</unit>
         </div>
     </div>
     <button type = button>
@@ -192,3 +196,19 @@
 </div>
 
 <!-- html standard tags are invisible -->
+
+
+<!-- with animation -->
+
+<unit use = animate>
+
+    <keyframe action = fade-in prop = {delay:(to.delay),duration:(to.duration)}>
+        <!--    <keyframe action = fade-in prop = {delay:3,duration:(x)}>  "x" from argv-->
+        <!--    <keyframe action = fade-in prop = {delay:3,duration:(y)}>  "y" from argv-->
+        <key offset = 1 prop = {x:(x),css:{opacity:1}} />
+        <!--  default offset settings - [1] - 100%, [2] - 0%-100% [>2] k = index*100%/count -->
+    </keyframe>
+
+    {(obj.some)}px
+
+</unit>
