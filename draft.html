@@ -137,13 +137,36 @@
 
 <unit stream = #intl template key = lang use = ../(lang)>
 
+    <unit nopreload key = ^$key tee = {lang:"en"} use = lngs/{lang:"en"}/$key />
+    <unit nopreload key = ^$key tee = {lang:"kz"} use = lngs/{lang:"kz"}/$key />
+    <unit nopreload key = ^$key tee = {lang:"ru"} use = lngs/{lang:"ru"}/$key />
+
     <unit key = toolbar-hint-off>
-        <u t = {lang:"en"}><u stream=^>{(x)}</u></u>
-        <u t = {lang:"kz"}><u stream=^>{(x)}</u></u>
-        <u t = {lang:"ru"}><u stream=^>{(x)}</u></u>
+        <unit tee = {lang:"en"}>
+
+            <unit use = lngs/{lang:"en"}/$key />
+
+            <unit stream = ^>{(x)}</unit>
+        </unit>
+        <unit tee = {lang:"kz"}><unit stream = ^>{(x)}</unit></unit>
+        <unit tee = {lang:"ru"}><unit stream = ^>{(x)}</unit></unit>
     </unit>
 
 </unit>
+
+
+<unit stream = #intl template key = lang use = ../(lang) />
+
+<unit key = lang stream = #intl>
+    <unit tee = {lang:"en"}>
+        <unit key = toolbar-hint-on>{(x)}</unit>
+        <unit key = toolbar-hint-off>{(x)}</unit>
+    </unit>
+</unit>
+
+
+    <unit use = lang/toolbar-hint-on></unit>
+
 
 <!-- How should the settings get inside the "div.btn-tooltip" container?  -->
 

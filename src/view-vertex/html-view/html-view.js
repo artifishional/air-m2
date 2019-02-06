@@ -88,22 +88,85 @@ export default class HTMLView extends LiveSchema {
 				end: this.createSystemBoundNode("end", "layers"),
 			};
 
-			//todo repeated slots
-			container.target.append(
-				container.begin,
-				...this.layers.map( ({ prop: { node } }) => node.cloneNode(true) ),
-				container.end,
-			);
-
 			sweep.add( combine( [
-				this.createNodeEntity( { $: { container, layers }, ...args } ),
+				...this.layers.map( (layer) =>
+					layer.createNodeEntity( { $: { container, layers }, ...args } )
+				),
 				this.createChildrenEntity( { $: { container, layers }, ...args } ),
-			] ).at( comps => {
+			] ).at( (comps) => {
+
+				const children = comps.pop();
+
+				//debugger;
+
+				const target = document.createDocumentFragment();
+				target.append(...comps.map( ([{ target }]) => target ));
+
 				if( comps.every( ([ { stage } ]) => stage === 1 ) ) {
-					emt( [ { stage: 1, target: container.target } ] );
+
+
+					const slots = target.querySelectorAll(`slot`);
+					const _children = children.map( ( [{ target }] ) => target );
+					if(slots.length) {
+						_children.map( (target, index) => {
+							
+
+							slots[index].replaceWith( target );
+						} );
+					}
+					else {
+						target.append( ..._children );
+						//begin.after( ..._children );
+					}
+
+
+					emt( [ { stage: 1, target } ] );
 				}
 			}) );
 
+		} );
+	}
+
+	createNodeEntity( { $: { container: { target } }, ...args } ) {
+		return stream( (emt, { sweep, hook }) => {
+
+			const container = {
+				target: document.createDocumentFragment(),
+				begin: this.createSystemBoundNode("begin", "layer"),
+				end: this.createSystemBoundNode("end", "layer"),
+			};
+
+			//todo repeated slots
+			container.target.append(
+				container.begin,
+				this.prop.node.cloneNode(true),
+				container.end,
+			);
+
+			let state = { stage: 0, target: container.target };
+			let reqState = { stage: 1 };
+
+			/*const targets = this.getTargets(target);
+
+			if(this.handlers.length || this.actions || targets) {
+
+			}*/
+
+			sweep.add( combine( this.prop.resources ).at( ( resources ) => {
+
+
+
+
+
+				if(reqState && reqState.stage === 1) {
+					reqState = null;
+					state = { ...state, stage: 1 };
+					const imgs = resources.filter( ({ type }) => type === "img" );
+					[...target.querySelectorAll(`m2-img`)]
+						.map( (target, i) => target.replaceWith( imgs[i].image ) );
+					emt( [ state ] );
+				}
+			} ));
 		} );
 	}
 
@@ -178,6 +241,13 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	createChildrenEntity( { $: { container: { target, begin }, layers }, ...args } ) {
+
+		return combine(
+			this.item
+				.filter( ({ prop: { template } }) => !template )
+				.map(x => x.obtain( "", { $: { layers } } ))
+		);
+
 		return stream( (emt, { sweep, hook }) => {
 			let state = { stage: 0 };
 			let reqState = { stage: 1 };
@@ -190,6 +260,7 @@ export default class HTMLView extends LiveSchema {
 				if(reqState && reqState.stage === 1) {
 					reqState = null;
 					state = { ...state, stage: 1 };
+
 					const slots = target.querySelectorAll(`slot`);
 					const _children = children.map( ( [{ target }] ) => target );
 					if(slots.length) {
@@ -200,23 +271,8 @@ export default class HTMLView extends LiveSchema {
 					else {
 						begin.after( ..._children );
 					}
-					emt( [ state ] );
-				}
-			} ));
-		} );
-	}
 
-	createNodeEntity( { $: { container: { target }, modelschema }, ...args } ) {
-		return stream( (emt, { sweep, hook }) => {
-			let state = { stage: 0, target };
-			let reqState = { stage: 1 };
-			sweep.add( combine( this.prop.resources ).at( ( resources ) => {
-				if(reqState && reqState.stage === 1) {
-					reqState = null;
-					state = { ...state, stage: 1 };
-					const imgs = resources.filter( ({ type }) => type === "img" );
-					[...target.querySelectorAll(`m2-img`)]
-						.map( (target, i) => target.replaceWith( imgs[i].image ) );
+
 					emt( [ state ] );
 				}
 			} ));
