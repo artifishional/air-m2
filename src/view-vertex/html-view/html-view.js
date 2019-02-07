@@ -241,42 +241,11 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	createChildrenEntity( { $: { container: { target, begin }, layers }, ...args } ) {
-
 		return combine(
 			this.item
 				.filter( ({ prop: { template } }) => !template )
 				.map(x => x.obtain( "", { $: { layers } } ))
 		);
-
-		return stream( (emt, { sweep, hook }) => {
-			let state = { stage: 0 };
-			let reqState = { stage: 1 };
-			const chidrenStream = combine(
-				this.item
-					.filter( ({ prop: { template } }) => !template )
-					.map(x => x.obtain( "", { $: { layers } } ))
-			);
-			sweep.add( chidrenStream.at( ( children ) => {
-				if(reqState && reqState.stage === 1) {
-					reqState = null;
-					state = { ...state, stage: 1 };
-
-					const slots = target.querySelectorAll(`slot`);
-					const _children = children.map( ( [{ target }] ) => target );
-					if(slots.length) {
-						_children.map( (target, index) => {
-							slots[index].replaceWith( target );
-						} );
-					}
-					else {
-						begin.after( ..._children );
-					}
-
-
-					emt( [ state ] );
-				}
-			} ));
-		} );
 	}
 	
 	createSystemBoundNode( point, species ) {
@@ -336,7 +305,7 @@ export default class HTMLView extends LiveSchema {
             [ ...(src.acid > -1 && src.prop.resources || []), ...JSON5
                 .parse(node.getAttribute("resources") || "[]")
                 .map( x => resource(pack, x) )
-            ]
+            ];
 		
         const tee = cuttee(node, key);
         const preload = !["false"].includes(node.getAttribute("preload"));
@@ -381,7 +350,7 @@ export default class HTMLView extends LiveSchema {
 			return this.prop.stream;
 		}
 
-		else if( name == "tee" ) {
+		else if( name === "tee" ) {
 			return [ ...this.prop.tee, ...value];
 		}
 		
