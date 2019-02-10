@@ -105,7 +105,7 @@ export default class HTMLView extends LiveSchema {
 				if( comps.every( ([ { stage } ]) => stage === 1 ) ) {
 
 
-					const slots = target.querySelectorAll(`slot`);
+					const slots = target.querySelectorAll(`slot[key]`);
 					const _children = children.map( ( [{ target }] ) => target );
 					if(slots.length) {
 						_children.map( (target, index) => {
@@ -127,7 +127,7 @@ export default class HTMLView extends LiveSchema {
 		} );
 	}
 
-	createNodeEntity( { $: { container: { target } }, ...args } ) {
+	createNodeEntity( { $, ...args } ) {
 		return stream( (emt, { sweep, hook }) => {
 
 			const container = {
@@ -146,23 +146,18 @@ export default class HTMLView extends LiveSchema {
 			let state = { stage: 0, target: container.target };
 			let reqState = { stage: 1 };
 
-			/*const targets = this.getTargets(target);
+			const targets = this.getTargets(container.target);
 
-			if(this.handlers.length || this.actions || targets) {
+			if(this.handlers.length || this.actions.length || targets.length) {
 
-			}*/
+			}
 
 			sweep.add( combine( this.prop.resources ).at( ( resources ) => {
-
-
-
-
-
 				if(reqState && reqState.stage === 1) {
 					reqState = null;
 					state = { ...state, stage: 1 };
 					const imgs = resources.filter( ({ type }) => type === "img" );
-					[...target.querySelectorAll(`m2-img`)]
+					[...container.target.querySelectorAll(`slot[img]`)]
 						.map( (target, i) => target.replaceWith( imgs[i].image ) );
 					emt( [ state ] );
 				}
@@ -445,12 +440,16 @@ function setup( next, { keyframes } ) {
 	);
 }
 
-function slot( ) {
-	return document.createElement("slot");
+function slot( { key } ) {
+	const res = document.createElement("slot");
+	res.setAttribute("key", key);
+	return res;
 }
 
 function img() {
-	return document.createElement("m2-img");
+	const res = document.createElement("slot");
+	res.setAttribute("img", "");
+	return res;
 }
 
 /**
@@ -469,7 +468,7 @@ function is( node, name ) {
 function parseChildren(next, { resources, path, key }, src) {
 	if(is( next, "unit" )) {
 		const parser = HTMLView.parse(next, src, { pack: src.prop.pack });
-		const _slot = slot( );
+		const _slot = slot( parser );
 		parser.prop.template ? next.remove() : next.replaceWith( _slot );
 		return [ parser ];
 	}
@@ -477,7 +476,7 @@ function parseChildren(next, { resources, path, key }, src) {
 		const parser = HTMLView.parse(next, src, {
 			key, path, type: "custom", pack: src.prop.pack
 		});
-		const _slot = slot( );
+		const _slot = slot( parser );
 		parser.prop.template ? next.remove() : next.replaceWith( _slot );
 		return [ parser ];
 	}
