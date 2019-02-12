@@ -17,10 +17,13 @@ export function frommodule(module, _key = "main") {
     return [ _key,
         ...Object.keys(module).filter(key => key === "default").map( key => {
             if (typeof module[key] === "function") {
+                if(module.hasOwnProperty("id")) {
+                    return {id: module.id, source: module[key]};
+                }
                 return {source: module[key]};
             }
         }),
-        ...Object.keys(module).filter(key => key !== "default").map( key => {
+        ...Object.keys(module).filter(key => key !== "default" && key !== "id").map( key => {
             if(typeof module[key] === "function") {
                 return [ key, { source: module[key] } ];
             }
