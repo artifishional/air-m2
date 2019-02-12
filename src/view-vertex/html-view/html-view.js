@@ -101,33 +101,37 @@ export default class HTMLView extends LiveSchema {
 
 				const target = document.createDocumentFragment();
 				target.append(...comps.map( ([{ target }]) => target ));
-
 				if( comps.every( ([ { stage } ]) => stage === 1 ) ) {
-
-
 					const slots = target.querySelectorAll(`slot[key]`);
-					const _children = children.map( ( [{ target }] ) => target );
 					if(slots.length) {
-						_children.map( (target, index) => {
-							
-
-							slots[index].replaceWith( target );
+						const _slots = [...slots].reduce(( cache, slot ) => {
+							const key = slot.getAttribute("key");
+							const exist = cache.get(key);
+							if(!exist || exist.parentNode === target && slot.parentNode !== target) {
+								cache.set(key, slot);
+							}
+							return cache;
+						}, new Map());
+						children.map( ([{target, key}]) => {
+							_slots.get(JSON.stringify(key)).replaceWith( target );
 						} );
 					}
 					else {
-						target.append( ..._children );
+						target.append( ...children.map( ( [{ target }] ) => target ) );
 						//begin.after( ..._children );
 					}
-
-
-					emt( [ { stage: 1, target } ] );
+					emt( [ { key: this.key, stage: 1, target } ] );
 				}
 			}) );
 
 		} );
 	}
+	
+	getTargets( node ) {
+	
+	}
 
-	createNodeEntity( { $, ...args } ) {
+	createNodeEntity( { $: { container: { target, begin, end } }, ...args } ) {
 		return stream( (emt, { sweep, hook }) => {
 
 			const container = {
@@ -135,22 +139,24 @@ export default class HTMLView extends LiveSchema {
 				begin: this.createSystemBoundNode("begin", "layer"),
 				end: this.createSystemBoundNode("end", "layer"),
 			};
-
-			//todo repeated slots
+			
 			container.target.append(
 				container.begin,
 				this.prop.node.cloneNode(true),
 				container.end,
 			);
+			
+			//if slot.key exist - non new slot added
+			//begin.after( container.target );
 
 			let state = { stage: 0, target: container.target };
 			let reqState = { stage: 1 };
-
+/*
 			const targets = this.getTargets(container.target);
 
 			if(this.handlers.length || this.actions.length || targets.length) {
 
-			}
+			}*/
 
 			sweep.add( combine( this.prop.resources ).at( ( resources ) => {
 				if(reqState && reqState.stage === 1) {
@@ -175,7 +181,7 @@ export default class HTMLView extends LiveSchema {
 
 		return stream( (emt, { sweep, hook }) => {
 
-			let state = { stage: 0, active: false, target: null };
+			let state = { key: this.key, stage: 0, active: false, target: null };
 			let reqState = { stage: 1 };
 			let loaderTarget = null;
 			let loaderHook = null;
@@ -345,7 +351,7 @@ export default class HTMLView extends LiveSchema {
 			return this.prop.stream;
 		}
 
-		else if( name === "tee" ) {
+		else if( name == "tee" ) {
 			return [ ...this.prop.tee, ...value];
 		}
 		
@@ -442,7 +448,7 @@ function setup( next, { keyframes } ) {
 
 function slot( { key } ) {
 	const res = document.createElement("slot");
-	res.setAttribute("key", key);
+	res.setAttribute("key", JSON.stringify(key));
 	return res;
 }
 
