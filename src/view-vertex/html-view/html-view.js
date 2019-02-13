@@ -81,34 +81,36 @@ export default class HTMLView extends LiveSchema {
 
 	createNextLayers( { $: { layers }, ...args } ) {
 		return stream( (emt, { sweep }) => {
-
 			const container = {
 				target: document.createDocumentFragment(),
 				begin: this.createSystemBoundNode("begin", "layers"),
 				end: this.createSystemBoundNode("end", "layers"),
 			};
-
+			container.target.append(container.begin, container.end);
 			sweep.add( combine( [
 				...this.layers.map( (layer) =>
 					layer.createNodeEntity( { $: { container, layers }, ...args } )
 				),
 				this.createChildrenEntity( { $: { container, layers }, ...args } ),
 			] ).at( (comps) => {
-
 				const children = comps.pop();
-
-				//debugger;
-
-				const target = document.createDocumentFragment();
-				target.append(...comps.map( ([{ target }]) => target ));
+				const target = container.target;
+				container.begin.after(...comps.map( ([{ target }]) => target ));
 				if( comps.every( ([ { stage } ]) => stage === 1 ) ) {
 					const slots = target.querySelectorAll(`slot[key]`);
 					if(slots.length) {
 						const _slots = [...slots].reduce(( cache, slot ) => {
 							const key = slot.getAttribute("key");
 							const exist = cache.get(key);
-							if(!exist || exist.parentNode === target && slot.parentNode !== target) {
+							if(!exist) {
 								cache.set(key, slot);
+							}
+							else if(exist.parentNode === target && slot.parentNode !== target) {
+								exist.remove();
+								cache.set(key, slot);
+							}
+							else {
+								slot.remove();
 							}
 							return cache;
 						}, new Map());
@@ -117,18 +119,16 @@ export default class HTMLView extends LiveSchema {
 						} );
 					}
 					else {
-						target.append( ...children.map( ( [{ target }] ) => target ) );
-						//begin.after( ..._children );
+						container.begin.after( ...children.map( ( [{ target }] ) => target ) );
 					}
 					emt( [ { key: this.key, stage: 1, target } ] );
 				}
 			}) );
-
 		} );
 	}
 	
 	getTargets( node ) {
-	
+		
 	}
 
 	createNodeEntity( { $: { container: { target, begin, end } }, ...args } ) {
@@ -145,15 +145,12 @@ export default class HTMLView extends LiveSchema {
 				this.prop.node.cloneNode(true),
 				container.end,
 			);
-			
-			//if slot.key exist - non new slot added
-			//begin.after( container.target );
 
 			let state = { stage: 0, target: container.target };
 			let reqState = { stage: 1 };
-/*
-			const targets = this.getTargets(container.target);
 
+			const targets = this.getTargets(container.target);
+/*
 			if(this.handlers.length || this.actions.length || targets.length) {
 
 			}*/
