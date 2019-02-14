@@ -33,6 +33,162 @@ class Path {
 	
 }
 
+function gtemplate(str = "", ct = 0) {
+	const len = str.length;
+	let res = [];
+	let srt = 0;
+	let pfx = 0;
+	let layer = 0;
+	while (ct < len) {
+		if(str[ct] === "{") {
+			if(!layer) {
+				if(pfx < ct) {
+					res.push( { type: "other", vl: str.substring(pfx, ct) } );
+				}
+				srt = ct;
+			}
+			layer ++ ;
+		}
+		if(str[ct] === "}") {
+			if(layer > 0) {
+				layer -- ;
+			}
+			if(!layer) {
+				pfx = ct+1;
+				res.push( { type: "template", vl: str.substring(srt, pfx) } );
+			}
+		}
+		ct ++ ;
+	}
+	if(pfx < ct) {
+		res.push( { type: "other", vl: str.substring(pfx, ct) } );
+	}
+	return res;
+}
+
+function gtargeting(parent, res = []) {
+	[...parent.childNodes].map(node => {
+		if(node.tagName === "style") { }
+		else if(node.nodeType === 3) {
+			const nodes = gtemplate(node.nodeValue)
+				.map( ({ vl, type }) => ({ vl, type, target: new Text(vl) }) );
+			const targeting = nodes.filter(({type}) => type === "template");
+			res.push(...targeting);
+			if(targeting.length) {
+				node.before(...nodes.map(({target}) => target));
+				node.remove();
+			}
+		}
+		else if(node.nodeType === 1) {
+			gtargeting(node, res);
+		}
+	});
+	return res;
+}
+
+function getfrompath(argv, path) {
+	return path.reduce((argv, name) => {
+		if(argv && argv.hasOwnProperty(name)) {
+			return argv[name];
+		}
+		else {
+			return null;
+		}
+	}, argv);
+}
+
+function templater(vl, intl = null, argv, resources) {
+	if(vl.indexOf("intl") === 1) {
+		if(!intl) return null;
+		const [_, name, template] = vl.match(/^{intl.([a-zA-Z0-9_\-]+),(.*)}$/);
+		const format = resources.find(({ type, name: x }) => type === "intl" && name === x).data;
+		format.currency = format.currency || intl.currency;
+		if(!isNaN(+template)) {
+			const formatter = new NumberFormat(intl.locale, format);
+			return formatter.format(+template);
+		}
+		else if(template.indexOf("argv") === 0) {
+			const res = templater(`{${template}}`, intl, argv, resources);
+			if(res !== null) {
+				const formatter = new NumberFormat(intl.locale, format);
+				return formatter.format(res);
+			}
+			return null;
+		}
+		else {
+			const formatter = new NumberFormat(intl.locale, {
+				...format,
+				minimumIntegerDigits: 1,
+				minimumFractionDigits: 0,
+				maximumFractionDigits: 0,
+			});
+			const templates = gtemplate(template).map( ({ vl, type }) => {
+				if(type === "template") {
+					return templater(vl, intl, argv, resources);
+				}
+				else {
+					return vl;
+				}
+			} );
+			if(templates.some(x => x === null)) {
+				return null;
+			}
+			return formatter.format(0).replace( "0", templates.join("") );
+		}
+	}
+	else if(vl.indexOf("argv") === 1) {
+		let [_, name] = vl.match(/^{argv((?:\.[a-zA-Z0-9_\-]+)*)}$/);
+		name = name || DEFAULT;
+		const path = name.split(".").filter(Boolean);
+		let str = getfrompath(argv, path);
+
+		if(!str) return str;
+
+		str += "";
+
+		if(str.indexOf("{") > -1) {
+			const templates = gtemplate(str).map( ({ vl, type }) => {
+				if(type === "template") {
+					return templater(vl, intl, argv, resources);
+				}
+				else {
+					return vl;
+				}
+			} );
+
+			if(templates.some(x => x === null)) {
+				return null;
+			}
+
+			return templates.join("");
+		}
+		else {
+			return str;
+		}
+
+	}
+	else if(vl.indexOf("lang") === 1) {
+		if(!intl) return null;
+
+		const [_, name] = vl.match(/^{lang\.([a-zA-Z0-9_\-]+)}$/);
+		const raw = resources.find(({ type, name: x }) => type === "lang" && name === x);
+		const template = raw ? raw.data[intl.locale] : `lang "${name}" not found`;
+		const templates = gtemplate(template).map( ({ vl, type }) => {
+			if(type === "template") {
+				return templater(vl, intl, argv, resources);
+			}
+			else {
+				return vl;
+			}
+		} );
+		if(templates.some(x => x === null)) {
+			return null;
+		}
+		return templates.join("");
+	}
+	throw "unsupported template type";
+}
+
 export default class HTMLView extends LiveSchema {
 	
 	constructor( args, src, { createEntity = null } = {} ) {
@@ -79,8 +235,15 @@ export default class HTMLView extends LiveSchema {
 		} );
 	}
 
+	createInstance( ) {
+		return new Instance( this );
+	}
+
 	createNextLayers( { $: { layers }, ...args } ) {
 		return stream( (emt, { sweep }) => {
+
+			let targeting = null;
+
 			const container = {
 				target: document.createDocumentFragment(),
 				begin: this.createSystemBoundNode("begin", "layers"),
@@ -93,10 +256,22 @@ export default class HTMLView extends LiveSchema {
 				),
 				this.createChildrenEntity( { $: { container, layers }, ...args } ),
 			] ).at( (comps) => {
+
 				const children = comps.pop();
-				const target = container.target;
-				container.begin.after(...comps.map( ([{ target }]) => target ));
+
 				if( comps.every( ([ { stage } ]) => stage === 1 ) ) {
+
+					const { target, begin } = container;
+					begin.after(...comps.map( ([{ target }]) => target ));
+
+
+					targeting = this.getTargets(container);
+
+
+
+
+
+
 					const slots = target.querySelectorAll(`slot[key]`);
 					if(slots.length) {
 						const _slots = [...slots].reduce(( cache, slot ) => {
@@ -119,16 +294,18 @@ export default class HTMLView extends LiveSchema {
 						} );
 					}
 					else {
-						container.begin.after( ...children.map( ( [{ target }] ) => target ) );
+						begin.after( ...children.map( ( [{ target }] ) => target ) );
 					}
 					emt( [ { key: this.key, stage: 1, target } ] );
 				}
 			}) );
 		} );
 	}
-	
+
 	getTargets( node ) {
-		
+
+
+
 	}
 
 	createNodeEntity( { $: { container: { target, begin, end } }, ...args } ) {
@@ -149,8 +326,8 @@ export default class HTMLView extends LiveSchema {
 			let state = { stage: 0, target: container.target };
 			let reqState = { stage: 1 };
 
-			const targets = this.getTargets(container.target);
-/*
+			//const targets = this.getTargets(container.target);
+			/*
 			if(this.handlers.length || this.actions.length || targets.length) {
 
 			}*/
