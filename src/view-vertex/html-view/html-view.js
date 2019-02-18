@@ -4,190 +4,11 @@ import events from "../events"
 import JSON5 from "json5"
 import { LiveSchema } from "../../live-schema"
 import resource from "../../loader/resource"
+import { NODE_TYPES } from "./def"
+import Instance from "./instance"
 
 const CUT_FRAMES_REG = /\[\s*["'](.+?)["']\s*,((?:\s*{.+?}\s*,\s*)?\s*(?:\[.+?]))\s*]/gs;
 let UNIQUE_VIEW_KEY = 0;
-
-class Path {
-	
-	constructor({ route = [], ...args } = {}) {
-		this.route = route;
-		this._args(args);
-	}
-	
-	_args(args) {
-		Object.assign(this, args);
-	}
-	
-	static concat(...paths) {
-		debugger;
-		return paths.reduce( (acc, { route, ...args }) =>
-			(acc._args(args), acc.route.concat( route ), acc),
-			new Path,
-		);
-	}
-	
-	concat(...paths) {
-		return Path.concat(this, ...paths);
-	}
-	
-}
-
-function gtemplate(str = "", ct = 0) {
-	const len = str.length;
-	let res = [];
-	let srt = 0;
-	let pfx = 0;
-	let layer = 0;
-	while (ct < len) {
-		if(str[ct] === "{") {
-			if(!layer) {
-				if(pfx < ct) {
-					res.push( { type: "other", vl: str.substring(pfx, ct) } );
-				}
-				srt = ct;
-			}
-			layer ++ ;
-		}
-		if(str[ct] === "}") {
-			if(layer > 0) {
-				layer -- ;
-			}
-			if(!layer) {
-				pfx = ct+1;
-				res.push( { type: "template", vl: str.substring(srt, pfx) } );
-			}
-		}
-		ct ++ ;
-	}
-	if(pfx < ct) {
-		res.push( { type: "other", vl: str.substring(pfx, ct) } );
-	}
-	return res;
-}
-
-function gtargeting(parent, res = []) {
-	[...parent.childNodes].map(node => {
-		if(node.tagName === "style") { }
-		else if(node.nodeType === 3) {
-			const nodes = gtemplate(node.nodeValue)
-				.map( ({ vl, type }) => ({ vl, type, target: new Text(vl) }) );
-			const targeting = nodes.filter(({type}) => type === "template");
-			res.push(...targeting);
-			if(targeting.length) {
-				node.before(...nodes.map(({target}) => target));
-				node.remove();
-			}
-		}
-		else if(node.nodeType === 1) {
-			gtargeting(node, res);
-		}
-	});
-	return res;
-}
-
-function getfrompath(argv, path) {
-	return path.reduce((argv, name) => {
-		if(argv && argv.hasOwnProperty(name)) {
-			return argv[name];
-		}
-		else {
-			return null;
-		}
-	}, argv);
-}
-
-function templater(vl, intl = null, argv, resources) {
-	if(vl.indexOf("intl") === 1) {
-		if(!intl) return null;
-		const [_, name, template] = vl.match(/^{intl.([a-zA-Z0-9_\-]+),(.*)}$/);
-		const format = resources.find(({ type, name: x }) => type === "intl" && name === x).data;
-		format.currency = format.currency || intl.currency;
-		if(!isNaN(+template)) {
-			const formatter = new NumberFormat(intl.locale, format);
-			return formatter.format(+template);
-		}
-		else if(template.indexOf("argv") === 0) {
-			const res = templater(`{${template}}`, intl, argv, resources);
-			if(res !== null) {
-				const formatter = new NumberFormat(intl.locale, format);
-				return formatter.format(res);
-			}
-			return null;
-		}
-		else {
-			const formatter = new NumberFormat(intl.locale, {
-				...format,
-				minimumIntegerDigits: 1,
-				minimumFractionDigits: 0,
-				maximumFractionDigits: 0,
-			});
-			const templates = gtemplate(template).map( ({ vl, type }) => {
-				if(type === "template") {
-					return templater(vl, intl, argv, resources);
-				}
-				else {
-					return vl;
-				}
-			} );
-			if(templates.some(x => x === null)) {
-				return null;
-			}
-			return formatter.format(0).replace( "0", templates.join("") );
-		}
-	}
-	else if(vl.indexOf("argv") === 1) {
-		let [_, name] = vl.match(/^{argv((?:\.[a-zA-Z0-9_\-]+)*)}$/);
-		name = name || DEFAULT;
-		const path = name.split(".").filter(Boolean);
-		let str = getfrompath(argv, path);
-
-		if(!str) return str;
-
-		str += "";
-
-		if(str.indexOf("{") > -1) {
-			const templates = gtemplate(str).map( ({ vl, type }) => {
-				if(type === "template") {
-					return templater(vl, intl, argv, resources);
-				}
-				else {
-					return vl;
-				}
-			} );
-
-			if(templates.some(x => x === null)) {
-				return null;
-			}
-
-			return templates.join("");
-		}
-		else {
-			return str;
-		}
-
-	}
-	else if(vl.indexOf("lang") === 1) {
-		if(!intl) return null;
-
-		const [_, name] = vl.match(/^{lang\.([a-zA-Z0-9_\-]+)}$/);
-		const raw = resources.find(({ type, name: x }) => type === "lang" && name === x);
-		const template = raw ? raw.data[intl.locale] : `lang "${name}" not found`;
-		const templates = gtemplate(template).map( ({ vl, type }) => {
-			if(type === "template") {
-				return templater(vl, intl, argv, resources);
-			}
-			else {
-				return vl;
-			}
-		} );
-		if(templates.some(x => x === null)) {
-			return null;
-		}
-		return templates.join("");
-	}
-	throw "unsupported template type";
-}
 
 export default class HTMLView extends LiveSchema {
 	
@@ -219,7 +40,6 @@ export default class HTMLView extends LiveSchema {
 					}
 				}
 			));
-
 			sweep.add( combine(
 				[...clayers].map( ([, layer ]) => layer ),
 				(...layers) => new Map([ ...clayers].map( ([ acid ], i) => [acid, layers[i]] ))
@@ -231,17 +51,20 @@ export default class HTMLView extends LiveSchema {
 					over.add(this.createNextLayers( { $: { layers }, ...args } ).on(emt));
 				}
 			} ) );
-
 		} );
 	}
 
-	createInstance( ) {
-		return new Instance( this );
+	createInstance( { targets, resources } ) {
+		return new Instance( this, {}, { targets, resources } );
 	}
 
 	createNextLayers( { $: { layers }, ...args } ) {
 		return stream( (emt, { sweep }) => {
 
+			let actives = [];
+			
+			sweep.add( () => actives.map( x => x.clear() ) );
+			
 			let targeting = null;
 
 			const container = {
@@ -258,91 +81,73 @@ export default class HTMLView extends LiveSchema {
 			] ).at( (comps) => {
 
 				const children = comps.pop();
-
-				if( comps.every( ([ { stage } ]) => stage === 1 ) ) {
-
-					const { target, begin } = container;
-					begin.after(...comps.map( ([{ target }]) => target ));
-
-
-					targeting = this.getTargets(container);
-
-
-
-
-
-
-					const slots = target.querySelectorAll(`slot[key]`);
-					if(slots.length) {
-						const _slots = [...slots].reduce(( cache, slot ) => {
-							const key = slot.getAttribute("key");
-							const exist = cache.get(key);
-							if(!exist) {
-								cache.set(key, slot);
-							}
-							else if(exist.parentNode === target && slot.parentNode !== target) {
-								exist.remove();
-								cache.set(key, slot);
-							}
-							else {
-								slot.remove();
-							}
-							return cache;
-						}, new Map());
-						children.map( ([{target, key}]) => {
-							_slots.get(JSON.stringify(key)).replaceWith( target );
-						} );
-					}
-					else {
-						begin.after( ...children.map( ( [{ target }] ) => target ) );
-					}
-					emt( [ { key: this.key, stage: 1, target } ] );
+				
+				const { target, begin } = container;
+				begin.after(...comps.map( ({ target }) => target));
+				
+				const slots = target.querySelectorAll(`slot[key]`);
+				if(slots.length) {
+					const _slots = [...slots].reduce(( cache, slot ) => {
+						const key = slot.getAttribute("key");
+						const exist = cache.get(key);
+						if(!exist) {
+							cache.set(key, slot);
+						}
+						else if(exist.parentNode === target && slot.parentNode !== target) {
+							exist.remove();
+							cache.set(key, slot);
+						}
+						else {
+							slot.remove();
+						}
+						return cache;
+					}, new Map());
+					children.map( ([{target, key}]) => {
+						_slots.get(JSON.stringify(key)).replaceWith( target );
+					} );
 				}
+				else {
+					begin.after( ...children.map( ( [{ target }] ) => target ) );
+				}
+				
+				const targets = this.defineTargets( container );
+				actives = this.layers.map( ( layer, i ) => {
+					layer.createInstance( { ...comps[i], targets } );
+				} );
+				
+				emt( [ { key: this.key, stage: 1, target } ] );
+				
 			}) );
 		} );
 	}
-
-	getTargets( node ) {
-
-
-
+	
+	//todo optimize with tree walker
+	defineTargets( { begin, end } ) {
+		const res = [];
+		let cur = begin.nextSibling;
+		while (cur !== end) {
+			if(
+				cur.nodeType === NODE_TYPES.ELEMENT_NODE ||
+				cur.nodeType === NODE_TYPES.TEXT_NODE &&
+				cur.textContent.trim()
+			) {
+				res.push(cur);
+			}
+			cur = cur.nextSibling;
+		}
+		return res;
 	}
 
-	createNodeEntity( { $: { container: { target, begin, end } }, ...args } ) {
-		return stream( (emt, { sweep, hook }) => {
-
-			const container = {
-				target: document.createDocumentFragment(),
-				begin: this.createSystemBoundNode("begin", "layer"),
-				end: this.createSystemBoundNode("end", "layer"),
-			};
-			
-			container.target.append(
-				container.begin,
-				this.prop.node.cloneNode(true),
-				container.end,
-			);
-
-			let state = { stage: 0, target: container.target };
-			let reqState = { stage: 1 };
-
-			//const targets = this.getTargets(container.target);
-			/*
-			if(this.handlers.length || this.actions.length || targets.length) {
-
-			}*/
-
-			sweep.add( combine( this.prop.resources ).at( ( resources ) => {
-				if(reqState && reqState.stage === 1) {
-					reqState = null;
-					state = { ...state, stage: 1 };
-					const imgs = resources.filter( ({ type }) => type === "img" );
-					[...container.target.querySelectorAll(`slot[img]`)]
-						.map( (target, i) => target.replaceWith( imgs[i].image ) );
-					emt( [ state ] );
-				}
-			} ));
-		} );
+	createNodeEntity( ) {
+		return stream( (emt, { sweep }) => {
+			sweep.add(combine( this.prop.resources ).at( ( resources ) => {
+				const imgs = resources.filter(({type}) => type === "img");
+				const target = this.prop.node.cloneNode(true);
+				[...target.querySelectorAll(`slot[img]`)]
+					.map((target, i) => target.replaceWith(imgs[i].image));
+				emt( { target, resources } );
+			}));
+		});
 	}
 
 	createTeeEntity( { $: { layers }, ...args } ) {
