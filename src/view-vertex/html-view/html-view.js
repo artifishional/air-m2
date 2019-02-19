@@ -279,8 +279,6 @@ export default class HTMLView extends LiveSchema {
 
 		use = source && { path: source, schtype: type === "custom" ? "js" : "html" } || { };
 
-		const keyframes = [];
-
         const resources =
             [ ...(src.acid > -1 && src.prop.resources || []), ...JSON5
                 .parse(node.getAttribute("resources") || "[]")
@@ -289,7 +287,9 @@ export default class HTMLView extends LiveSchema {
 		
         const tee = cuttee(node, key);
         const preload = !["false"].includes(node.getAttribute("preload"));
-        
+
+		const keyframes = parseKeyFrames( { node } );
+
 		const prop = {
             tee,            //switch mode
             preload,        //must be fully loaded before readiness
@@ -324,38 +324,52 @@ export default class HTMLView extends LiveSchema {
 	}
 	
 	mergeProperties( name, value ) {
-		
 		if(name === "stream") {
-			//return value || this.prop.stream || "";
 			return this.prop.stream;
 		}
-
 		else if( name == "tee" ) {
 			return [ ...this.prop.tee, ...value];
 		}
-		
-		else if(["node", "template", "pack", "source"].includes(name)) {
+		else if(["keyframes", "node", "template", "pack", "source"].includes(name)) {
 			return this.prop[name];
 		}
 		else {
 			return super.mergeProperties( name, value );
 		}
 	}
-	/*
-		targeting() {
-			return [...this.node.querySelectorAll( "SETUP,M2-SETUP" )]
-				.map(node => {
-					const keyframes = JSON5.parse(node.getAttribute("keyframes") || "[]");
-					let props = node.getAttribute("props");
-					if (props) {
-						const cdc = new Function("key", "argv", `{return ${props}}`);
-						props = argv => cdc(key, argv);
-					}
-					node.remove();
-					return { node, keyframes, props };
-				});
-		}*/
 	
+}
+
+function parseKeyFrames( { node } ) {
+	let res = [];
+	const keyframe = node.querySelectorAll("keyframe");
+	if(keyframe.length) {
+		res = [...keyframe].map( node => {
+			const action = node.getAttribute("name") || "default";
+			let prop = (node.getAttribute("prop"));
+			if(prop) {
+				prop = prop.replace(/\([a-b0-9]+?\)/g, (_, reg) => {
+					return `(argv${reg})`;
+				});
+				prop = new Function("argv", "ttm", `{return ${prop}}`);
+			}
+			const keys = [...node.querySelectorAll("key")]
+				.map( node => {
+					let offset = node.getAttribute("offset");
+					let prop = node.getAttribute("prop");
+					if(prop) {
+						prop = prop.replace(/\([a-b0-9]+?\)/g, (_, reg) => {
+							return `(argv${reg})`;
+						});
+						prop = new Function("argv", "ttm", `{return ${prop}}`);
+					}
+					return [ offset, prop ];
+				} )
+			node.remove();
+			return [ action, prop, ...keys ];
+		} );
+	}
+	return res;
 }
 
 function cuttee(node, key) {
