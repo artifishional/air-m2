@@ -30,12 +30,12 @@ const statesstream = (scenesstream, { modelstream, viewbuilder, baseresources })
                             let action, key;
 
                             if(Array.isArray(data)) {
-                                [ action, { key } ] = data;
+                                [ action, { key = null } ] = data;
                             }
                             else {
-                                ({ action, key } = data);
+                                ({ action, key = null } = data);
                                 if(Array.isArray(action)) {
-                                    [action, { key} ] = action;
+                                    [action, { key = null } ] = action;
                                 }
                             }
 
