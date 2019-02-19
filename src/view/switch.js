@@ -38,6 +38,11 @@ const statesstream = (scenesstream, { modelstream, viewbuilder, baseresources })
                                     [action, { key} ] = action;
                                 }
                             }
+
+                            if(key === undefined) {
+                                throw new TypeError(`parm 'key' is undefined`);
+                            }
+
                             if(action === "change" && curstate !== key) {
 
                                 clearTimeout(loadertimeout);
