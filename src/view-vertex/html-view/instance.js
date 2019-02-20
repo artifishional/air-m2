@@ -1,3 +1,4 @@
+import { stream } from "air-stream"
 import { NODE_TYPES } from "./def"
 
 class NumberFormat {
@@ -157,23 +158,137 @@ function templater(vl, intl = null, argv, resources) {
 	throw "unsupported template type";
 }
 
+function checkModelNecessity({ layer, targets }) {
+	return [
+		!layer.prop.handlers.length,
+		!layer.prop.keyframes.filter( ([ name ]) => !["fade-in", "fade-out"].includes(name) ).length,
+		targets.filter( ({ nodeType }) => nodeType === NODE_TYPES.TEXT_NODE ).length,
+	]
+		.every( x => x )
+}
+
 export default class Instance {
 
-    constructor( layer, x, { targets, resources }) {
+    constructor( layer, { schema: { model } }, { targets, resources }) {
         //super( owner, { stream: { model, view, update }, targets } );
         this.layer = layer;
+		this.loaderTimeoutID = null;
+        this.schema = { model };
         this.resources = resources;
         this.targets = targets;
+
+        this.state = { stage: 0 };
+
+		this.layer.props.handlers.map( ({ name }) => {
+			if(name === "clickoutside") {
+				window.addEventListener("click", this, false);
+			}
+			else if(name === "globalkeydown") {
+				window.addEventListener("keydown", this, false);
+			}
+			else if(name === "globalkeyup") {
+				window.addEventListener("keyup", this, false);
+			}
+			else {
+				this.targets
+					.filter( ( { nodeType } ) => nodeType === NODE_TYPES.ELEMENT_NODE )
+					.map( target => target.addEventListener(name, this, false) )
+			}
+		});
+
+        this.stream = stream( (emt, { sweep }) => {
+
+			this.loaderTimeoutID = setTimeout( () =>
+				console.warn(`too long loading layer`, this.layer), 5000
+			);
+
+			if(checkModelNecessity( { layer, targets } )) {
+				sweep.add( model.obtain().at( (data) => {
+					this.complete(emt);
+				} ) );
+			}
+			else {
+				this.complete(emt);
+			}
+
+			sweep.add( () => this.clear() );
+
+		} );
+
     }
+
+	complete(emt) {
+		if(!this.state.stage) {
+			clearTimeout(this.loaderTimeoutID);
+			this.state = {...this.state, stage: 1};
+			emt([this.state, {action: "complete", data: null}]);
+		}
+	}
+
+	handleEvent(event) {
+		if(event.currentTarget === window) {
+			if(
+				event.type === "click" &&
+				this.handlers.find( ({name}) => name === "clickoutside" )
+			) {
+				if(event.target !== this.target && !this.target.contains(event.target)) {
+					this.handleEvent(new MouseEvent("clickoutside", event));
+				}
+			}
+			if(
+				event.type === "keydown" &&
+				this.handlers.find( ({name}) => name === "globalkeydown" )
+			) {
+				this.handleEvent(new KeyboardEvent("globalkeydown", event));
+			}
+			if(
+				event.type === "keyup" &&
+				this.handlers.find( ({name}) => name === "globalkeyup" )
+			) {
+				this.handleEvent(new KeyboardEvent("globalkeyup", event));
+			}
+		}
+		else {
+			this.handlers
+				.find( ({ name }) => event.type === name )
+				.hn.call(
+				this.target,
+				event,
+				this.props,
+				({...args} = {}) => this.handler({ dissolve: false, ...args }),
+				this.key
+			);
+		}
+	}
     
     update( argv ) {
-        this.targets.map( ({ node }) => {
+    	this.targets.map( ({ node }) => {
             if(node.nodeType === NODE_TYPES.TEXT_NODE) {
 	            templater( node.textContent, argv, this.intl, this.resources );
             }
         } );
     }
     
-    clear() {}
+    clear() {
+
+		this.layer.props.handlers.map( ({ name }) => {
+			if(name === "clickoutside") {
+				window.removeEventListener("click", this, false);
+			}
+			else if(name === "globalkeydown") {
+				window.removeEventListener("keydown", this, false);
+			}
+			else if(name === "globalkeyup") {
+				window.removeEventListener("keyup", this, false);
+			}
+			else {
+				this.targets
+					.filter( ( { nodeType } ) => nodeType === NODE_TYPES.ELEMENT_NODE )
+					.map( target => target.removeEventListener(name, this, false) )
+			}
+		});
+
+		clearTimeout(this.loaderTimeoutID);
+	}
 
 }

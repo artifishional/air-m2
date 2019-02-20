@@ -17,7 +17,9 @@ export default class HTMLView extends LiveSchema {
 		createEntity && (this.createEntity = createEntity);
 		this.prop.use.schtype = this.prop.use.schtype || "html";
 		this.prop.stream = this.prop.stream || "";
+		this.prop.handlers = this.prop.handlers || [];
 		this.prop.tee = this.prop.tee || [];
+		this.prop.keyframes = this.prop.keyframes || [];
 		this.prop.node = this.prop.node || document.createDocumentFragment();
 	}
 
@@ -54,18 +56,12 @@ export default class HTMLView extends LiveSchema {
 		} );
 	}
 
-	createInstance( { targets, resources } ) {
-		return new Instance( this, {}, { targets, resources } );
+	createInstance( owner, { targets, resources } ) {
+		return new Instance( this, owner, { targets, resources } );
 	}
 
 	createNextLayers( { $: { layers }, ...args } ) {
 		return stream( (emt, { sweep }) => {
-
-			let actives = [];
-			
-			sweep.add( () => actives.map( x => x.clear() ) );
-			
-			let targeting = null;
 
 			const container = {
 				target: document.createDocumentFragment(),
@@ -73,6 +69,15 @@ export default class HTMLView extends LiveSchema {
 				end: this.createSystemBoundNode("end", "layers"),
 			};
 			container.target.append(container.begin, container.end);
+
+			let actives = [];
+			let state = { stage: 0, key: this.key, target: container.target };
+			
+			sweep.add( () => actives.map( x => x.clear() ) );
+			
+			let targeting = null;
+
+
 			sweep.add( combine( [
 				...this.layers.map( (layer) =>
 					layer.createNodeEntity( { $: { container, layers }, ...args } )
@@ -111,11 +116,19 @@ export default class HTMLView extends LiveSchema {
 				}
 				
 				const targets = this.defineTargets( container );
-				actives = this.layers.map( ( layer, i ) => {
-					layer.createInstance( { ...comps[i], targets } );
+				combine(this.layers.map( ( layer, i ) => {
+					return layer.createInstance(
+						{ schema: { model: layers.get(layer.acid) } },
+						{ ...comps[i], targets }
+					).stream;
+				} )).at( (layers) => {
+
+					if(state.stage === 0 && layers.every( ([ { stage } ]) => stage === 1)) {
+						state = { ...state, stage: 1 };
+						emt( [ state ] );
+					}
+
 				} );
-				
-				emt( [ { key: this.key, stage: 1, target } ] );
 				
 			}) );
 		} );
@@ -129,7 +142,7 @@ export default class HTMLView extends LiveSchema {
 			if(
 				cur.nodeType === NODE_TYPES.ELEMENT_NODE ||
 				cur.nodeType === NODE_TYPES.TEXT_NODE &&
-				cur.textContent.trim()
+				cur.textContent.match(/{.+}/g)
 			) {
 				res.push(cur);
 			}
@@ -330,7 +343,7 @@ export default class HTMLView extends LiveSchema {
 		else if( name == "tee" ) {
 			return [ ...this.prop.tee, ...value];
 		}
-		else if(["keyframes", "node", "template", "pack", "source"].includes(name)) {
+		else if(["handlers", "keyframes", "node", "template", "pack", "source"].includes(name)) {
 			return this.prop[name];
 		}
 		else {
