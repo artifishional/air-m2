@@ -1,5 +1,6 @@
 import { stream } from "air-stream"
 import { NODE_TYPES } from "./def"
+import { animate } from "air-gsap"
 
 class NumberFormat {
 	
@@ -160,26 +161,29 @@ function templater(vl, intl = null, argv, resources) {
 
 function checkModelNecessity({ layer, targets }) {
 	return [
-		!layer.prop.handlers.length,
-		!layer.prop.keyframes.filter( ([ name ]) => !["fade-in", "fade-out"].includes(name) ).length,
+		layer.prop.handlers.length,
+		layer.prop.keyframes.filter( ([ name ]) => !["fade-in", "fade-out"].includes(name) ).length,
 		targets.filter( ({ nodeType }) => nodeType === NODE_TYPES.TEXT_NODE ).length,
 	]
-		.every( x => x )
+		.some( x => x )
 }
 
 export default class Instance {
 
+	createAnimateStream( keyframes ) {
+		return animate( this, keyframes );
+	}
+
     constructor( layer, { schema: { model } }, { targets, resources }) {
         //super( owner, { stream: { model, view, update }, targets } );
+		this.animateStream = this.createAnimateStream( layer.prop.keyframes );
         this.layer = layer;
 		this.loaderTimeoutID = null;
         this.schema = { model };
         this.resources = resources;
         this.targets = targets;
-
         this.state = { stage: 0 };
-
-		this.layer.props.handlers.map( ({ name }) => {
+		this.layer.prop.handlers.map( ({ name }) => {
 			if(name === "clickoutside") {
 				window.addEventListener("click", this, false);
 			}
@@ -195,34 +199,38 @@ export default class Instance {
 					.map( target => target.addEventListener(name, this, false) )
 			}
 		});
-
         this.stream = stream( (emt, { sweep }) => {
-
 			this.loaderTimeoutID = setTimeout( () =>
 				console.warn(`too long loading layer`, this.layer), 5000
 			);
-
+			sweep.add(this.animateHandler = this.animateStream.at( () => {} ));
 			if(checkModelNecessity( { layer, targets } )) {
-				sweep.add( model.obtain().at( (data) => {
-					this.complete(emt);
+				sweep.add( this.handler = model.obtain().at( (data) => {
+					!this.state.stage && this.complete(emt);
+
+					let state, action = "*";
+					if(Array.isArray(data) && data.length < 3) {
+						[state, action = "*"] = data;
+					}
+					else {
+						state = data;
+					}
+
+					this.animateHandler( { data: [ state, action ] } );
+					
 				} ) );
 			}
 			else {
 				this.complete(emt);
 			}
-
 			sweep.add( () => this.clear() );
-
 		} );
-
     }
 
 	complete(emt) {
-		if(!this.state.stage) {
-			clearTimeout(this.loaderTimeoutID);
-			this.state = {...this.state, stage: 1};
-			emt([this.state, {action: "complete", data: null}]);
-		}
+		clearTimeout(this.loaderTimeoutID);
+		this.state = {...this.state, stage: 1};
+		emt([this.state, {action: "complete", data: null}]);
 	}
 
 	handleEvent(event) {
@@ -231,7 +239,9 @@ export default class Instance {
 				event.type === "click" &&
 				this.handlers.find( ({name}) => name === "clickoutside" )
 			) {
-				if(event.target !== this.target && !this.target.contains(event.target)) {
+				if(this.targets.some( target =>
+					event.target !== target && !target.contains(event.target) )
+				) {
 					this.handleEvent(new MouseEvent("clickoutside", event));
 				}
 			}
@@ -249,10 +259,8 @@ export default class Instance {
 			}
 		}
 		else {
-			this.handlers
-				.find( ({ name }) => event.type === name )
-				.hn.call(
-				this.target,
+			this.handlers.find( ({ name }) => event.type === name ).hn.call(
+				event.target,
 				event,
 				this.props,
 				({...args} = {}) => this.handler({ dissolve: false, ...args }),
@@ -270,8 +278,7 @@ export default class Instance {
     }
     
     clear() {
-
-		this.layer.props.handlers.map( ({ name }) => {
+		this.layer.prop.handlers.map( ({ name }) => {
 			if(name === "clickoutside") {
 				window.removeEventListener("click", this, false);
 			}
@@ -287,7 +294,6 @@ export default class Instance {
 					.map( target => target.removeEventListener(name, this, false) )
 			}
 		});
-
 		clearTimeout(this.loaderTimeoutID);
 	}
 
