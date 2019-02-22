@@ -5,7 +5,8 @@ import JSON5 from "json5"
 import { LiveSchema } from "../../live-schema"
 import resource from "../../loader/resource"
 import { NODE_TYPES } from "./def"
-import Instance from "./instance"
+import Layer from "./layer"
+import PlaceHolderContainer from "./place-holder-container"
 
 const CUT_FRAMES_REG = /\[\s*["'](.+?)["']\s*,((?:\s*{.+?}\s*,\s*)?\s*(?:\[.+?]))\s*]/gs;
 let UNIQUE_VIEW_KEY = 0;
@@ -56,27 +57,19 @@ export default class HTMLView extends LiveSchema {
 		} );
 	}
 
-	createInstance( owner, { targets, resources } ) {
-		return new Instance( this, owner, { targets, resources } );
+	createLayer(owner, { targets, resources } ) {
+		return new Layer( this, owner, { targets, resources } );
 	}
 
 	createNextLayers( { $: { layers }, ...args } ) {
 		return stream( (emt, { sweep }) => {
 
-			const container = {
-				target: document.createDocumentFragment(),
-				begin: this.createSystemBoundNode("begin", "layers"),
-				end: this.createSystemBoundNode("end", "layers"),
-			};
-			container.target.append(container.begin, container.end);
+			const container = new PlaceHolderContainer(this, { type: "layers" });
 
 			let actives = [];
 			let state = { stage: 0, key: this.key, target: container.target };
 			
 			sweep.add( () => actives.map( x => x.clear() ) );
-			
-			let targeting = null;
-
 
 			sweep.add( combine( [
 				...this.layers.map( (layer) =>
@@ -87,8 +80,8 @@ export default class HTMLView extends LiveSchema {
 
 				const children = comps.pop();
 				
-				const { target, begin } = container;
-				begin.after(...comps.map( ({ target }) => target));
+				const { target } = container;
+				container.append(...comps.map( ({ container: { target } }) => target));
 				
 				const slots = target.querySelectorAll(`slot[key]`);
 				if(slots.length) {
@@ -112,53 +105,37 @@ export default class HTMLView extends LiveSchema {
 					} );
 				}
 				else {
-					begin.after( ...children.map( ( [{ target }] ) => target ) );
+					container.append( ...children.map( ( [{ target }] ) => target ) );
 				}
-				
-				const targets = this.defineTargets( container );
-				combine(this.layers.map( ( layer, i ) => {
-					return layer.createInstance(
+				sweep.add(combine(this.layers.map( ( layer, i ) => {
+					return layer.createLayer(
 						{ schema: { model: layers.get(layer.acid) } },
-						{ ...comps[i], targets }
+						{ resources: comps[i].resources,
+							targets: [
+								...comps[i].container.targets( "datas" ),
+								...container.targets("actives")
+							],
+						}
 					).stream;
 				} )).at( (layers) => {
-
 					if(state.stage === 0 && layers.every( ([ { stage } ]) => stage === 1)) {
 						state = { ...state, stage: 1 };
 						emt( [ state ] );
 					}
-
-				} );
-				
+				} ));
 			}) );
 		} );
-	}
-	
-	//todo optimize with tree walker
-	defineTargets( { begin, end } ) {
-		const res = [];
-		let cur = begin.nextSibling;
-		while (cur !== end) {
-			if(
-				cur.nodeType === NODE_TYPES.ELEMENT_NODE ||
-				cur.nodeType === NODE_TYPES.TEXT_NODE &&
-				cur.textContent.match(/{.+}/g)
-			) {
-				res.push(cur);
-			}
-			cur = cur.nextSibling;
-		}
-		return res;
 	}
 
 	createNodeEntity( ) {
 		return stream( (emt, { sweep }) => {
 			sweep.add(combine( this.prop.resources ).at( ( resources ) => {
+				const container = new PlaceHolderContainer( this, { type: "node" } );
+				container.append(this.prop.node.cloneNode(true));
 				const imgs = resources.filter(({type}) => type === "img");
-				const target = this.prop.node.cloneNode(true);
-				[...target.querySelectorAll(`slot[img]`)]
+				[...container.target.querySelectorAll(`slot[img]`)]
 					.map((target, i) => target.replaceWith(imgs[i].image));
-				emt( { target, resources } );
+				emt( { resources, container } );
 			}));
 		});
 	}
@@ -179,14 +156,8 @@ export default class HTMLView extends LiveSchema {
 			let loaderHook = null;
 			let childHook = null;
 
-			const container = {
-				target: state.target = document.createDocumentFragment(),
-				begin: this.createSystemBoundNode("begin", "entity"),
-				end: this.createSystemBoundNode("end", "entity"),
-			};
-
-			//todo repeated slots
-			container.target.append( container.begin, container.end );
+			const container = new PlaceHolderContainer( this, { type: "entity" } );
+			state.target = container.target;
 
 			if(!this.prop.preload) {
 				sweep.add( loaderHook = this.obtain( "#loader" )
@@ -194,7 +165,7 @@ export default class HTMLView extends LiveSchema {
 						if(state.stage === 0 && stage > 0) {
 							loaderTarget = target;
 							state = { ...state, stage: 1, };
-							container.begin.after( target );
+							container.append( target );
 							emt( [ state ] );
 						}
 					} )
