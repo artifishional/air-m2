@@ -1,12 +1,12 @@
-import {NODE_TYPES} from "air-m2/src/view-vertex/html-view/def";
+import {NODE_TYPES} from "air-m2/src/view-vertex/html-view/def"
 
 export default class PlaceHolderContainer {
 
     constructor( owner, { type } ) {
         this.owner = owner;
         this.target = new DocumentFragment();
-        this.begin = this.createSystemBoundNode("begin", type);
-        this.end = this.createSystemBoundNode("end", type);
+        this.begin = this.createSystemBoundNode("˄", type);
+        this.end = this.createSystemBoundNode("˅", type);
         this.target.append( this.begin, this.end );
         this._dirty = false;
         this._targets = [];

@@ -294,14 +294,14 @@ export default class HTMLView extends LiveSchema {
 		
 		const res = src.acid > -1 && src.lift( [ key, prop ], src ) || new HTMLView( [ key, prop ], src );
 		
-		[...node.childNodes].map( next => setup( next, res.prop ));
+		//[...node.childNodes].map( next => setup( next, res.prop ));
 		
 		res.append(...[...node.children].reduce((acc, next) =>
 				[...acc, ...parseChildren( next, res.prop, res )]
 			, []));
 		
 		res.prop.node = document.createDocumentFragment();
-		res.prop.node.append( ...node.children );
+		res.prop.node.append( ...node.childNodes );
 
 		return res;
 		
@@ -371,7 +371,7 @@ function cuttee(node, key) {
 		return [ rawTee ];
 	}
 }
-
+/*
 function setup( next, { keyframes } ) {
 	if(next.nodeType === 3 && !is( next.parentNode, "setup" )) {
 		const templates = next.nodeValue.match(/{(?:intl|lang|argv).+?}/g);
@@ -421,7 +421,7 @@ function setup( next, { keyframes } ) {
 	return [...next.childNodes].map( node =>
 		!is( node, "unit" ) && setup(node, { keyframes })
 	);
-}
+}*/
 
 function slot( { key } ) {
 	const res = document.createElement("slot");
