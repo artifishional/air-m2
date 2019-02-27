@@ -170,14 +170,16 @@ function checkModelNecessity({ layer, targets }) {
 
 export default class Layer {
 
-	createAnimateStream( keyframes ) {
-		return animate( this, keyframes );
+	createAnimateStream( { keyframes, targets } ) {
+		return animate( this, { keyframes, targets }, this.layer.prop.key );
 	}
 
     constructor( layer, { schema: { model } }, { targets, resources }) {
-        //super( owner, { stream: { model, view, update }, targets } );
-		this.animateStream = this.createAnimateStream( layer.prop.keyframes );
-        this.layer = layer;
+
+		this.layer = layer;
+
+		//super( owner, { stream: { model, view, update }, targets } );
+		this.animateStream = this.createAnimateStream( { ...layer.prop, targets } );
 		this.loaderTimeoutID = null;
         this.schema = { model };
         this.resources = resources;
@@ -208,9 +210,9 @@ export default class Layer {
 				sweep.add( this.handler = model.obtain().at( (data) => {
 					!this.state.stage && this.complete(emt);
 
-					let state, action = "*";
+					let state, action = "default";
 					if(Array.isArray(data) && data.length < 3) {
-						[state, action = "*"] = data;
+						[state, action = "default"] = data;
 					}
 					else {
 						state = data;
@@ -237,7 +239,7 @@ export default class Layer {
 		if(event.currentTarget === window) {
 			if(
 				event.type === "click" &&
-				this.handlers.find( ({name}) => name === "clickoutside" )
+				this.layer.prop.handlers.find( ({name}) => name === "clickoutside" )
 			) {
 				if(this.targets.some( target =>
 					event.target !== target && !target.contains(event.target) )
@@ -247,19 +249,19 @@ export default class Layer {
 			}
 			if(
 				event.type === "keydown" &&
-				this.handlers.find( ({name}) => name === "globalkeydown" )
+				this.layer.prop.handlers.find( ({name}) => name === "globalkeydown" )
 			) {
 				this.handleEvent(new KeyboardEvent("globalkeydown", event));
 			}
 			if(
 				event.type === "keyup" &&
-				this.handlers.find( ({name}) => name === "globalkeyup" )
+				this.layer.prop.handlers.find( ({name}) => name === "globalkeyup" )
 			) {
 				this.handleEvent(new KeyboardEvent("globalkeyup", event));
 			}
 		}
 		else {
-			this.handlers.find( ({ name }) => event.type === name ).hn.call(
+			this.layer.prop.handlers.find( ({ name }) => event.type === name ).hn.call(
 				event.target,
 				event,
 				this.props,
