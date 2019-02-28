@@ -25,24 +25,25 @@ export default class PlaceHolderContainer {
         );
     }
 
-    targets( type = "*" ) {
+    targets( type = "*", resources ) {
         if(this._dirty) {
             this._dirty = false;
-            this._targets = PlaceHolderContainer.defineTargets( this );
+            this._targets = this.defineTargets( resources );
         }
         if(type === "*") {
             return this._targets;
         }
         else if(type === "datas") {
-            return this._targets.filter( ({ nodeType }) => NODE_TYPES.TEXT_NODE );
+            return this._targets.filter( ({ type }) => "data" );
         }
         else if(type === "actives") {
-            return this._targets.filter( ({ nodeType }) => NODE_TYPES.ELEMENT_NODE );
+            return this._targets.filter( ({ type }) => "active" );
         }
     }
 
     //todo optimize with tree walker
-    static defineTargets( { target, begin = target.firstChild, end = target.lastChild  } ) {
+    defineTargets( resources ) {
+        const { target, begin = target.firstChild, end = target.lastChild  } = this;
         const res = [];
         let cur = begin;
         while (cur !== end) {
@@ -56,7 +57,7 @@ export default class PlaceHolderContainer {
             }
             cur = cur.nextSibling;
         }
-        return res;
+        return res.map( node => this.owner.createActiveNodeTarget( node, resources ) );
     }
 
 }

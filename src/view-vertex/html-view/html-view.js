@@ -1,15 +1,16 @@
 import { stream, combine } from "air-stream"
-import {equal, routeNormalizer, routeToString, signature} from "../../utils"
+import {routeNormalizer, routeToString, signature} from "../../utils"
 import events from "../events"
 import JSON5 from "json5"
 import { LiveSchema } from "../../live-schema"
 import resource from "../../loader/resource"
-import { NODE_TYPES } from "./def"
 import Layer from "./layer"
 import PlaceHolderContainer from "./place-holder-container"
+import ActiveNodeTarget from "./active-node-target"
 
 const CUT_FRAMES_REG = /\[\s*["'](.+?)["']\s*,((?:\s*{.+?}\s*,\s*)?\s*(?:\[.+?]))\s*]/gs;
 let UNIQUE_VIEW_KEY = 0;
+
 
 export default class HTMLView extends LiveSchema {
 	
@@ -22,6 +23,10 @@ export default class HTMLView extends LiveSchema {
 		this.prop.tee = this.prop.tee || [];
 		this.prop.keyframes = this.prop.keyframes || [];
 		this.prop.node = this.prop.node || document.createDocumentFragment();
+	}
+
+	createActiveNodeTarget(node, resources) {
+		return new ActiveNodeTarget(node, resources);
 	}
 
 	createEntity( { $: { modelschema, layers: layers = new Map( [ [ -1, modelschema ] ] ) }, ...args } ) {
@@ -112,8 +117,8 @@ export default class HTMLView extends LiveSchema {
 						{ schema: { model: layers.get(layer.acid) } },
 						{ resources: comps[i].resources,
 							targets: [
-								...comps[i].container.targets( "datas" ),
-								...container.targets("actives")
+								...comps[i].container.targets( "datas", comps[i].resources ),
+								...container.targets("actives", comps[i].resources )
 							],
 						}
 					).stream;
@@ -209,14 +214,6 @@ export default class HTMLView extends LiveSchema {
 			this.item
 				.filter( ({ prop: { template } }) => !template )
 				.map(x => x.obtain( "", { $: { layers } } ))
-		);
-	}
-	
-	createSystemBoundNode( point, species ) {
-		const label = typeof this.prop.key === "object" ?
-			JSON.stringify(this.prop.key) : this.prop.key;
-		return document.createComment(
-			`${point} ${species} ${this.acid} ${label} ${point}`.toUpperCase()
 		);
 	}
 	
@@ -371,57 +368,6 @@ function cuttee(node, key) {
 		return [ rawTee ];
 	}
 }
-/*
-function setup( next, { keyframes } ) {
-	if(next.nodeType === 3 && !is( next.parentNode, "setup" )) {
-		const templates = next.nodeValue.match(/{(?:intl|lang|argv).+?}/g);
-		templates && next.replaceWith( ...templates.map(
-			text => {
-				const res = document.createElement("setup");
-				res.textContent = text;
-				return res;
-			}
-		));
-	}
-	if(is( next, "setup" )) {
-		if(!is( next.parentNode.parentNode, "unit" ) ) {
-			const replaced = next.parentNode;
-			const unit = document.createElement("unit");
-			replaced.replaceWith( unit );
-			unit.append( replaced );
-		}
-		else {
-			
-			if(next.textContent) {
-				if(!keyframes.find(([name]) => name === "*")) {
-					keyframes.push( [ "*", [ 100 ] ] );
-				}
-			}
-			
-			let keyframesAttribute = next.getAttribute("keyframes");
-			if(keyframesAttribute) {
-				
-				if(keyframesAttribute.indexOf("[") < 0) {
-					keyframesAttribute = `[[ "*", {}, [100, ${keyframesAttribute}]]]`
-				}
-				
-				keyframesAttribute.replace(CUT_FRAMES_REG, (all, action, fn) => {
-					let exist = keyframes.findIndex(([x]) => x === action);
-					if(exist < 0) {
-						exist = keyframes.length;
-					}
-					const handler = new Function("argv", `return ["${action}", ${fn}]`);
-					keyframes[exist] = [ action, ({argv} = {}) => handler(argv) ];
-				});
-				
-			}
-			
-		}
-	}
-	return [...next.childNodes].map( node =>
-		!is( node, "unit" ) && setup(node, { keyframes })
-	);
-}*/
 
 function slot( { key } ) {
 	const res = document.createElement("slot");

@@ -131,3 +131,5 @@ export const signature = (sign, target) => {
         return false;
     }
 };
+
+export const copy = target => JSON.parse(JSON.stringify(target));
