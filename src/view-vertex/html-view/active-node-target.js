@@ -121,13 +121,12 @@ function templater(vl, intl = null, argv, resources) {
             const formatter = new NumberFormat(intl.locale, format);
             return formatter.format(+template);
         }
-        else if(template.indexOf("argv") === 0) {
-            const res = templater(`{${template}}`, intl, argv, resources);
-            if(res !== null) {
-                const formatter = new NumberFormat(intl.locale, format);
-                return formatter.format(res);
-            }
-            return null;
+        else if(template.search(/\([a-zA-Z\-\_\.0-9]+\)/) > -1) {
+            const res = template.replace(/\(([a-zA-Z\-\_\.0-9]+)\)/g, ( _, path ) => {
+                return getfrompath( argv, path.split(".") );
+            });
+            const formatter = new NumberFormat(intl.locale, format);
+            return formatter.format(res);
         }
         else {
             const formatter = new NumberFormat(intl.locale, {
@@ -150,17 +149,12 @@ function templater(vl, intl = null, argv, resources) {
             return formatter.format(0).replace( "0", templates.join("") );
         }
     }
-    else if(vl.indexOf("argv") === 1) {
-        let [_, name] = vl.match(/^{argv((?:\.[a-zA-Z0-9_\-]+)*)}$/);
-        name = name || DEFAULT;
-        const path = name.split(".").filter(Boolean);
-        const str = getfrompath(argv, path);
-        if(str && str[0] === "{" && str.slice(-1)[0] === "}") {
-            return templater(str, intl, argv, resources);
-        }
-        else {
-            return str;
-        }
+    else if(vl.search(/\([a-zA-Z\-\_\.0-9]+\)/) > -1) {
+        return vl.replace(/\{(.*)\}/, (_, lit) => {
+            return lit.replace(/\(([a-zA-Z\-\_\.0-9]+)\)/g, ( _, path ) => {
+                return getfrompath( argv, path.split(".") );
+            })
+        });
     }
     else if(vl.indexOf("lang") === 1) {
         if(!intl) return null;

@@ -72,7 +72,7 @@ export default class HTMLView extends LiveSchema {
 			const container = new PlaceHolderContainer(this, { type: "layers" });
 
 			let actives = [];
-			let state = { stage: 0, key: this.key, target: container.target };
+			let state = { acid: this.acid, stage: 0, key: this.key, target: container.target };
 			
 			sweep.add( () => actives.map( x => x.clear() ) );
 
@@ -82,35 +82,34 @@ export default class HTMLView extends LiveSchema {
 				),
 				this.createChildrenEntity( { $: { container, layers }, ...args } ),
 			] ).at( (comps) => {
-
 				const children = comps.pop();
-				
 				const { target } = container;
 				container.append(...comps.map( ({ container: { target } }) => target));
-				
-				const slots = target.querySelectorAll(`slot[key]`);
-				if(slots.length) {
-					const _slots = [...slots].reduce(( cache, slot ) => {
-						const key = slot.getAttribute("key");
-						const exist = cache.get(key);
-						if(!exist) {
-							cache.set(key, slot);
-						}
-						else if(exist.parentNode === target && slot.parentNode !== target) {
-							exist.remove();
-							cache.set(key, slot);
-						}
-						else {
-							slot.remove();
-						}
-						return cache;
-					}, new Map());
-					children.map( ([{target, key}]) => {
-						_slots.get(JSON.stringify(key)).replaceWith( target );
-					} );
-				}
-				else {
-					container.append( ...children.map( ( [{ target }] ) => target ) );
+				const slots = target.querySelectorAll(`slot[acid]`);
+				if(children.length) {
+					if(slots.length) {
+						const _slots = [...slots].reduce(( cache, slot ) => {
+							const acid = slot.getAttribute("acid");
+							const exist = cache.get(acid);
+							if(!exist) {
+								cache.set(acid, slot);
+							}
+							else if(exist.parentNode === target && slot.parentNode !== target) {
+								exist.remove();
+								cache.set(acid, slot);
+							}
+							else {
+								slot.remove();
+							}
+							return cache;
+						}, new Map());
+						children.map( ([{target, acid}]) => {
+							_slots.get(JSON.stringify(acid)).replaceWith( target );
+						} );
+					}
+					else {
+						container.append( ...children.map( ( [{ target }] ) => target ) );
+					}
 				}
 				sweep.add(combine(this.layers.map( ( layer, i ) => {
 					return layer.createLayer(
@@ -155,7 +154,7 @@ export default class HTMLView extends LiveSchema {
 
 		return stream( (emt, { sweep, hook }) => {
 
-			let state = { key: this.key, stage: 0, active: false, target: null };
+			let state = { acid: this.acid, key: this.key, stage: 0, active: false, target: null };
 			let reqState = { stage: 1 };
 			let loaderTarget = null;
 			let loaderHook = null;
@@ -222,24 +221,21 @@ export default class HTMLView extends LiveSchema {
 	}
 	
 	static parse( node, src, { pack, type = "unit" } ) {
-		
+		let uvk = `${++UNIQUE_VIEW_KEY}`;
 		if(!(node instanceof Element)) {
 			return new HTMLView( ["", {}], src, { createEntity: node } );
 		}
-		
-		const { path = "./", key: pkey = ++UNIQUE_VIEW_KEY+"" } = (src || {}).prop || {};
-		
+		const { path = "./", key: pkey = uvk } = (src || {}).prop || {};
 		let key = node.getAttribute("key");
-		
 		if(key !== null) {
 			if(/[`"'{}\]\[]/.test(key)) {
 				key = JSON5.parse(key);
 			}
+			uvk = key;
 		}
 		else {
 			key = pkey;
 		}
-		
 		const handlers = [ ...node.attributes ]
 			.filter( ({ name }) => events.includes(name) )
 			.map( ({ name, value }) => ({
@@ -289,10 +285,10 @@ export default class HTMLView extends LiveSchema {
 			resources,      //related resources
 		};
 		
-		const res = src.acid > -1 && src.lift( [ key, prop ], src ) || new HTMLView( [ key, prop ], src );
+		const res = src.acid > -1 && src.lift( [ uvk, prop ], src ) || new HTMLView( [ uvk, prop ], src );
 		
 		//[...node.childNodes].map( next => setup( next, res.prop ));
-		
+
 		res.append(...[...node.children].reduce((acc, next) =>
 				[...acc, ...parseChildren( next, res.prop, res )]
 			, []));
@@ -345,7 +341,7 @@ function parseKeyFrames( { node } ) {
 						prop = new Function("argv", "ttm", `{return ${prop}}`);
 					}
 					return [ offset, prop ];
-				} )
+				} );
 			node.remove();
 			return [ action, prop, ...keys ];
 		} );
@@ -369,9 +365,9 @@ function cuttee(node, key) {
 	}
 }
 
-function slot( { key } ) {
+function slot( { key, acid } ) {
 	const res = document.createElement("slot");
-	res.setAttribute("key", JSON.stringify(key));
+	res.setAttribute("acid", JSON.stringify(acid));
 	return res;
 }
 
