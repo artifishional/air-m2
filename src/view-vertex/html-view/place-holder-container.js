@@ -1,4 +1,5 @@
 import {NODE_TYPES} from "air-m2/src/view-vertex/html-view/def"
+import ActiveNodeTarget from "./active-node-target"
 
 export default class PlaceHolderContainer {
 
@@ -23,6 +24,22 @@ export default class PlaceHolderContainer {
         return document.createComment(
             `${point} ${species} ${this.owner.acid} ${label} ${point}`.toUpperCase()
         );
+    }
+
+    restore() {
+        let point = this.begin;
+        const res = [ point ];
+        while (point !== this.end) {
+            point = point.nextSibling;
+            res.push(point);
+        }
+        this.target.append(...res);
+    }
+
+    clear() {
+        while (this.begin.nextSibling !== this.end) {
+            this.begin.nextSibling.remove();
+        }
     }
 
     targets( type = "*", resources ) {

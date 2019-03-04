@@ -1,16 +1,16 @@
 import { stream, combine } from "air-stream"
-import {routeNormalizer, routeToString, signature} from "../../utils"
+import {equal, routeNormalizer, routeToString, signature} from "../../utils"
 import events from "../events"
 import JSON5 from "json5"
 import { LiveSchema } from "../../live-schema"
 import resource from "../../loader/resource"
+import { NODE_TYPES } from "./def"
 import Layer from "./layer"
 import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
 
 const CUT_FRAMES_REG = /\[\s*["'](.+?)["']\s*,((?:\s*{.+?}\s*,\s*)?\s*(?:\[.+?]))\s*]/gs;
 let UNIQUE_VIEW_KEY = 0;
-
 
 export default class HTMLView extends LiveSchema {
 	
@@ -82,10 +82,14 @@ export default class HTMLView extends LiveSchema {
 				),
 				this.createChildrenEntity( { $: { container, layers }, ...args } ),
 			] ).at( (comps) => {
+
 				const children = comps.pop();
+				
 				const { target } = container;
 				container.append(...comps.map( ({ container: { target } }) => target));
+				
 				const slots = target.querySelectorAll(`slot[acid]`);
+
 				if(children.length) {
 					if(slots.length) {
 						const _slots = [...slots].reduce(( cache, slot ) => {
@@ -103,14 +107,21 @@ export default class HTMLView extends LiveSchema {
 							}
 							return cache;
 						}, new Map());
+						
+						if(_slots.size !== children.length) debugger;
+						
 						children.map( ([{target, acid}]) => {
 							_slots.get(JSON.stringify(acid)).replaceWith( target );
 						} );
+
+
+
 					}
 					else {
 						container.append( ...children.map( ( [{ target }] ) => target ) );
 					}
 				}
+
 				sweep.add(combine(this.layers.map( ( layer, i ) => {
 					return layer.createLayer(
 						{ schema: { model: layers.get(layer.acid) } },
@@ -179,19 +190,26 @@ export default class HTMLView extends LiveSchema {
 			sweep.add( modelschema.at( ([ data ]) => {
 				const active = this.prop.tee.every(tee => signature(tee, data));
 				if(active !== state.active) {
+
+					container.restore();
+					childHook && sweep.force( childHook );
+					childHook = null;
+
 					state = { ...state, active };
 					if(active) {
 						sweep.add( childHook = view
 							.at( ([ { target } ]) => {
+
+								if(this.acid === 107) {
+
+									console.log( target.childNodes );
+								}
+
 								container.begin.after( target );
 							} )
 						);
 					}
-					else {
-						clearContainer( container );
-						childHook && sweep.force( childHook );
-						childHook = null;
-					}
+					
 				}
 			} ) );
 			sweep.add( combine([ modelschema.ready(), view ]).at( ([ data ]) => {
@@ -221,12 +239,17 @@ export default class HTMLView extends LiveSchema {
 	}
 	
 	static parse( node, src, { pack, type = "unit" } ) {
+
 		let uvk = `${++UNIQUE_VIEW_KEY}`;
+		
 		if(!(node instanceof Element)) {
 			return new HTMLView( ["", {}], src, { createEntity: node } );
 		}
+
 		const { path = "./", key: pkey = uvk } = (src || {}).prop || {};
+
 		let key = node.getAttribute("key");
+		
 		if(key !== null) {
 			if(/[`"'{}\]\[]/.test(key)) {
 				key = JSON5.parse(key);
@@ -236,6 +259,7 @@ export default class HTMLView extends LiveSchema {
 		else {
 			key = pkey;
 		}
+		
 		const handlers = [ ...node.attributes ]
 			.filter( ({ name }) => events.includes(name) )
 			.map( ({ name, value }) => ({
@@ -317,6 +341,8 @@ export default class HTMLView extends LiveSchema {
 	
 }
 
+const REG_GETTER_ATTRIBUTE = /\([a-zA-Z\_]{1}[a-bA-Z\-\_0-9]*?\)/g;
+
 function parseKeyFrames( { node } ) {
 	let res = [];
 	const keyframe = node.querySelectorAll("keyframe");
@@ -325,23 +351,23 @@ function parseKeyFrames( { node } ) {
 			const action = node.getAttribute("name") || "default";
 			let prop = (node.getAttribute("prop"));
 			if(prop) {
-				prop = prop.replace(/\([a-b0-9]+?\)/g, (_, reg) => {
-					return `(argv${reg})`;
+				prop = prop.replace(REG_GETTER_ATTRIBUTE, (_, reg) => {
+					return `(argv.${reg})`;
 				});
-				prop = new Function("argv", "ttm", `{return ${prop}}`);
+				prop = new Function("argv", "ttm", `return ${prop}`);
 			}
 			const keys = [...node.querySelectorAll("key")]
 				.map( node => {
 					let offset = node.getAttribute("offset");
 					let prop = node.getAttribute("prop");
 					if(prop) {
-						prop = prop.replace(/\([a-b0-9]+?\)/g, (_, reg) => {
-							return `(argv${reg})`;
+						prop = prop.replace(REG_GETTER_ATTRIBUTE, (_, reg) => {
+							return `(argv.${reg})`;
 						});
-						prop = new Function("argv", "ttm", `{return ${prop}}`);
+						prop = new Function("argv", "ttm", `return ${prop}`);
 					}
 					return [ offset, prop ];
-				} );
+				} )
 			node.remove();
 			return [ action, prop, ...keys ];
 		} );
@@ -417,10 +443,4 @@ function parseChildren(next, { resources, path, key }, src) {
 	return [...next.children].reduce( (acc, node) =>
 			[...acc, ...parseChildren(node, { resources, path, key }, src)]
 		, []);
-}
-
-function clearContainer({ begin, end }) {
-	while (begin.nextSibling !== end) {
-		begin.nextSibling.remove();
-	}
 }
