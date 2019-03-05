@@ -72,7 +72,12 @@ export default class HTMLView extends LiveSchema {
 			const container = new PlaceHolderContainer(this, { type: "layers" });
 
 			let actives = [];
-			let state = { acid: this.acid, stage: 0, key: this.key, target: container.target };
+			let state = {
+				acid: this.acid, 
+				stage: 0, container, 
+				key: this.key, 
+				target: container.target
+			};
 			
 			sweep.add( () => actives.map( x => x.clear() ) );
 
@@ -173,6 +178,7 @@ export default class HTMLView extends LiveSchema {
 
 			const container = new PlaceHolderContainer( this, { type: "entity" } );
 			state.target = container.target;
+			state.container = container;
 
 			if(!this.prop.preload) {
 				sweep.add( loaderHook = this.obtain( "#loader" )
@@ -186,30 +192,26 @@ export default class HTMLView extends LiveSchema {
 					} )
 				);
 			}
+
+			let _inner = null;
 			const view = this.createNextLayers( { $: { layers }, ...args } );
 			sweep.add( modelschema.at( ([ data ]) => {
 				const active = this.prop.tee.every(tee => signature(tee, data));
 				if(active !== state.active) {
-
-					container.restore();
-					childHook && sweep.force( childHook );
-					childHook = null;
-
 					state = { ...state, active };
 					if(active) {
 						sweep.add( childHook = view
-							.at( ([ { target } ]) => {
-
-								if(this.acid === 107) {
-
-									console.log( target.childNodes );
-								}
-
-								container.begin.after( target );
+							.at( ([ { target, container: inner } ]) => {
+								_inner = inner;
+								container.begin.after( inner.target );
 							} )
 						);
 					}
-					
+					else {
+						_inner && _inner.restore();
+						childHook && sweep.force( childHook );
+						childHook = null;
+					}
 				}
 			} ) );
 			sweep.add( combine([ modelschema.ready(), view ]).at( ([ data ]) => {
