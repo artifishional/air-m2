@@ -1,21 +1,19 @@
 import { stream, combine } from "air-stream"
-import {equal, routeNormalizer, routeToString, signature} from "../../utils"
+import {routeNormalizer, routeToString, signature} from "../../utils"
 import events from "../events"
 import JSON5 from "json5"
 import { LiveSchema } from "../../live-schema"
 import resource from "../../loader/resource"
-import { NODE_TYPES } from "./def"
 import Layer from "./layer"
 import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
 
-const CUT_FRAMES_REG = /\[\s*["'](.+?)["']\s*,((?:\s*{.+?}\s*,\s*)?\s*(?:\[.+?]))\s*]/gs;
 let UNIQUE_VIEW_KEY = 0;
 
 export default class HTMLView extends LiveSchema {
 	
-	constructor( args, src, { createEntity = null } = {} ) {
-		super( args, src );
+	constructor( args, src, { acid, createEntity = null } = {} ) {
+		super( args, src, { acid } );
 		createEntity && (this.createEntity = createEntity);
 		this.prop.use.schtype = this.prop.use.schtype || "html";
 		this.prop.stream = this.prop.stream || "";
@@ -29,9 +27,17 @@ export default class HTMLView extends LiveSchema {
 		return new ActiveNodeTarget(node, resources);
 	}
 
-	createEntity( { $: { modelschema, layers: layers = new Map( [ [ -1, modelschema ] ] ) }, ...args } ) {
+	createEntity( { $: { modelschema,
+		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) }, ...args }
+	) {
 		return stream( (emt, { sweep, over }) => {
 			let state = { stage: 0, target: null, active: false };
+
+
+			if(this.acid.indexOf("hint") > -1) {
+				debugger;
+			}
+
 			const clayers = new Map(this.layers.map(
 				({ acid: _acid, src: { acid }, prop: { stream } }, i, arr) => {
 					if(stream[0] === "^") {
@@ -41,16 +47,30 @@ export default class HTMLView extends LiveSchema {
 							throw `the first view layer cannot refer to the predecessor stream`
 						}
 						const { src: { acid }, prop: { stream: pstream } } = eLayer;
-						return [_acid, layers.get(acid).get( pstream + stream.substr(1) )];
+						return [_acid, {
+							layer: layers.get(acid).layer.get( pstream + stream.substr(1) ),
+							vars: routeNormalizer(pstream + stream.substr(1)),
+						}];
+					}
+					if(stream === "") {
+						return [ _acid, {
+							layer: layers.get(acid).layer.get(stream),
+							vars: layers.get(acid).vars,
+						}];
 					}
 					else {
-						return [_acid, layers.get(acid).get(stream)];
+						return [_acid, {
+							layer: layers.get(acid).layer.get(stream),
+							vars: routeNormalizer(stream),
+						}];
 					}
 				}
 			));
 			sweep.add( combine(
-				[...clayers].map( ([, layer ]) => layer ),
-				(...layers) => new Map([ ...clayers].map( ([ acid ], i) => [acid, layers[i]] ))
+				[...clayers].map( ([, { layer } ]) => layer ),
+				(...layers) => new Map([ ...clayers].map( ([ acid, { vars: { route, ...vars } } ], i) => [
+					acid, { layer: layers[i], vars }
+				] ))
 			).at( ( layers ) => {
 				if(this.prop.tee.length || !this.prop.preload) {
 					over.add(this.createTeeEntity( { $: { layers }, ...args } ).on(emt));
@@ -87,14 +107,10 @@ export default class HTMLView extends LiveSchema {
 				),
 				this.createChildrenEntity( { $: { container, layers }, ...args } ),
 			] ).at( (comps) => {
-
 				const children = comps.pop();
-				
 				const { target } = container;
 				container.append(...comps.map( ({ container: { target } }) => target));
-				
 				const slots = target.querySelectorAll(`slot[acid]`);
-
 				if(children.length) {
 					if(slots.length) {
 						const _slots = [...slots].reduce(( cache, slot ) => {
@@ -112,21 +128,15 @@ export default class HTMLView extends LiveSchema {
 							}
 							return cache;
 						}, new Map());
-						
 						if(_slots.size !== children.length) debugger;
-						
 						children.map( ([{target, acid}]) => {
 							_slots.get(JSON.stringify(acid)).replaceWith( target );
 						} );
-
-
-
 					}
 					else {
 						container.append( ...children.map( ( [{ target }] ) => target ) );
 					}
 				}
-
 				sweep.add(combine(this.layers.map( ( layer, i ) => {
 					return layer.createLayer(
 						{ schema: { model: layers.get(layer.acid) } },
@@ -164,7 +174,7 @@ export default class HTMLView extends LiveSchema {
 
 		//выбрать те слои с данными, в которых присутсвует tee
 		const modelschema = combine(
-			[...layers].map( ([,layer]) => layer.obtain() ),
+			[...layers].map( ([, { layer, vars } ]) => layer.obtain("", vars) ),
 			(...layers) => [Object.assign({}, ...layers.map(([state]) => state) )]
 		);
 
@@ -274,7 +284,9 @@ export default class HTMLView extends LiveSchema {
 		stream.route = stream.route.map( seg => seg === "$key" ? key : seg );
 		Object.keys( stream ).map( prop => stream[prop] === "$key" && (stream[prop] = key) );
 		stream = routeToString(stream);
-		
+
+		const acid = node.getAttribute("acid") || "";
+
 		const template = ["", "true"].includes(node.getAttribute("template"));
 		const id = node.getAttribute("id") || "$";
 		let use = (node.getAttribute("use") || "").trim();
@@ -283,7 +295,7 @@ export default class HTMLView extends LiveSchema {
 		use = source && { path: source, schtype: type === "custom" ? "js" : "html" } || { };
 
         const resources =
-            [ ...(src.acid > -1 && src.prop.resources || []), ...JSON5
+            [ ...(src.acid !== -1 && src.prop.resources || []), ...JSON5
                 .parse(node.getAttribute("resources") || "[]")
                 .map( x => resource(pack, x) )
             ];
@@ -310,8 +322,9 @@ export default class HTMLView extends LiveSchema {
 			stream,         //link to model stream todo obsolete io
 			resources,      //related resources
 		};
-		
-		const res = src.acid > -1 && src.lift( [ uvk, prop ], src ) || new HTMLView( [ uvk, prop ], src );
+
+		const res = src.acid !== -1 && src.lift( [ uvk, prop ], src, { acid } ) ||
+			new HTMLView( [ uvk, prop ], src, { acid } );
 		
 		//[...node.childNodes].map( next => setup( next, res.prop ));
 
@@ -330,7 +343,7 @@ export default class HTMLView extends LiveSchema {
 		if(name === "stream") {
 			return this.prop.stream;
 		}
-		else if( name == "tee" ) {
+		else if( name === "tee" ) {
 			return [ ...this.prop.tee, ...value];
 		}
 		else if(["handlers", "keyframes", "node", "template", "pack", "source"].includes(name)) {

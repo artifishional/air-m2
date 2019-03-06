@@ -1,23 +1,22 @@
 import { stream } from "air-stream"
 import { Schema } from "air-schema"
-import {routeNormalizer} from "../utils/index"
-import { signature, equal } from "../utils"
+import { routeNormalizer, signature, equal } from "../utils"
 import { Loader } from "../loader"
 
 export default class LiveSchema extends Schema {
 
-    constructor([ key, { id = "", use = {}, pack, ...prop }, ...item], src = { acid: -1 }) {
+    constructor([ key, { id = "", use = {}, pack, ...prop }, ...item], src = { acid: -1 }, { acid } = {}) {
         super( [ key, {
 	        id,
             ...prop,
             use,
             pack: {
                 path: pack && pack.path || (use.hasOwnProperty("path") ?
-                    use.path + "/" : src.acid > 0 && src.prop.pack.path || "./")
+                    use.path + "/" : src.acid !== -1 && src.prop.pack.path || "./")
             },
-        }, ...item ] );
+        }, ...item ], {}, { acid } );
         this.src = this.parent = src;
-        this.isready = !use.hasOwnProperty("path");
+        this.isready = !use.hasOwnProperty("path") && !use.hasOwnProperty("include");
         this.entities = [];
         this._stream = null;
     }

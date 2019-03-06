@@ -18,14 +18,14 @@ export default class Layer {
 		return animate( this, { keyframes, targets }, this.layer.prop.key );
 	}
 
-    constructor( layer, { schema: { model } }, { targets, resources }) {
+    constructor( layer, { schema }, { targets, resources }) {
 
 		this.layer = layer;
 
 		//super( owner, { stream: { model, view, update }, targets } );
 		this.animateStream = this.createAnimateStream( { ...layer.prop, targets } );
 		this.loaderTimeoutID = null;
-        this.schema = { model };
+        this.schema = schema;
         this.resources = resources;
         this.targets = targets;
         this.state = { stage: 0 };
@@ -52,9 +52,10 @@ export default class Layer {
 			sweep.add(this.animateHandler = this.animateStream.at( () => {} ));
 			if(checkModelNecessity( { layer, targets } )) {
 				sweep.add( this.handler = combine([
-					model.obtain(),
-					model.obtain("#intl"),
+					this.schema.model.layer.obtain("", this.schema.model.vars),
+					this.schema.model.layer.obtain("#intl"),
 				]).at( ([data, intl]) => {
+
 					!this.state.stage && this.complete(emt);
 
 					let state, action = "default";
@@ -113,7 +114,7 @@ export default class Layer {
 				event,
 				this.props,
 				({...args} = {}) => this.handler({ dissolve: false, ...args }),
-				this.key
+				this.layer.prop.key
 			);
 		}
 	}
