@@ -1,22 +1,18 @@
-import { stream } from "air-stream"
+import { stream, combine } from "air-stream"
 import { Schema } from "air-schema"
 import { routeNormalizer, signature, equal } from "../utils"
 import { Loader } from "../loader"
 
 export default class LiveSchema extends Schema {
 
-    constructor([ key, { id = "", use = {}, pack, ...prop }, ...item], src = { acid: -1 }, { acid } = {}) {
-        super( [ key, {
-	        id,
-            ...prop,
-            use,
-            pack: {
-                path: pack && pack.path || (use.hasOwnProperty("path") ?
-                    use.path + "/" : src.acid !== -1 && src.prop.pack.path || "./")
-            },
-        }, ...item ], {}, { acid } );
+    constructor(
+        [ key, { id = "", use = [], pack = { path: "./" }, ...prop }, ...item],
+        src = { acid: -1 },
+        { acid } = {}
+    ) {
+        super( [ key, { id, ...prop, use, pack, }, ...item ], {}, { acid } );
         this.src = this.parent = src;
-        this.isready = !use.hasOwnProperty("path") && !use.hasOwnProperty("include");
+        this.isready = !use.length;
         this.entities = [];
         this._stream = null;
     }
@@ -46,10 +42,21 @@ export default class LiveSchema extends Schema {
     load( emt, { sweep } ) {
         const nextToLoad = this.layers.find( ( { isready } ) => !isready );
         if( nextToLoad ) {
-            sweep.add(Loader.default.obtain( nextToLoad ).at(( { data, pack } ) => {
-	            nextToLoad.isready = true;
-                this.appendData( { data, pack } );
+            const loader = combine( nextToLoad.prop.use.map( ({ type = "url", ...use }) =>
+                type === "url" ? Loader.default.obtain( use ) : this.get( use.path )
+            ));
+            sweep.add(loader.at(( packs ) => {
+                packs.map( (pkj, index) => {
+                    const { type = "url" } = nextToLoad.prop.use[index];
+                    if(type === "url") {
+                        this.appendData( pkj );
+                    }
+                    else {
+                        this.merge( pkj );
+                    }
+                } );
                 this.load( emt, { sweep } );
+	            nextToLoad.isready = true;
             }));
         }
         else {

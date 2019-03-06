@@ -15,7 +15,6 @@ export default class HTMLView extends LiveSchema {
 	constructor( args, src, { acid, createEntity = null } = {} ) {
 		super( args, src, { acid } );
 		createEntity && (this.createEntity = createEntity);
-		this.prop.use.schtype = this.prop.use.schtype || "html";
 		this.prop.stream = this.prop.stream || "";
 		this.prop.handlers = this.prop.handlers || [];
 		this.prop.tee = this.prop.tee || [];
@@ -32,12 +31,6 @@ export default class HTMLView extends LiveSchema {
 	) {
 		return stream( (emt, { sweep, over }) => {
 			let state = { stage: 0, target: null, active: false };
-
-
-			if(this.acid.indexOf("hint") > -1) {
-				debugger;
-			}
-
 			const clayers = new Map(this.layers.map(
 				({ acid: _acid, src: { acid }, prop: { stream } }, i, arr) => {
 					if(stream[0] === "^") {
@@ -289,10 +282,8 @@ export default class HTMLView extends LiveSchema {
 
 		const template = ["", "true"].includes(node.getAttribute("template"));
 		const id = node.getAttribute("id") || "$";
-		let use = (node.getAttribute("use") || "").trim();
-		let [ , source = null ] = use && use.match( /^url\((.*)\)$/ ) || [];
 
-		use = source && { path: source, schtype: type === "custom" ? "js" : "html" } || { };
+		const use = pathParser( node.getAttribute("use") || "" );
 
         const resources =
             [ ...(src.acid !== -1 && src.prop.resources || []), ...JSON5
@@ -314,7 +305,7 @@ export default class HTMLView extends LiveSchema {
 			template,       //template node
 			id,             //tree m2 advantages id
 			type,           //view node type [node -> unit, switcher -> tee]
-			source,         //m2 advantages source path if module
+			//source,         //m2 advantages source path if module
 			handlers,       //event handlers
 			path,           //absolute path
 			node,           //xml target node
@@ -343,7 +334,7 @@ export default class HTMLView extends LiveSchema {
 		if(name === "stream") {
 			return this.prop.stream;
 		}
-		else if( name === "tee" ) {
+		else if( name == "tee" ) {
 			return [ ...this.prop.tee, ...value];
 		}
 		else if(["handlers", "keyframes", "node", "template", "pack", "source"].includes(name)) {
@@ -354,6 +345,48 @@ export default class HTMLView extends LiveSchema {
 		}
 	}
 	
+}
+
+function pathSplitter(str = "") {
+	str = str + ",";
+	let mode = 0;
+	let prev = 0;
+	const res = [];
+	for(let i = 0; i < str.length; i++ ) {
+		if(str[i] === "{") {
+			mode++;
+		}
+		else if(str[i] === "}") {
+			mode--;
+		}
+		else if(str[i] === ",") {
+			if(mode === 0) {
+				res.push( str.substring(prev, i) );
+				prev = i+1;
+			}
+		}
+	}
+	return res;
+}
+
+function pathParser(str) {
+	return pathSplitter(str)
+		.map( (ly)=>{
+			ly = ly.trim();
+			if(!ly) {
+				return null;
+			}
+			else {
+				let [ , path = null ] = ly.match( /^url\((.*)\)$/ ) || [];
+				if(path) {
+					return { path, type: "url", schtype: "html" };
+				}
+				else {
+					return { path: ly, type: "query", schtype: "html" };
+				}
+			}
+		} )
+		.filter( Boolean )
 }
 
 const REG_GETTER_ATTRIBUTE = /\([a-zA-Z\_]{1}[a-bA-Z\-\_0-9]*?\)/g;
@@ -382,7 +415,7 @@ function parseKeyFrames( { node } ) {
 						prop = new Function("argv", "ttm", `return ${prop}`);
 					}
 					return [ offset, prop ];
-				} )
+				} );
 			node.remove();
 			return [ action, prop, ...keys ];
 		} );

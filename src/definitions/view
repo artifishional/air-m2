@@ -1,5 +1,0 @@
-stream
-
-=> (kf) --> ["complete", { node }]
-
-<= [ "disolve" ] || [ "<action>", schema ]
