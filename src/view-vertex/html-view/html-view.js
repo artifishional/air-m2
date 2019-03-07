@@ -4,10 +4,12 @@ import events from "../events"
 import JSON5 from "json5"
 import { LiveSchema } from "../../live-schema"
 import resource from "../../loader/resource"
+import { NODE_TYPES } from "./def"
 import Layer from "./layer"
 import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
 
+const CUT_FRAMES_REG = /\[\s*["'](.+?)["']\s*,((?:\s*{.+?}\s*,\s*)?\s*(?:\[.+?]))\s*]/gs;
 let UNIQUE_VIEW_KEY = 0;
 
 export default class HTMLView extends LiveSchema {
@@ -17,7 +19,7 @@ export default class HTMLView extends LiveSchema {
 		createEntity && (this.createEntity = createEntity);
 		this.prop.stream = this.prop.stream || "";
 		this.prop.handlers = this.prop.handlers || [];
-		this.prop.tee = this.prop.tee || [];
+		this.prop.tee = this.prop.tee || null;
 		this.prop.keyframes = this.prop.keyframes || [];
 		this.prop.node = this.prop.node || document.createDocumentFragment();
 	}
@@ -65,7 +67,7 @@ export default class HTMLView extends LiveSchema {
 					acid, { layer: layers[i], vars }
 				] ))
 			).at( ( layers ) => {
-				if(this.prop.tee.length || !this.prop.preload) {
+				if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
 					over.add(this.createTeeEntity( { $: { layers }, ...args } ).on(emt));
 				}
 				else {
@@ -86,13 +88,18 @@ export default class HTMLView extends LiveSchema {
 
 			let actives = [];
 			let state = {
-				acid: this.acid, 
+				acids: this.layers.map( ({ acid }) => acid ),
+				acid: this.acid,
 				stage: 0, container, 
 				key: this.key, 
 				target: container.target
 			};
 			
 			sweep.add( () => actives.map( x => x.clear() ) );
+
+			if(this.acid.indexOf("block") > -1) {
+				debugger;
+			}
 
 			sweep.add( combine( [
 				...this.layers.map( (layer) =>
@@ -103,28 +110,49 @@ export default class HTMLView extends LiveSchema {
 				const children = comps.pop();
 				const { target } = container;
 				container.append(...comps.map( ({ container: { target } }) => target));
-				const slots = target.querySelectorAll(`slot[acid]`);
+				const slots = [ ...target.querySelectorAll(`slot[acid]`) ]
+					.map( slot => ({
+						acid: slot.getAttribute("acid"),
+						slot,
+					}) );
+				;
+
 				if(children.length) {
 					if(slots.length) {
-						const _slots = [...slots].reduce(( cache, slot ) => {
-							const acid = slot.getAttribute("acid");
-							const exist = cache.get(acid);
-							if(!exist) {
-								cache.set(acid, slot);
-							}
-							else if(exist.parentNode === target && slot.parentNode !== target) {
-								exist.remove();
-								cache.set(acid, slot);
-							}
-							else {
-								slot.remove();
-							}
-							return cache;
-						}, new Map());
-						if(_slots.size !== children.length) debugger;
-						children.map( ([{target, acid}]) => {
-							_slots.get(JSON.stringify(acid)).replaceWith( target );
+
+
+
+						//if(_slots.size !== children.length) debugger;
+
+						children.map( ([{ target, acids }]) => {
+
+							const place = slots
+								.filter( ({ acid }) => acids.includes(acid) )
+								.reduce(( exist, {slot, acid} ) => {
+								//const acid = slot.getAttribute("acid");
+
+								if(!exist) {
+									exist = slot;
+									//cache.set(acid, slot);
+								}
+								else if(
+									exist.parentNode.nodeType !== NODE_TYPES.ELEMENT_NODE &&
+									slot.parentNode.nodeType === NODE_TYPES.ELEMENT_NODE
+								) {
+									exist.remove();
+									exist = slot;
+									//cache.set(acid, slot);
+								}
+								else {
+									slot.remove();
+								}
+								return exist;
+							}, null);
+
+
+							place.replaceWith( target );
 						} );
+						
 					}
 					else {
 						container.append( ...children.map( ( [{ target }] ) => target ) );
@@ -163,17 +191,34 @@ export default class HTMLView extends LiveSchema {
 		});
 	}
 
+	teeSignatureCheck( layers ) {
+		return this.layers.every( ({ acid, prop: { tee } }) => signature( tee, layers.get(acid) ) );
+	}
+
 	createTeeEntity( { $: { layers }, ...args } ) {
+
+		const teeLayers = this.layers
+			.filter( ({ prop: { tee } }) => tee )
+			.map( ({ acid }) => acid );
+
+		const teeStreamLayers = new Map([...layers].filter( ([acid]) => teeLayers.includes(acid) ));
+
+
 
 		//выбрать те слои с данными, в которых присутсвует tee
 		const modelschema = combine(
-			[...layers].map( ([, { layer, vars } ]) => layer.obtain("", vars) ),
-			(...layers) => [Object.assign({}, ...layers.map(([state]) => state) )]
+			[...teeStreamLayers].map( ([, { layer, vars } ]) => layer.obtain("", vars) ),
+			//(...layers) => [Object.assign({}, ...layers.map(([state]) => state) )]
+
+
 		);
 
 		return stream( (emt, { sweep, hook }) => {
 
-			let state = { acid: this.acid, key: this.key, stage: 0, active: false, target: null };
+			let state = {
+				acids: this.layers.map( ({ acid }) => acid ),
+				acid: this.acid, key: this.key, stage: 0, active: false, target: null
+			};
 			let reqState = { stage: 1 };
 			let loaderTarget = null;
 			let loaderHook = null;
@@ -198,8 +243,15 @@ export default class HTMLView extends LiveSchema {
 
 			let _inner = null;
 			const view = this.createNextLayers( { $: { layers }, ...args } );
-			sweep.add( modelschema.at( ([ data ]) => {
-				const active = this.prop.tee.every(tee => signature(tee, data));
+			sweep.add( modelschema.at( (data) => {
+
+
+				//this.layers.filter( ({ prop: { tee } }) => tee )
+
+				//const active = this.prop.tee.every(tee => signature(tee, data));
+
+				const active = this.teeSignatureCheck( new Map(data) );
+
 				if(active !== state.active) {
 					state = { ...state, active };
 					if(active) {
@@ -334,10 +386,14 @@ export default class HTMLView extends LiveSchema {
 		if(name === "stream") {
 			return this.prop.stream;
 		}
-		else if( name == "tee" ) {
+		/*else if(name === "template") {
+			return this.prop.template || value;
+		}*/
+		/*else if( name == "tee" ) {
 			return [ ...this.prop.tee, ...value];
-		}
-		else if(["handlers", "keyframes", "node", "template", "pack", "source"].includes(name)) {
+		}*/
+		else if(["tee", "template", "handlers", "keyframes", "node", "pack", "source"].includes(name)) {
+
 			return this.prop[name];
 		}
 		else {
@@ -389,7 +445,7 @@ function pathParser(str) {
 		.filter( Boolean )
 }
 
-const REG_GETTER_ATTRIBUTE = /\([a-zA-Z\_]{1}[a-bA-Z\-\_0-9]*?\)/g;
+const REG_GETTER_ATTRIBUTE = /\([a-zA-Z_]{1}[a-bA-Z\-_0-9]*?\)/g;
 
 function parseKeyFrames( { node } ) {
 	let res = [];
@@ -441,7 +497,7 @@ function cuttee(node, key) {
 
 function slot( { key, acid } ) {
 	const res = document.createElement("slot");
-	res.setAttribute("acid", JSON.stringify(acid));
+	res.setAttribute("acid", acid);
 	return res;
 }
 

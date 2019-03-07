@@ -55,8 +55,8 @@ export default class LiveSchema extends Schema {
                         this.merge( pkj );
                     }
                 } );
+                nextToLoad.isready = true;
                 this.load( emt, { sweep } );
-	            nextToLoad.isready = true;
             }));
         }
         else {
