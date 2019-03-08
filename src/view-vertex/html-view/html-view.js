@@ -208,9 +208,7 @@ export default class HTMLView extends LiveSchema {
 		//выбрать те слои с данными, в которых присутсвует tee
 		const modelschema = combine(
 			[...teeStreamLayers].map( ([, { layer, vars } ]) => layer.obtain("", vars) ),
-			//(...layers) => [Object.assign({}, ...layers.map(([state]) => state) )]
-
-
+			(...layers) => layers.map( ly => Array.isArray(ly) ? ly[0] : ly )
 		);
 
 		return stream( (emt, { sweep, hook }) => {
@@ -250,9 +248,12 @@ export default class HTMLView extends LiveSchema {
 
 				//const active = this.prop.tee.every(tee => signature(tee, data));
 
-				const active = this.teeSignatureCheck( new Map(data) );
+				const active = this.teeSignatureCheck( 
+					new Map([ ...teeStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) ) 
+				);
 
 				if(active !== state.active) {
+
 					state = { ...state, active };
 					if(active) {
 						sweep.add( childHook = view
@@ -482,16 +483,16 @@ function parseKeyFrames( { node } ) {
 function cuttee(node, key) {
 	const rawTee = node.getAttribute("tee");
 	if(rawTee === null) {
-		return [];
+		return null;
 	}
 	else if(rawTee === "") {
-		return [ key ];
+		return key;
 	}
 	else if(rawTee[0] === "{") {
-		return [ JSON5.parse(rawTee) ];
+		return JSON5.parse(rawTee);
 	}
 	else {
-		return [ rawTee ];
+		return rawTee;
 	}
 }
 
