@@ -42,6 +42,15 @@ export default class HTMLView extends LiveSchema {
 							throw `the first view layer cannot refer to the predecessor stream`
 						}
 						const { src: { acid }, prop: { stream: pstream } } = eLayer;
+						
+						//stream inheritance
+						if(pstream === "" && !stream.substr(1)) {
+							return [ _acid, {
+								layer: layers.get(acid).layer.get(""),
+								vars: layers.get(acid).vars,
+							}];
+						}
+						
 						return [_acid, {
 							layer: layers.get(acid).layer.get( pstream + stream.substr(1) ),
 							vars: routeNormalizer(pstream + stream.substr(1)),
@@ -115,7 +124,6 @@ export default class HTMLView extends LiveSchema {
 						acid: slot.getAttribute("acid"),
 						slot,
 					}) );
-				;
 
 				if(children.length) {
 					if(slots.length) {
@@ -393,7 +401,7 @@ export default class HTMLView extends LiveSchema {
 		/*else if( name == "tee" ) {
 			return [ ...this.prop.tee, ...value];
 		}*/
-		else if(["tee", "template", "handlers", "keyframes", "node", "pack", "source"].includes(name)) {
+		else if(["key", "tee", "template", "handlers", "keyframes", "node", "pack", "source"].includes(name)) {
 
 			return this.prop[name];
 		}
