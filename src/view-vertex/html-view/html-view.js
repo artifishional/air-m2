@@ -330,7 +330,7 @@ export default class HTMLView extends LiveSchema {
 			.filter( ({ name }) => events.includes(name) )
 			.map( ({ name, value }) => ({
 				name: name.replace(/^on/, ""),
-				hn: new Function("event", "options", "request", "key", value )
+				hn: new Function("event", "options", "request", "key", "req", value )
 			}) );
 		
 		let stream = node.getAttribute("stream");

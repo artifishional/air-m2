@@ -1,5 +1,4 @@
 import { stream } from "air-stream"
-import { NODE_TYPES } from "./def"
 import { animate } from "air-gsap"
 import { combine } from "air-m2"
 
@@ -55,7 +54,6 @@ export default class Layer {
 					this.schema.model.layer.obtain("", this.schema.model.vars),
 					this.schema.model.layer.obtain("#intl"),
 				]).at( ([data, intl]) => {
-
 					!this.state.stage && this.complete(emt);
 
 					let state, action = "default";
@@ -113,8 +111,9 @@ export default class Layer {
 				event.target,
 				event,
 				this.props,
-				({...args} = {}) => this.handler({ dissolve: false, ...args }),
-				this.layer.prop.key
+				null, //({...args} = {}) => this.handler({ dissolve: false, ...args }),
+				this.layer.prop.key,
+				(action, {...args} = {}) => this.handler({ dissolve: false, action, ...args }),
 			);
 		}
 	}
