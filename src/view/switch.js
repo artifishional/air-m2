@@ -1,4 +1,5 @@
 import { stream, combine } from "air-stream"
+import { equal } from "../utils"
 
 const statesstream = (scenesstream, { modelstream, viewbuilder, baseresources }) =>
 
@@ -43,8 +44,7 @@ const statesstream = (scenesstream, { modelstream, viewbuilder, baseresources })
                                 throw new TypeError(`parm 'key' is undefined`);
                             }
 
-                            if(action === "change" && curstate !== key) {
-
+                            if(action === "change" && !equal(curstate, key)) {
                                 clearTimeout(loadertimeout);
                                 loadertimeout = setTimeout(() => {
                                     curstate = null;
