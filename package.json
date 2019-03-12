@@ -13,7 +13,8 @@
     "air-stream": "^0.6.0",
     "fontfaceobserver": "^2.0.13",
     "howler": "^2.0.15",
-    "json5": "^2.0.1"
+    "json5": "^2.0.1",
+    "pepjs": "^0.4.3"
   },
   "repository": {
     "type": "git",

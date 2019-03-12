@@ -68,7 +68,7 @@ export default class Advantages {
             }
             else {
                 this._stream = new Observable((emt) => {
-                    return this.loader.obtain(this).at(({module, advantages}) => {
+                    return this.loader.obtain(this).at(({module, advantages}, src) => {
                         /*locked cache*/this.stream.on( () => {} );
                         let exist = module[this.source.name || "default"];
                         if(!Array.isArray(exist) && typeof exist === "object") {
@@ -93,7 +93,7 @@ export default class Advantages {
                         else {
                             advantages.source = exist;
                         }
-                        emt({advantages, source: advantages.source});
+                        emt({advantages, source: advantages.source}, src);
                     });
                 });
             }

@@ -1,3 +1,4 @@
+import "pepjs"
 export * from "air-stream"
 export * from "./advantages"
 export * from "./loader"

@@ -19,12 +19,12 @@ const statesstream = (scenesstream, { modelstream, viewbuilder, baseresources })
 
                 const loaderstream = sceneschema.obtain("#loader");
 
-                sweep.add( loaderstream.at( ({action, node}) => {
+                sweep.add( loaderstream.at( ({action, node}, src) => {
 
                     if(action === "complete") {
 	
 	                    child.add( curChild = node );
-                        emt( { action: "complete", node: child } );
+                        emt( { action: "complete", node: child }, src );
 
                         sweep.add(modelschema.obtain(model).at( ( data ) => {
 
