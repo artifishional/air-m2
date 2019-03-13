@@ -12,6 +12,7 @@ const statesstream = (scenesstream, { modelstream, viewbuilder, baseresources })
 	            const child = viewbuilder({key, ...args});
                 
                 let curstate = null;
+                let reqstate = null;
                 let requirestatehook = null;
                 let loadertimeout = null;
                 let requirestatestream = null;
@@ -44,7 +45,10 @@ const statesstream = (scenesstream, { modelstream, viewbuilder, baseresources })
                                 throw new TypeError(`parm 'key' is undefined`);
                             }
 
-                            if(action === "change" && !equal(curstate, key)) {
+                            if(action === "change" && (!equal(curstate, key) || !equal(reqstate, key))) {
+
+                                reqstate = key;
+
                                 clearTimeout(loadertimeout);
                                 loadertimeout = setTimeout(() => {
                                     curstate = null;
