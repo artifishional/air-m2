@@ -106,10 +106,6 @@ export default class HTMLView extends LiveSchema {
 			
 			sweep.add( () => actives.map( x => x.clear() ) );
 
-			if(this.acid.indexOf("block") > -1) {
-				debugger;
-			}
-
 			sweep.add( combine( [
 				...this.layers.map( (layer) =>
 					layer.createNodeEntity( { $: { container, layers }, ...args } )
@@ -355,7 +351,7 @@ export default class HTMLView extends LiveSchema {
         const tee = cuttee(node, key);
         const preload = !["false"].includes(node.getAttribute("preload"));
 
-		const keyframes = parseKeyFrames( { node } );
+		const keyframes = [];
 
 		const prop = {
             tee,            //switch mode
@@ -383,6 +379,8 @@ export default class HTMLView extends LiveSchema {
 		res.append(...[...node.children].reduce((acc, next) =>
 				[...acc, ...parseChildren( next, res.prop, res )]
 			, []));
+
+		keyframes.push(...parseKeyFrames( { node } ));
 		
 		res.prop.node = document.createDocumentFragment();
 		res.prop.node.append( ...node.childNodes );
@@ -454,7 +452,7 @@ function pathParser(str) {
 		.filter( Boolean )
 }
 
-const REG_GETTER_ATTRIBUTE = /\([a-zA-Z_]{1}[a-bA-Z\-_0-9]*?\)/g;
+const REG_GETTER_ATTRIBUTE = /\(([a-zA-Z_]{1}[\.a-zA-Z\-_0-9]*?)\)/g;
 
 function parseKeyFrames( { node } ) {
 	let res = [];
