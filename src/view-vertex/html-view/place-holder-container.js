@@ -1,5 +1,4 @@
 import {NODE_TYPES} from "air-m2/src/view-vertex/html-view/def"
-import ActiveNodeTarget from "./active-node-target"
 
 export default class PlaceHolderContainer {
 
@@ -51,10 +50,10 @@ export default class PlaceHolderContainer {
             return this._targets;
         }
         else if(type === "datas") {
-            return this._targets.filter( ({ type }) => "data" );
+            return this._targets.filter( ({ type }) => type === "data" );
         }
         else if(type === "actives") {
-            return this._targets.filter( ({ type }) => "active" );
+            return this._targets.filter( ({ type }) => type === "active" );
         }
     }
 
