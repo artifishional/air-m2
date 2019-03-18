@@ -163,6 +163,7 @@ where
 - ``` "onpointerleave" ```
 - ``` "onpointerup" ```
 - ``` "onpointerdown" ```
+- ``` "onchange" ```
 - ``` "onglobalkeydown" (synthetic)```
 - ``` "onglobalkeyup" (synthetic)```
 - ``` "onkeydown" ```

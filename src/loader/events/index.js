@@ -11,4 +11,5 @@ export default [
     "onwheel",
     "onpointerup",
     "onpointerdown",
+    "onchange",
 ];
