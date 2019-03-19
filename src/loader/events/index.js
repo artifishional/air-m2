@@ -13,4 +13,5 @@ export default [
     "onpointerdown",
     "onchange",
     "oninput",
+    "touchend",
 ];

@@ -41,8 +41,8 @@ export default function ({path}, resources) {
         }
     } ),
         stream((emt, { sweep }) => {
-            const id = setTimeout(() => emt({type: "none"}));
-            sweep.add(() => clearTimeout(id));
+            const id = setImmediate(() => emt({type: "none"}));
+            sweep.add(() => clearImmediate(id));
         })
     ], (...res) => res.reduce( (acc, next) => {
         if(next.type === "none") { }
