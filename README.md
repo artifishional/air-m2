@@ -164,6 +164,7 @@ where
 - ``` "onpointerup" ```
 - ``` "onpointerdown" ```
 - ``` "onchange" ```
+- ``` "oninput" ```
 - ``` "onglobalkeydown" (synthetic)```
 - ``` "onglobalkeyup" (synthetic)```
 - ``` "onkeydown" ```
