@@ -12,6 +12,14 @@ export default class PlaceHolderContainer {
         this._targets = [];
     }
 
+    slots() {
+        return [ ...this.target.querySelectorAll(`slot[acid]`) ]
+            .map( slot => ({
+                acid: slot.getAttribute("acid"),
+                slot,
+            }) );
+    }
+
     append(...nodes) {
         this._dirty = true;
         this.begin.after(...nodes);

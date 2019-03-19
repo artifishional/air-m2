@@ -9,7 +9,6 @@ import Layer from "./layer"
 import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
 
-const CUT_FRAMES_REG = /\[\s*["'](.+?)["']\s*,((?:\s*{.+?}\s*,\s*)?\s*(?:\[.+?]))\s*]/gs;
 let UNIQUE_VIEW_KEY = 0;
 
 export default class HTMLView extends LiveSchema {
@@ -29,8 +28,8 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	createEntity( { $: { modelschema,
-		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) }, ...args }
-	) {
+		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) }, ...args
+	} ) {
 		return stream( (emt, { sweep, over }) => {
 			let state = { stage: 0, target: null, active: false };
 			const clayers = new Map(this.layers.map(
@@ -113,13 +112,8 @@ export default class HTMLView extends LiveSchema {
 				this.createChildrenEntity( { $: { container, layers }, ...args } ),
 			] ).at( (comps) => {
 				const children = comps.pop();
-				const { target } = container;
 				container.append(...comps.map( ({ container: { target } }) => target));
-				const slots = [ ...target.querySelectorAll(`slot[acid]`) ]
-					.map( slot => ({
-						acid: slot.getAttribute("acid"),
-						slot,
-					}) );
+				const slots = container.slots();
 
 				if(children.length) {
 					if(slots.length) {
@@ -247,11 +241,6 @@ export default class HTMLView extends LiveSchema {
 			const view = this.createNextLayers( { $: { layers }, ...args } );
 			sweep.add( modelschema.at( (data) => {
 
-
-				//this.layers.filter( ({ prop: { tee } }) => tee )
-
-				//const active = this.prop.tee.every(tee => signature(tee, data));
-
 				const active = this.teeSignatureCheck( 
 					new Map([ ...teeStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) ) 
 				);
@@ -289,10 +278,9 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	createChildrenEntity( { $: { container: { target, begin }, layers }, ...args } ) {
-		return combine(
-			this.item
-				.filter( ({ prop: { template } }) => !template )
-				.map(x => x.obtain( "", { $: { layers } } ))
+		return combine( this.item
+			.filter( ({ prop: { template } }) => !template )
+			.map(x => x.obtain( "", { $: { layers } } ))
 		);
 	}
 	
