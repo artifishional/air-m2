@@ -1,4 +1,4 @@
-import { stream, combine } from "air-stream"
+import { stream, combine, keyF, Observable } from "air-stream"
 import {routeNormalizer, routeToString, signature} from "../../utils"
 import events from "../events"
 import JSON5 from "json5"
@@ -90,7 +90,7 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	createNextLayers( { $: { layers }, ...args } ) {
-		return stream( (emt, { sweep }) => {
+		return stream( (emt, { sweep, over }) => {
 
 			const container = new PlaceHolderContainer(this, { type: "layers" });
 
@@ -156,7 +156,7 @@ export default class HTMLView extends LiveSchema {
 						container.append( ...children.map( ( [{ target }] ) => target ) );
 					}
 				}
-				sweep.add(combine(this.layers.map( ( layer, i ) => {
+				over.add(Observable.sync(this.layers.map( ( layer, i ) => {
 					return layer.createLayer(
 						{ schema: { model: layers.get(layer.acid) } },
 						{ resources: comps[i].resources,
@@ -166,11 +166,17 @@ export default class HTMLView extends LiveSchema {
 							],
 						}
 					).stream;
-				} )).at( (layers) => {
-					if(state.stage === 0 && layers.every( ([ { stage } ]) => stage === 1)) {
+				} ), ({ stage: a }, { stage: b }) => a === b).at( (layers) => {
+
+					emt( [ { ...state, stage: layers[0][0].stage } ] );
+
+					/*if(state.stage === 0 && layers[0].stage === 1) {
 						state = { ...state, stage: 1 };
 						emt( [ state ] );
 					}
+					else if() {
+
+					}*/
 				} ));
 			}) );
 		} );
@@ -250,16 +256,32 @@ export default class HTMLView extends LiveSchema {
 					state = { ...state, active };
 					if(active) {
 						sweep.add( childHook = view
-							.at( ([ { target, container: inner } ]) => {
-								_inner = inner;
-								container.begin.after( inner.target );
+							.connectable( (data) => {
+								if(data !== keyF) {
+									const [ { stage, target, container: inner } ] = data;
+									if( stage === 1 ) {
+
+										if(state.active) {
+											childHook({action: "fade-in"});
+											_inner = inner;
+											container.begin.after( inner.target );
+										}
+										else {
+											_inner && _inner.restore();
+											//childHook && sweep.force( childHook );
+											//childHook = null;
+										}
+
+									}
+								}
 							} )
 						);
+						childHook.connect();
 					}
 					else {
-						_inner && _inner.restore();
-						childHook && sweep.force( childHook );
-						childHook = null;
+						if(childHook) {
+							childHook({action: "fade-out"});
+						}
 					}
 				}
 			} ) );
@@ -270,7 +292,7 @@ export default class HTMLView extends LiveSchema {
 						loaderTarget && loaderTarget.remove();
 					}
 					reqState = null;
-					state = { ...state, stage: 1,  };
+					state = { ...state, stage: 1 };
 					emt( [ state ] );
 				}
 			} ) );
