@@ -166,7 +166,7 @@ export default class HTMLView extends LiveSchema {
 							],
 						}
 					).stream;
-				} ), ({ stage: a }, { stage: b }) => a === b).at( (layers) => {
+				} ), ([{ stage: a }], [{ stage: b }]) => a === b).at( (layers) => {
 
 					emt( [ { ...state, stage: layers[0][0].stage } ] );
 				} ));
