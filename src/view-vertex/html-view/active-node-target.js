@@ -101,14 +101,7 @@ function gtargeting(parent, res = []) {
 }
 
 function getfrompath(argv, path) {
-    return path.reduce((argv, name) => {
-        if(argv && argv.hasOwnProperty(name)) {
-            return argv[name];
-        }
-        else {
-            return null;
-        }
-    }, argv);
+    return new Function(`argv`, `return argv.${path}`)(argv);
 }
 
 function templater(vl, intl = null, argv, resources) {
@@ -121,9 +114,9 @@ function templater(vl, intl = null, argv, resources) {
             const formatter = new NumberFormat(intl.locale, format);
             return formatter.format(+template);
         }
-        else if(template.search(/\([a-zA-Z\-\_\.0-9]+\)/) > -1) {
+        else if(template.search(/\([\[\]a-zA-Z\-\_\.0-9]+\)/) > -1) {
             const res = template.replace(/\(([a-zA-Z\-\_\.0-9]+)\)/g, ( _, path ) => {
-                return getfrompath( argv, path.split(".") );
+                return getfrompath( argv, path );
             });
             const formatter = new NumberFormat(intl.locale, format);
             return formatter.format(res);
@@ -149,10 +142,10 @@ function templater(vl, intl = null, argv, resources) {
             return formatter.format(0).replace( "0", templates.join("") );
         }
     }
-    else if(vl.search(/\([a-zA-Z\-\_\.0-9]+\)/) > -1) {
+    else if(vl.search(/\([\[\]a-zA-Z\-\_\.0-9]+\)/) > -1) {
         return vl.replace(/\{(.*)\}/, (_, lit) => {
-            return lit.replace(/\(([a-zA-Z\-\_\.0-9]+)\)/g, ( _, path ) => {
-                return getfrompath( argv, path.split(".") );
+            return lit.replace(/\(([\[\]a-zA-Z\-\_\.0-9]+)\)/g, ( _, path ) => {
+                return getfrompath( argv, path );
             })
         });
     }
