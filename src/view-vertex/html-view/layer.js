@@ -102,6 +102,11 @@ export default class Layer {
 	}
 
 	handleEvent(event) {
+		
+		if(event.type === "pointerleave") {
+			console.log(event);
+		}
+		
 		if(event.currentTarget === window) {
 			if(
 				event.type === "click" &&

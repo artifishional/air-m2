@@ -1,4 +1,4 @@
-import { stream, combine, keyF, Observable } from "air-stream"
+import { stream, combine, keyF, sync } from "air-stream"
 import {routeNormalizer, routeToString, signature} from "../../utils"
 import events from "../events"
 import JSON5 from "json5"
@@ -156,7 +156,7 @@ export default class HTMLView extends LiveSchema {
 						container.append( ...children.map( ( [{ target }] ) => target ) );
 					}
 				}
-				over.add(Observable.sync(this.layers.map( ( layer, i ) => {
+				over.add(sync(this.layers.map( ( layer, i ) => {
 					return layer.createLayer(
 						{ schema: { model: layers.get(layer.acid) } },
 						{ resources: comps[i].resources,
@@ -169,14 +169,6 @@ export default class HTMLView extends LiveSchema {
 				} ), ({ stage: a }, { stage: b }) => a === b).at( (layers) => {
 
 					emt( [ { ...state, stage: layers[0][0].stage } ] );
-
-					/*if(state.stage === 0 && layers[0].stage === 1) {
-						state = { ...state, stage: 1 };
-						emt( [ state ] );
-					}
-					else if() {
-
-					}*/
 				} ));
 			}) );
 		} );
@@ -246,37 +238,64 @@ export default class HTMLView extends LiveSchema {
 			let _inner = null;
 			const view = this.createNextLayers( { $: { layers }, ...args } );
 			sweep.add( modelschema.at( (data) => {
+				
+				const connect = () => {
+					sweep.add( childHook = view
+						.connectable( (data) => {
+							if(data !== keyF) {
+								const [ { stage, target, container: inner } ] = data;
+								_inner = inner;
+								if(state.stage === 0) {
+									state = { ...state, stage: 1 };
+									emt( [ state ] );
+								}
+								if( stage === 1 ) {
+									if(state.active) {
+										childHook({action: "fade-in"});
+										container.begin.after( _inner.target );
+									}
+									else {
+										_inner && _inner.restore();
+										if(!this.prop.preload) {
+											childHook && sweep.force( childHook );
+											childHook = null;
+										}
+									}
+								}
+							}
+						} )
+					);
+					childHook.connect();
+				}
 
 				const active = this.teeSignatureCheck( 
 					new Map([ ...teeStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) ) 
 				);
+				
+				if(state.stage === 0) {
+					if(this.prop.preload) {
+						connect();
+					}
+					else {
+						state = { ...state, stage: 1 };
+						emt( [ state ] );
+						loaderTarget && loaderTarget.remove();
+						sweep.force(loaderHook);
+					}
+				}
 
 				if(active !== state.active) {
-
 					state = { ...state, active };
 					if(active) {
-						sweep.add( childHook = view
-							.connectable( (data) => {
-								if(data !== keyF) {
-									const [ { stage, target, container: inner } ] = data;
-									if( stage === 1 ) {
-
-										if(state.active) {
-											childHook({action: "fade-in"});
-											_inner = inner;
-											container.begin.after( inner.target );
-										}
-										else {
-											_inner && _inner.restore();
-											//childHook && sweep.force( childHook );
-											//childHook = null;
-										}
-
-									}
-								}
-							} )
-						);
-						childHook.connect();
+						if(!childHook) {
+							connect();
+						}
+						else {
+							if(state.stage === 1) {
+								childHook({action: "fade-in"});
+								container.begin.after( _inner.target );
+							}
+						}
 					}
 					else {
 						if(childHook) {
@@ -285,17 +304,7 @@ export default class HTMLView extends LiveSchema {
 					}
 				}
 			} ) );
-			sweep.add( combine([ modelschema.ready(), view ]).at( ([ data ]) => {
-				if(reqState && reqState.stage === 1) {
-					if(!this.prop.preload) {
-						sweep.force(loaderHook);
-						loaderTarget && loaderTarget.remove();
-					}
-					reqState = null;
-					state = { ...state, stage: 1 };
-					emt( [ state ] );
-				}
-			} ) );
+			
 		});
 	}
 
