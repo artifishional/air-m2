@@ -1,4 +1,5 @@
 import "pepjs"
+import "resize-observer-polyfill"
 import MobileDetect from "mobile-detect"
 export * from "air-stream"
 export * from "./advantages"
