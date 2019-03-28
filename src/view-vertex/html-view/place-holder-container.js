@@ -14,10 +14,8 @@ export default class PlaceHolderContainer {
 
     slots() {
         return [ ...this.target.querySelectorAll(`slot[acid]`) ]
-            .map( slot => ({
-                acid: slot.getAttribute("acid"),
-                slot,
-            }) );
+            .map( slot => ({ acid: slot.getAttribute("acid"), slot }) )
+            .map( ({ acid, slot }) => ({ slot, acid: acid.indexOf("/") > 0 ? acid : +acid }));
     }
 
     append(...nodes) {

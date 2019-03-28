@@ -16,6 +16,7 @@ export default class HTMLView extends LiveSchema {
 	constructor( args, src, { acid, createEntity = null } = {} ) {
 		super( args, src, { acid } );
 		createEntity && (this.createEntity = createEntity);
+		this.prop.preload = this.prop.preload !== undefined ? this.prop.preload : true;
 		this.prop.stream = this.prop.stream || "";
 		this.prop.handlers = this.prop.handlers || [];
 		this.prop.tee = this.prop.tee || null;
@@ -63,7 +64,7 @@ export default class HTMLView extends LiveSchema {
 					}
 					else {
 						return [_acid, {
-							layer: layers.get(acid).layer.get(stream),
+							layer: (layers.get(acid) || [...layers][0][1] ).layer.get(stream),
 							vars: routeNormalizer(stream),
 						}];
 					}
@@ -156,8 +157,8 @@ export default class HTMLView extends LiveSchema {
 						container.append( ...children.map( ( [{ target }] ) => target ) );
 					}
 				}
-				over.add(sync(this.layers.map( ( layer, i ) => {
-					return layer.createLayer(
+				over.add(sync(this.layers.map(
+					( layer, i ) => layer.createLayer(
 						{ schema: { model: layers.get(layer.acid) } },
 						{ resources: comps[i].resources,
 							targets: [
@@ -165,10 +166,11 @@ export default class HTMLView extends LiveSchema {
 								...container.targets("actives", comps[i].resources )
 							],
 						}
-					).stream;
-				} ), ([{ stage: a }], [{ stage: b }]) => a === b).at( (layers) => {
-
-					emt( [ { ...state, stage: layers[0][0].stage } ] );
+					).stream),
+					([{ stage: a }], [{ stage: b }]) => a === b,
+					( ...layers ) => [ { ...state, stage: layers[0][0].stage } ]
+				).at( (evt) => {
+					emt( evt );
 				} ));
 			}) );
 		} );
@@ -217,18 +219,21 @@ export default class HTMLView extends LiveSchema {
 			let loaderTarget = null;
 			let loaderHook = null;
 			let childHook = null;
+			let loaderContainer = null;
 
 			const container = new PlaceHolderContainer( this, { type: "entity" } );
 			state.target = container.target;
 			state.container = container;
 
 			if(!this.prop.preload) {
-				sweep.add( loaderHook = this.obtain( "#loader" )
-					.at( ([ { stage, target } ]) => {
+				sweep.add( loaderHook = this.obtain( "#loader", { $: { layers } } )
+					.at( ([ { stage, container: inner, target } ]) => {
 						if(state.stage === 0 && stage > 0) {
+							loaderContainer = inner;
 							loaderTarget = target;
-							state = { ...state, stage: 1, };
+							state = { ...state, load: true, stage: 1, };
 							container.append( target );
+							emt.kf();
 							emt( [ state ] );
 						}
 					} )
@@ -238,15 +243,19 @@ export default class HTMLView extends LiveSchema {
 			let _inner = null;
 			const view = this.createNextLayers( { $: { layers }, ...args } );
 			sweep.add( modelschema.at( (data) => {
-				
 				const connect = () => {
 					sweep.add( childHook = view
 						.connectable( (data) => {
 							if(data !== keyF) {
+								if(state.load) {
+                                    state = { ...state, load: false };
+                                    loaderContainer.restore();
+								}
 								const [ { stage, target, container: inner } ] = data;
 								_inner = inner;
 								if(state.stage === 0) {
 									state = { ...state, stage: 1 };
+                                    emt.kf();
 									emt( [ state ] );
 								}
 								if( stage === 1 ) {
@@ -266,7 +275,7 @@ export default class HTMLView extends LiveSchema {
 						} )
 					);
 					childHook.connect();
-				}
+				};
 
 				const active = this.teeSignatureCheck( 
 					new Map([ ...teeStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) ) 
@@ -275,12 +284,6 @@ export default class HTMLView extends LiveSchema {
 				if(state.stage === 0) {
 					if(this.prop.preload) {
 						connect();
-					}
-					else {
-						state = { ...state, stage: 1 };
-						emt( [ state ] );
-						loaderTarget && loaderTarget.remove();
-						sweep.force(loaderHook);
 					}
 				}
 
@@ -368,8 +371,8 @@ export default class HTMLView extends LiveSchema {
             ];
 		
         const tee = cuttee(node, key);
-        const preload = !["false"].includes(node.getAttribute("preload"));
-
+        const preload = !["", "true"].includes(node.getAttribute("nopreload"));
+        
 		const keyframes = [];
 
 		const prop = {
@@ -403,7 +406,7 @@ export default class HTMLView extends LiveSchema {
 		
 		res.prop.node = document.createDocumentFragment();
 		res.prop.node.append( ...node.childNodes );
-
+		
 		return res;
 		
 	}
@@ -418,8 +421,17 @@ export default class HTMLView extends LiveSchema {
 		/*else if( name == "tee" ) {
 			return [ ...this.prop.tee, ...value];
 		}*/
-		else if(["key", "tee", "template", "handlers", "keyframes", "node", "pack", "source"].includes(name)) {
-
+		else if([
+			"preload",
+			"key",
+			"tee",
+			"template",
+			"handlers",
+			"keyframes",
+			"node",
+			"pack",
+			"source"
+		].includes(name)) {
 			return this.prop[name];
 		}
 		else {
