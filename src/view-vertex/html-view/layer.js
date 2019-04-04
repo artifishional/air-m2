@@ -1,5 +1,5 @@
 import { stream } from "air-stream"
-import { animate } from "air-gsap"
+import animate from "air-anime"
 import { combine } from "air-m2"
 
 function checkModelNecessity({ layer, targets }) {
@@ -14,7 +14,7 @@ function checkModelNecessity({ layer, targets }) {
 export default class Layer {
 
 	createAnimateStream( { keyframes, targets } ) {
-		return animate( this, { keyframes, targets }, this.layer.prop.key );
+		return animate( targets, keyframes, this.layer.prop.key );
 	}
 
     constructor( layer, { schema }, { targets, resources }) {
@@ -48,13 +48,13 @@ export default class Layer {
 
 			hook.add( ({action}) => {
 				if(action === "fade-in") {
-					this.animateHandler({ intl: null, data: [ {}, { action: "fade-in" } ] });
+					this.animateHandler({ data: [ {}, { action: "fade-in" } ] });
 					this.state = { ...this.state, stage: 2 };
 					emt.kf();
 					emt( [ this.state ] );
 				}
 				else if(action === "fade-out") {
-					this.animateHandler({ intl: null, data: [ {}, { action: "fade-out" } ] });
+					this.animateHandler({ data: [ {}, { action: "fade-out" } ] });
 				}
 			} );
 
@@ -73,6 +73,9 @@ export default class Layer {
 					this.schema.model.layer.obtain("", this.schema.model.vars),
 					this.schema.model.layer.obtain("#intl"),
 				]).at( ([data, intl]) => {
+
+					this.targets.map( target => target.transition(intl) )
+
 					!this.state.stage && this.complete(emt);
 
 					let state, action = "default";
@@ -83,7 +86,7 @@ export default class Layer {
 						state = data;
 					}
 
-					this.animateHandler( { intl, data: [ state, action ] } );
+					this.animateHandler( { data: [ state, action ] } );
 					
 				} ) );
 			}
@@ -142,10 +145,6 @@ export default class Layer {
 			);
 		}
 	}
-    
-    update( argv, intl ) {
-    	this.targets.map( target => target.update( argv, intl, this.resources ) );
-    }
     
     clear() {
 		this.layer.prop.handlers.map( ({ name }) => {

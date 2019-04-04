@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "air-schema": "^0.1.5",
-    "air-gsap": "^0.2.4",
+    "air-anime": "^0.1.0",
     "air-stream": "^0.6.0",
     "fontfaceobserver": "^2.0.13",
     "howler": "^2.0.15",

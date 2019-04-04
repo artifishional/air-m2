@@ -183,11 +183,16 @@ export default class ActiveNodeTarget {
         else {
             this.template = null;
         }
+        this.intl = null;
     }
 
-    update(argv, intl) {
+    transition(intl) {
+        this.intl = intl;
+    }
+
+    update(argv) {
         if(this.type === "data") {
-            this.node.textContent = templater( this.template, intl, argv, this.resources );
+            this.node.textContent = templater( this.template, this.intl, argv, this.resources );
         }
     }
 

@@ -169,9 +169,9 @@ export default class HTMLView extends LiveSchema {
 					).stream),
 					([{ stage: a }], [{ stage: b }]) => a === b,
 					( ...layers ) => [ { ...state, stage: layers[0][0].stage } ]
-				).at( (evt) => {
-					emt( evt );
-				} ));
+				)
+					.on( emt )
+				);
 			}) );
 		} );
 	}
@@ -184,6 +184,7 @@ export default class HTMLView extends LiveSchema {
 				const imgs = resources.filter(({type}) => type === "img");
 				[...container.target.querySelectorAll(`slot[img]`)]
 					.map((target, i) => target.replaceWith(imgs[i].image));
+				emt.kf();
 				emt( { resources, container } );
 			}));
 		});
@@ -483,7 +484,31 @@ function pathParser(str) {
 		.filter( Boolean )
 }
 
-const REG_GETTER_ATTRIBUTE = /\(([a-zA-Z_]{1}[\.a-zA-Z\-_0-9]*?)\)/g;
+const REG_GETTER_ATTRIBUTE = /\(([a-zA-Z_]{1}[\[\]\.a-zA-Z\-_0-9]*?)\)/g;
+
+
+function parseKeyProps( { classList, ...prop } ) {
+	if(classList) {
+		return {
+			classList: Object.keys(classList).reduce( (acc, next) => {
+				if(next.indexOf("|") > - 1) {
+					next.split("|").reduce( (acc, name) => {
+						acc[name] = classList[next] === name;
+						return acc;
+					}, acc);
+				}
+				else {
+					acc[next] = !!classList[next];
+				}
+				return acc;
+			}, {} ),
+			...prop,
+		}
+	}
+	return {
+		...prop,
+	}
+}
 
 function parseKeyFrames( { node } ) {
 	let res = [];
@@ -500,13 +525,15 @@ function parseKeyFrames( { node } ) {
 			}
 			const keys = [...node.querySelectorAll("key")]
 				.map( node => {
+					let prop = null;
 					let offset = node.getAttribute("offset");
-					let prop = node.getAttribute("prop");
-					if(prop) {
-						prop = prop.replace(REG_GETTER_ATTRIBUTE, (_, reg) => {
+					let properties = node.getAttribute("prop");
+					if(properties) {
+						const functionBuilder = properties.replace(REG_GETTER_ATTRIBUTE, (_, reg) => {
 							return `(argv.${reg})`;
 						});
-						prop = new Function("argv", "ttm", `return ${prop}`);
+						const handler = new Function("argv", "ttm", `return ${functionBuilder}`);
+						prop = (argv) => parseKeyProps(handler(argv));
 					}
 					return [ offset, prop ];
 				} );
