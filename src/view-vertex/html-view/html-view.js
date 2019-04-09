@@ -249,14 +249,14 @@ export default class HTMLView extends LiveSchema {
 						.connectable( (data) => {
 							if(data !== keyF) {
 								if(state.load) {
-                                    state = { ...state, load: false };
-                                    loaderContainer.restore();
+									state = { ...state, load: false };
+									loaderContainer.restore();
 								}
 								const [ { stage, target, container: inner } ] = data;
 								_inner = inner;
 								if(state.stage === 0) {
 									state = { ...state, stage: 1 };
-                                    emt.kf();
+									emt.kf();
 									emt( [ state ] );
 								}
 								if( stage === 1 ) {
@@ -278,10 +278,14 @@ export default class HTMLView extends LiveSchema {
 					childHook.connect();
 				};
 
-				const active = this.teeSignatureCheck( 
-					new Map([ ...teeStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) ) 
+				const active = this.teeSignatureCheck(
+					new Map([ ...teeStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) )
 				);
-				
+
+				if(!active) {
+					loaderContainer.restore();
+				}
+
 				if(state.stage === 0) {
 					if(this.prop.preload) {
 						connect();
@@ -308,7 +312,7 @@ export default class HTMLView extends LiveSchema {
 					}
 				}
 			} ) );
-			
+
 		});
 	}
 
@@ -370,6 +374,15 @@ export default class HTMLView extends LiveSchema {
                 .parse(node.getAttribute("resources") || "[]")
                 .map( x => resource(pack, x) )
             ];
+
+        const style = node.querySelectorAll("* > style");
+
+        if(style.length) {
+			resources.push(...[...style].map( style => {
+				style.remove();
+				return resource(pack, { type: "inline-style", style })
+			} ));
+		}
 		
         const tee = cuttee(node, key);
         const preload = !["", "true"].includes(node.getAttribute("nopreload"));

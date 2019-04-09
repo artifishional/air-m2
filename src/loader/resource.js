@@ -1,3 +1,4 @@
+import { stream } from "air-stream"
 import ObservableFont from "./font"
 import Sound from "./sound"
 import ObservableImage from "./image"
@@ -5,8 +6,15 @@ import ObservableStyle from "./style"
 import Languages from "./languages"
 import Internalization from "./intl"
 
-export default function ({path}, {type, rel, url, ...args} ) {
-    if(type === "texture") {
+export default function ({ path }, { style, type, rel, url, ...args } ) {
+    if(type === "inline-style") {
+        return stream( (emt, { sweep }) => {
+            document.head.append(style);
+            emt({});
+            sweep.add(() => style.remove());
+        } );
+    }
+    else if(type === "texture") {
         throw "unsupported in current version"
         //return new ObservableTexture({url: `./m2units/${path}${url}` })
     }
