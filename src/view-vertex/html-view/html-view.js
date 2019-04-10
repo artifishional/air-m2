@@ -11,6 +11,24 @@ import ActiveNodeTarget from "./active-node-target"
 
 let UNIQUE_VIEW_KEY = 0;
 
+
+class Cached {
+
+	constructor({ constructor }) {
+		this.__cache = [];
+	}
+
+	createIfNotExist( signature, data ) {
+		let exist = this.__cache.find( ({ signature: x }) => signature === x );
+		if(!exist) {
+			exist = { signature, cell: constructor(signature, data) };
+			this.__cache.push(exist);
+		}
+		return exist.cell;
+	}
+
+}
+
 export default class HTMLView extends LiveSchema {
 	
 	constructor( args, src, { acid, createEntity = null } = {} ) {
@@ -26,6 +44,56 @@ export default class HTMLView extends LiveSchema {
 
 	createActiveNodeTarget(node, resources) {
 		return new ActiveNodeTarget(node, resources);
+	}
+
+	createKitLayer( { $: { modelschema,
+		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) }, ...args
+	} ) {
+
+
+		return stream( ( emt, { sweep }) => {
+			
+			const cache = new Cached( {
+				constructor: (signature, data) => this.createEntity(  )
+			} );
+
+			const container = [];
+
+			modelschema.at( ([ nodes, { action = "default" } = {} ]) => {
+
+				//if(action === "default") {
+
+					let domTreePlacment = container.start;
+
+					nodes.map( (elem) => {
+
+						const exist = container.find( equal( elem ) );
+						if(!exist) {
+							const slot = document.createComment("sloted");
+							domTreePlacment.after(slot);
+							domTreePlacment = slot;
+							sweep.add(cache.createIfNotExist( elem )
+								.at( ([ { stage, container: { target } } ]) => {
+									if(stage === 1) {
+										slot.replaceWith( target );
+									}
+								})
+							);
+						}
+						else {
+							domTreePlacment.after(exist.node);
+							domTreePlacment = exist.node;
+						}
+
+					} );
+
+				//}
+
+			} );
+
+
+		} );
+
 	}
 
 	createEntity( { $: { modelschema,
