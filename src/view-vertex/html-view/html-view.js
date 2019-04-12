@@ -294,7 +294,9 @@ export default class HTMLView extends LiveSchema {
 			state.target = container.target;
 			state.container = container;
 
-			if(!this.prop.preload) {
+			//todo temporary solution
+			
+			/*if(!this.prop.preload) {
 				sweep.add( loaderHook = this.obtain( "#loader", { $: { layers } } )
 					.at( ([ { stage, container: inner, target } ]) => {
 						if(state.stage === 0 && stage > 0) {
@@ -307,7 +309,7 @@ export default class HTMLView extends LiveSchema {
 						}
 					} )
 				);
-			}
+			}*/
 
 			let _inner = null;
 			const view = this.createNextLayers( { $: { layers }, ...args } );
@@ -350,8 +352,11 @@ export default class HTMLView extends LiveSchema {
 					new Map([ ...teeStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) )
 				);
 
-				if(!active) {
-					loaderContainer.restore();
+				if(!active && !this.prop.preload) {
+					//loaderContainer loaderContainer.restore();
+					state = { ...state, stage: 1 };
+					emt.kf();
+					emt( [ state ] );
 				}
 
 				if(state.stage === 0) {
