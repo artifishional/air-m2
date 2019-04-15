@@ -24,8 +24,11 @@ export default class PlaceHolderContainer {
     }
 
     createSystemBoundNode( point, species ) {
-        const label = typeof this.owner.prop.key === "object" ?
-            JSON.stringify(this.owner.prop.key) : this.owner.prop.key;
+        const label = this.owner.prop.key !== undefined ?
+            typeof this.owner.prop.key === "object" ?
+                JSON.stringify(this.owner.prop.key) :
+                this.owner.prop.key :
+            "";
         return document.createComment(
             `${point} ${species} ${this.owner.acid} ${label} ${point}`.toUpperCase()
         );

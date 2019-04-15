@@ -16,12 +16,13 @@ class Cached {
 
 	constructor({ constructor }) {
 		this.__cache = [];
+		this.constructor = constructor;
 	}
 
 	createIfNotExist( signature, data ) {
 		let exist = this.__cache.find( ({ signature: x }) => signature === x );
 		if(!exist) {
-			exist = { signature, cell: constructor(signature, data) };
+			exist = { signature, cell: this.constructor(signature, data) };
 			this.__cache.push(exist);
 		}
 		return exist.cell;
@@ -40,6 +41,7 @@ export default class HTMLView extends LiveSchema {
 		this.prop.tee = this.prop.tee || null;
 		this.prop.keyframes = this.prop.keyframes || [];
 		this.prop.node = this.prop.node || document.createDocumentFragment();
+		this.traits = [];
 	}
 
 	createActiveNodeTarget(node, resources) {
@@ -49,30 +51,61 @@ export default class HTMLView extends LiveSchema {
 	createKitLayer( { $: { modelschema,
 		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) }, ...args
 	} ) {
-
-
-		return stream( ( emt, { sweep }) => {
+		
+		function equal(prop, sign, letter) {
+			if(!prop.length) {
+				return Object.keys(sign).every( key => sign[key] === letter[key] )
+			}
+			throw "not supported yet"
+		}
+		
+		return stream( ( emt, { sweep, over }) => {
+			
+			const container = new PlaceHolderContainer( this, { type: "kit" } );
+			
+			emt( [ {
+				stage: 1,
+				container,
+				target: container.target,
+				acids: this.layers.map( ({ acid }) => acid ),
+			} ] );
 			
 			const cache = new Cached( {
-				constructor: (signature, data) => this.createEntity(  )
+				constructor: (signature, data) => {
+					
+					//todo need refactor
+					if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
+						return this.createTeeEntity( { $: { layers }, ...args } );
+					}
+					else {
+						return this.createNextLayers( { $: { layers }, ...args } );
+					}
+					
+				}
 			} );
 
-			const container = [];
-
-			modelschema.at( ([ nodes, { action = "default" } = {} ]) => {
+			const store = [];
+			
+			//todo need layers sup
+			const modelvertex = layers.get(this.acid);
+			
+			sweep.add(modelvertex.layer.obtain("", modelvertex.vars)
+				.at( ([ nodes, { action = "default" } = {} ]) => {
 
 				//if(action === "default") {
+					
+					debugger;
 
-					let domTreePlacment = container.start;
+					let domTreePlacment = container.begin;
 
-					nodes.map( (elem) => {
+					nodes.map( (node) => {
 
-						const exist = container.find( equal( elem ) );
+						const exist = store.find( e => equal([], node, e ) );
 						if(!exist) {
 							const slot = document.createComment("sloted");
 							domTreePlacment.after(slot);
 							domTreePlacment = slot;
-							sweep.add(cache.createIfNotExist( elem )
+							over.add(cache.createIfNotExist( node )
 								.at( ([ { stage, container: { target } } ]) => {
 									if(stage === 1) {
 										slot.replaceWith( target );
@@ -89,7 +122,7 @@ export default class HTMLView extends LiveSchema {
 
 				//}
 
-			} );
+			} ));
 
 
 		} );
@@ -144,14 +177,35 @@ export default class HTMLView extends LiveSchema {
 					acid, { layer: layers[i], vars }
 				] ))
 			).at( ( layers ) => {
+				
+				/*
 				if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
 					over.add(this.createTeeEntity( { $: { layers }, ...args } ).on(emt));
 				}
 				else {
 					over.add(this.createNextLayers( { $: { layers }, ...args } ).on(emt));
 				}
+				*/
+				
+				if(this.layers.some( ({ prop: { kit } }) => kit )) {
+					over.add(this.createKitLayer( { $: { layers }, ...args } ).on(emt));
+				}
+				else {
+					//todo need refactor
+					if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
+						over.add(this.createTeeEntity( { $: { layers }, ...args } ).on(emt));
+					}
+					else {
+						over.add(this.createNextLayers( { $: { layers }, ...args } ).on(emt));
+					}
+				}
+				
 			} ) );
 		} );
+	}
+	
+	acidis(name) {
+		return (this.acid+"").indexOf(name) > -1;
 	}
 
 	createLayer(owner, { targets, resources } ) {
@@ -458,11 +512,13 @@ export default class HTMLView extends LiveSchema {
 		}
 		
         const tee = cuttee(node, key);
+		const kit = cutkit(node, key);
         const preload = !["", "true"].includes(node.getAttribute("nopreload"));
         
 		const keyframes = [];
 
 		const prop = {
+			kit,            //kit's container
             tee,            //switch mode
             preload,        //must be fully loaded before readiness
             pack,           //current package
@@ -509,6 +565,7 @@ export default class HTMLView extends LiveSchema {
 			return [ ...this.prop.tee, ...value];
 		}*/
 		else if([
+			"kit",
 			"preload",
 			"key",
 			"tee",
@@ -644,6 +701,18 @@ function cuttee(node, key) {
 	else {
 		return rawTee;
 	}
+}
+
+function cutkit(node, key) {
+	const raw = node.getAttribute("kit");
+	if(raw === null) {
+		return null;
+	}
+	else if(raw === "") {
+		return true;
+	}
+	else
+		return raw
 }
 
 function slot( { key, acid } ) {
