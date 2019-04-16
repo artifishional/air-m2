@@ -12,7 +12,8 @@
     "air-schema": "^0.1.5",
     "air-anime": "^0.1.0",
     "air-stream": "^0.6.0",
-    "fontfaceobserver": "^2.0.13",
+    "css-tree": "^1.0.0-alpha.29",
+    "fontfaceobserver": "^2.1.0",
     "howler": "^2.0.15",
     "json5": "^2.0.1"
   },
