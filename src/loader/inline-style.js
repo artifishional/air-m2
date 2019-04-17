@@ -1,6 +1,7 @@
 import { stream } from "air-stream";
 import csstree from "css-tree";
 import FontFaceObserver from "fontfaceobserver";
+import ImagePreloader from "image-preloader";
 
 export default ({ style, path, ...args }) =>
   stream((emt, { sweep }) => {
@@ -11,6 +12,7 @@ export default ({ style, path, ...args }) =>
 
     const observers = [];
     const fonts = [];
+    const images = [];
 
     const ast = csstree.parse(style.textContent);
     ast.children.forEach(node => {
@@ -33,6 +35,21 @@ export default ({ style, path, ...args }) =>
           }
         });
         fontFaceStyle.textContent += csstree.generate(node);
+      } else if (type === "Rule") {
+        block.children.forEach(prop => {
+          const { property, value } = prop;
+          if (property === "background-image" || property === "background") {
+            value.children.forEach(e => {
+              const { type, value } = e;
+              if (type === "Url") {
+                const v = "m2units/" + path + value.value.replace(/"/g, "");
+                value.value = v;
+                images.push(v);
+              }
+            });
+          }
+        });
+        otherStyle.textContent += csstree.generate(node);
       } else {
         otherStyle.textContent += csstree.generate(node);
       }
@@ -41,6 +58,9 @@ export default ({ style, path, ...args }) =>
       document.head.appendChild(fontFaceStyle);
     }
 
+    images.forEach(img => {
+      observers.push(new ImagePreloader().preload(...images));
+    });
     fonts.forEach(fontName => {
       observers.push(new FontFaceObserver(fontName).load(null, 30000));
     });
