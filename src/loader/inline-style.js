@@ -7,6 +7,8 @@ const FONT_LOADING_TIMEOUT = 30000;
 
 export default ({ style, path, ...args }) =>
   stream((emt, { sweep }) => {
+    let isActive = true;
+    let fontFaceStyle = null;
     const commonStyle = document.createElement("style");
     commonStyle.type = "text/css";
     commonStyle.textContent = "";
@@ -58,7 +60,7 @@ export default ({ style, path, ...args }) =>
 
     commonStyle.textContent = rawCommonCSSContent;
     if (rawCommonCSSContent) {
-      const fontFaceStyle = document.createElement("style");
+      fontFaceStyle = document.createElement("style");
       fontFaceStyle.textContent = rawFontCSSContent;
       fontFaceStyle.type = "text/css";
       document.head.appendChild(fontFaceStyle);
@@ -73,11 +75,14 @@ export default ({ style, path, ...args }) =>
         }
       })
     ).then(() => {
-      document.head.appendChild(commonStyle);
-      emt({ type: "inline-style", style: commonStyle, ...args });
+      if (isActive) {
+        document.head.appendChild(commonStyle);
+        emt({ type: "inline-style", style: commonStyle, ...args });
+      }
     });
 
     sweep.add(() => {
+      isActive = false;
       commonStyle.remove();
       fontFaceStyle && fontFaceStyle.remove();
     });
