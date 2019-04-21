@@ -1,4 +1,5 @@
 import { LiveSchema } from "../live-schema"
+import { ObservableCollection } from "../observable-collection"
 import { stream } from "air-stream"
 
 function frommodule(module, _key = "main") {
@@ -19,10 +20,33 @@ function frommodule(module, _key = "main") {
 	];
 }
 
+const observers = new Map();
+
 export default class ModelVertex extends LiveSchema {
 
 	constructor([ key, { source = () => stream( emt => `empty point ${key}` ), ...prop }, ...item], src) {
 		super([ key, { source, ...prop }, ...item], src);
+	}
+	
+	static observe(src, cb) {
+		if(!observers.has(src)) {
+			observers.set(src, []);
+		}
+		observers.get(src).push(cb);
+		function handleChanges(self, { added }) {
+			added.map( ({ entity }) => ObservableCollection.observe(entity, "obs", () => cb(src)));
+			cb( src );
+		}
+		ObservableCollection.observe( src, "entities", handleChanges );
+		src.slice(2).map( schema => ModelVertex.observe(schema, cb) );
+	}
+	
+	append(...item) {
+		super.append(...item);
+		observers.get(this) && observers.get(this).map( cb => {
+			item.map( schema => ModelVertex.observe(schema, cb) );
+			cb(this);
+		} );
 	}
 
 	parse( module, src ) {
