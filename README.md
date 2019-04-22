@@ -31,37 +31,37 @@ export default () => stream((emt, { hook }) => {
 
 data transmission from events
 ```html
-<span>{argv}</span>
+<span>{(property)}</span>
 ``` 
 
 the event source must have the form
 
 ```js 
-{action: [ "name", { argv: "value" } ]}
+[{property: 77}]
 ```
 
 the data source can be an object with a nested structure
 
 ```html
-<span>{argv.somefield.nested}</span>
+<span>{(somefield.nested)}</span>
 ``` 
 
 ```js 
-{action: [ "name", { argv: {somefield: {nested: "value"} } } ]}
+[{somefield: {nested: 77} }]
 ```
 
 formatting
 
 ```html
-<span>{intl.formatter-resource-name,{argv}}</span>
+<span>{intl.formatter-resource-name,{property}}</span>
 ``` 
 
-,where ```{argv}``` - data transmission template
+,where ```{property}``` - data transmission template
 
 the event source must have the form
 
 ```js 
-{action: [ "name", { argv: 100 } ]}
+[{property: 77}]
 ```
 
 localization
@@ -72,18 +72,30 @@ localization
 
 #### Actions definition
 
-```js
-/*<div m2 = '["name", */
-{ frames: [
-    [ "action-name", { duration: 1/*sec*/ }, 
-       //key-frames 
-       [0/*%*/, { rotate: 10/*deg*/ }],
-       [50, { rotate: 20 }],
-       [100, { rotate: 360 }]
-     ],
-    /*...*/
-]}
-/*]'></div>*/
+##### Class controllers
+
+
+
+```html
+<keyframe>
+    <key prop = {classList:{active:(isactive)}}></key>
+</keyframe>
+``` 
+
+```js 
+[{isactive: true}]
+```
+
+or
+
+```html
+<keyframe>
+    <key prop = {classList:{red|green|black:(selectedColor)}}></key>
+</keyframe>
+``` 
+
+```js 
+[{selectedColor: "red"}]
 ```
 
 ##### Sound controls
@@ -140,16 +152,12 @@ if you are going to transfer the name of the sound from the model, you must spec
 
 #### Reactions definition
 
-```js
-/*<div m2 = '["name", */
-{ handlers: {
-    onclick: "action({ key, event, options })" 
-}}
-/*]'></div>*/
-```
+```html
+<unit onclick = req("action-name",{/*args*/})></unit>
+``` 
 
-where
-- action - stream fallback method
+where environment variables:
+- req - stream fallback method
 - key - view-component name
 - options - current view-component options
 - event - system event data
@@ -171,61 +179,53 @@ where
 
 selects one view state available according to the model.
 
-```js
-/*<div m2 = '["name", */ { type: "switcher" } /*]'>
-    <div m2 = '["loader", { id: "loader" }]'></div>
-    <div m2 = '["state1"]'></div>
-    <div m2 = '["state2"]'></div>
-    <div m2 = '["state3"]'></div>
-</div>*/
+```html
+<unit tee = {a:10,b:-1}></unit>
+``` 
+
+rendered to the page if the condition when mapping data from the stream is fully met
+
+```js 
+[{a: 10, b: -1, ...other}]
 ```
 
-supports only one default action: ```js "change" ```
+or not rendered
 
-```js
-export default ( { /*...args*/ } ) => 
-    stream(emt => {
-        emt( {action: ["change", { key: "state1" }] } );
-    })
-```
-
-uses ``` #loader ``` state for preloading
-
-```js
-/*<div m2 = '["loader", { id: "loader" }]'></div>*/
+```js 
+[{a: 10, b: -2, ...other}]
 ```
 
 ### Common features
 
 #### Coupling with model
 
-you can link your view to the model to get actions and process reactions
+you can link your view to the stream to get actions and process reactions
 
-```js
-/*<div m2 = '["aurora", */
-{ model: "./path/to/model[key=aurora]" }
-/*]'></div>*/
-```
+```html
+<unit stream = ./path>
+``` 
+
 any relative path will be calculated relative to the parent view, which is related to the model.
 
 you can use the constant ``` $name ``` as a parameter to pass the current name of the view to the model
 
-```js
-/*<div m2 = '["aurora", */
-{ model: "./path/to/model[key=$name]" }
-/*]'></div>*/
-```
+```html
+<unit stream = ./path/to/model[key=$name]>
+``` 
 
 #### Submodules
 
 you can use the included submodules
 
 ```html
-<div m2 = '[ "submodule", { source: { path: "./m2unit/submodule_path" } } ]' > </div>
+<unit use = url(./path-to-src-module)></unit>
 ```
 
-,where 
- - ``` path ``` - path to the module defined in m2units
+or
+
+```html
+<unit use = ./path-to-registered-module></unit>
+```
 
 ## Model unit
 
