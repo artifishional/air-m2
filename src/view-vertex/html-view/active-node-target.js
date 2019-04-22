@@ -105,6 +105,16 @@ function getfrompath(argv, path) {
 }
 
 function templater(vl, intl = null, argv, resources) {
+    
+    function filler(template, argv) {
+        if(template.search(/\([\[\]a-zA-Z\-\_\.0-9]+\)/) > -1) {
+            return filler(template.replace(/\(([[\]a-zA-Z\-\_\.0-9]+)\)/g, ( _, path ) => {
+                return getfrompath( argv, path );
+            }), argv);
+        }
+        else return template;
+    }
+    
     if(vl.indexOf("intl") === 1) {
         if(!intl) return null;
         const [_, name, template] = vl.match(/^{intl.([a-zA-Z0-9_\-]+),(.*)}$/);
@@ -115,9 +125,7 @@ function templater(vl, intl = null, argv, resources) {
             return formatter.format(+template);
         }
         else if(template.search(/\([\[\]a-zA-Z\-\_\.0-9]+\)/) > -1) {
-            const res = template.replace(/\(([a-zA-Z\-\_\.0-9]+)\)/g, ( _, path ) => {
-                return getfrompath( argv, path );
-            });
+            const res = filler(template, argv);
             const formatter = new NumberFormat(intl.locale, format);
             return formatter.format(res);
         }
