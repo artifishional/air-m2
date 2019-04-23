@@ -10,7 +10,6 @@ export default ({ style, path, ...args }) =>
     let isActive = true;
     let fontFaceStyle = null;
     const commonStyle = document.createElement("style");
-    commonStyle.type = "text/css";
     commonStyle.textContent = "";
 
     const targets = [];
@@ -59,10 +58,9 @@ export default ({ style, path, ...args }) =>
     });
 
     commonStyle.textContent = rawCommonCSSContent;
-    if (rawCommonCSSContent) {
+    if (rawFontCSSContent) {
       fontFaceStyle = document.createElement("style");
       fontFaceStyle.textContent = rawFontCSSContent;
-      fontFaceStyle.type = "text/css";
       document.head.appendChild(fontFaceStyle);
     }
 
