@@ -170,6 +170,7 @@ where
 - ``` "onkeydown" ```
 - ``` "onkeyup" ```
 - ``` "onwheel" ```
+- ``` "onscroll" ```
 
 ### Switcher
 

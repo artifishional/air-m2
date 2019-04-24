@@ -1,4 +1,5 @@
 export default [
+    "onscroll",
     "onclickoutside",
     "onpointermove",
     "onclick",
