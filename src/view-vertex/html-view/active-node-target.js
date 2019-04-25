@@ -4,19 +4,12 @@ import {NODE_TYPES} from "./def"
 class NumberFormat {
 
     constructor( locale, { splitter = null, ...options } = {} ) {
-        /*if(splitter) {
-            locale = "ru";
-        }*/
         this.formatter = new Intl.NumberFormat( locale, options );
         this.splitter = splitter;
     }
 
     format(num) {
-        let format = this.formatter.format(num);
-        /*if(this.splitter) {
-            format = format.replace( ",", this.splitter );
-        }*/
-        return format;
+        return this.formatter.format(num);
     }
 
 }
@@ -27,7 +20,7 @@ function getformat( name, resources ) {
             .filter(( { type } ) => type === "intl" )
             .map( ( { content } ) => content.slice(1) )
     )
-        .find( ([ _name ]) => _name === name )
+        .find( ([ _name ]) => _name === name );
     if(!exist) {
         return `formatter '${name}' not found`
     }
@@ -40,7 +33,7 @@ function getlang( name, resources, intl ) {
             .filter(( { type } ) => type === "language" )
             .map( ( { content } ) => content.slice(1) )
     )
-        .find( ([ _name ]) => _name === name )
+        .find( ([ _name ]) => _name === name );
     if(!exist) {
         return `literal '${name}' not found`
     }
@@ -107,8 +100,8 @@ function getfrompath(argv, path) {
 function templater(vl, intl = null, argv, resources) {
     
     function filler(template, argv) {
-        if(template.search(/\([\[\]a-zA-Z\-\_\.0-9]+\)/) > -1) {
-            return filler(template.replace(/\(([[\]a-zA-Z\-\_\.0-9]+)\)/g, ( _, path ) => {
+        if(template.search(/\([\[\]a-zA-Z\-_.0-9]+\)/) > -1) {
+            return filler(template.replace(/\(([[\]a-zA-Z\-_.0-9]+)\)/g, ( _, path ) => {
                 return getfrompath( argv, path );
             }), argv);
         }
@@ -124,7 +117,7 @@ function templater(vl, intl = null, argv, resources) {
             const formatter = new NumberFormat(intl.locale, format);
             return formatter.format(+template);
         }
-        else if(template.search(/\([\[\]a-zA-Z\-\_\.0-9]+\)/) > -1) {
+        else if(template.search(/\([\[\]a-zA-Z\-_.0-9]+\)/) > -1) {
             const res = filler(template, argv);
             const formatter = new NumberFormat(intl.locale, format);
             return formatter.format(res);
@@ -150,11 +143,9 @@ function templater(vl, intl = null, argv, resources) {
             return formatter.format(0).replace( "0", templates.join("") );
         }
     }
-    else if(vl.search(/\([\[\]a-zA-Z\-\_\.0-9]+\)/) > -1) {
-        return vl.replace(/\{(.*)\}/, (_, lit) => {
-            return lit.replace(/\(([\[\]a-zA-Z\-\_\.0-9]+)\)/g, ( _, path ) => {
-                return getfrompath( argv, path );
-            })
+    else if(vl.search(/\([\[\]a-zA-Z\-_.0-9]+\)/) > -1) {
+        return vl.replace(/{(.*)}/, (_, lit) => {
+            return filler( lit, argv );
         });
     }
     else if(vl.indexOf("lang") === 1) {
