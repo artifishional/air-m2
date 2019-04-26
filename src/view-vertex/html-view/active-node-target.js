@@ -94,7 +94,7 @@ function gtargeting(parent, res = []) {
 }
 
 function getfrompath(argv, path) {
-    return new Function(`argv`, `return argv.${path}`)(argv);
+    return new Function(`argv`, `try{ return argv.${path} } catch(e) { return null }`)(argv);
 }
 
 function templater(vl, intl = null, argv, resources) {
