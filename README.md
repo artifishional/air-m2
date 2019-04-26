@@ -169,11 +169,16 @@ where environment variables:
 - ``` "onpointermove" ```
 - ``` "onpointerenter" ```
 - ``` "onpointerleave" ```
+- ``` "onpointerup" ```
+- ``` "onpointerdown" ```
+- ``` "onchange" ```
+- ``` "oninput" ```
 - ``` "onglobalkeydown" (synthetic)```
 - ``` "onglobalkeyup" (synthetic)```
 - ``` "onkeydown" ```
 - ``` "onkeyup" ```
 - ``` "onwheel" ```
+- ``` "onscroll" ```
 
 ### Switcher
 

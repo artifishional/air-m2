@@ -1,4 +1,5 @@
 export default [
+    "onscroll",
     "onclickoutside",
     "onpointermove",
     "onclick",
@@ -9,4 +10,9 @@ export default [
     "onkeydown",
     "onkeyup",
     "onwheel",
+    "onpointerup",
+    "onpointerdown",
+    "onchange",
+    "oninput",
+    "ontouchend",
 ];
