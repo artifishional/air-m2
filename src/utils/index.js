@@ -132,7 +132,7 @@ export const signature = (sign, target) => {
         if(Array.isArray(sign)) {
             return sign.every( (s, i) => signature( s, target[i] ) );
         }
-        else if(typeof sign === "object" && sign !== null && target !== null) {
+        else if(typeof sign === "object" && sign !== null && target) {
             return Object.keys(sign).every( k => signature(sign[k], target[k]) )
         }
         return false;
