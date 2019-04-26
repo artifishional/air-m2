@@ -1,3 +1,4 @@
+import { BOOLEAN } from "../../def"
 import { stream, combine, keyF, sync } from "air-stream"
 import {routeNormalizer, routeToString, signature} from "../../utils"
 import events from "../events"
@@ -93,12 +94,10 @@ export default class HTMLView extends LiveSchema {
 				.at( ([ nodes, { action = "default" } = {} ]) => {
 
 				//if(action === "default") {
-					
-					debugger;
 
 					let domTreePlacment = container.begin;
 
-					nodes.map( (node) => {
+					nodes.map( (node, index) => {
 
 						const exist = store.find( e => equal([], node, e ) );
 						if(!exist) {
@@ -446,7 +445,7 @@ export default class HTMLView extends LiveSchema {
 	createChildrenEntity( { $: { container: { target, begin }, layers }, ...args } ) {
 		return combine( this.item
 			.filter( ({ prop: { template } }) => !template )
-			.map(x => x.obtain( "", { $: { layers } } ))
+			.map(x => x.obtain( "", { $: { layers }, ...args } ))
 		);
 	}
 	
@@ -688,7 +687,7 @@ function parseKeyFrames( { node } ) {
 }
 
 function cuttee(node, key) {
-	const rawTee = node.getAttribute("tee");
+	let rawTee = node.getAttribute("tee");
 	if(rawTee === null) {
 		return null;
 	}
@@ -696,6 +695,14 @@ function cuttee(node, key) {
 		return key;
 	}
 	else if(rawTee[0] === "{") {
+
+		//autocomplete { value } boolean
+		rawTee = rawTee.replace(/\{\s*([a-zA-Z0-9]+|\"[\-\!\&\$\?\*a-zA-Z0-9]+\")\s*\}/g, (_, vl) => {
+			return "{" +  vl + ":$bool" + "}"
+		});
+
+		return new Function("$bool", "return" + rawTee)(BOOLEAN);
+
 		return JSON5.parse(rawTee);
 	}
 	else {

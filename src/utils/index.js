@@ -1,3 +1,6 @@
+import { BOOLEAN } from "../def"
+
+
 /**
  *
  * @param path
@@ -117,6 +120,10 @@ export const equal = (a, b) => {
 };
 
 export const signature = (sign, target) => {
+
+    if(sign === BOOLEAN) {
+        return !!target;
+    }
 
     if(sign == target) { //important
         return true;

@@ -185,6 +185,7 @@ selects one view state available according to the model.
 
 rendered to the page if the condition when mapping data from the stream is fully met
 
+
 ```js 
 [{a: 10, b: -1, ...other}]
 ```
@@ -193,6 +194,15 @@ or not rendered
 
 ```js 
 [{a: 10, b: -2, ...other}]
+```
+
+allowed to use attachments and abbreviated forms
+```html
+<unit tee = {obj:{prop}}></unit>
+``` 
+
+```js 
+[{obj: {prop: 1}}]
 ```
 
 ### Common features
