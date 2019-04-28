@@ -50,7 +50,7 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	createKitLayer( { $: { modelschema,
-		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) }, ...args
+		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) }, kit = {}, ...args
 	} ) {
 		
 		function equal(prop, sign, letter) {
@@ -58,6 +58,14 @@ export default class HTMLView extends LiveSchema {
 				return Object.keys(sign).every( key => sign[key] === letter[key] )
 			}
 			throw "not supported yet"
+		}
+		
+		function removeElementFromArray(arr, elem) {
+			const indexOf = arr.indexOf(elem);
+			if(indexOf === -1) {
+				throw "element not found";
+			}
+			return arr.splice(indexOf, 1)[0];
 		}
 		
 		return stream( ( emt, { sweep, over }) => {
@@ -73,17 +81,24 @@ export default class HTMLView extends LiveSchema {
 			
 			const cache = new Cached( {
 				constructor: (signature, data) => {
-					
+	
 					//todo need refactor
 					if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
-						return this.createTeeEntity( { $: { layers }, ...args } );
+						return this.createTeeEntity( { $: { layers },
+							kit: { [this.acid]: signature, ...kit }, ...args
+						} );
 					}
 					else {
-						return this.createNextLayers( { $: { layers }, ...args } );
+						return this.createNextLayers( { $: { layers },
+							kit: { [this.acid]: signature, ...kit },
+							...args
+						} );
 					}
 					
 				}
 			} );
+			
+			over.add(() => cache.clear());
 
 			const store = [];
 			
@@ -91,32 +106,41 @@ export default class HTMLView extends LiveSchema {
 			const modelvertex = layers.get(this.acid);
 			
 			sweep.add(modelvertex.layer.obtain("", modelvertex.vars)
-				.at( ([ nodes, { action = "default" } = {} ]) => {
+				.at( ([ childs, { action = "default" } = {} ]) => {
 
 				//if(action === "default") {
 
 					let domTreePlacment = container.begin;
+					
+					const deleted = [ ...store];
 
-					nodes.map( (node, index) => {
+					childs.map( (signature, index) => {
 
-						const exist = store.find( e => equal([], node, e ) );
+						const exist = store.find( ({ signature: $ }) => equal([], signature, $ ) );
 						if(!exist) {
-							const slot = document.createComment("sloted");
-							domTreePlacment.after(slot);
-							domTreePlacment = slot;
-							over.add(cache.createIfNotExist( node )
+							const box = new PlaceHolderContainer(this, { type: "item" });
+							domTreePlacment.after(box.target);
+							domTreePlacment = box.end;
+							cache.createIfNotExist( signature )
 								.at( ([ { stage, container: { target } } ]) => {
 									if(stage === 1) {
-										slot.replaceWith( target );
+										box.append( target );
 									}
-								})
-							);
+								});
+							store.push( { signature, box } );
 						}
 						else {
-							domTreePlacment.after(exist.node);
-							domTreePlacment = exist.node;
+							removeElementFromArray(deleted, exist);
+							domTreePlacment.after(exist.box.target);
+							domTreePlacment = exist.box.end;
 						}
 
+					} );
+					
+					deleted.map( ({ box, signature: $ }) => {
+						const deleted = store.findIndex( ({ signature, box }) => equal([], signature, $));
+						store.splice(deleted, 1);
+						box.remove();
 					} );
 
 				//}

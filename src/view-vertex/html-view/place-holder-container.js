@@ -33,6 +33,10 @@ export default class PlaceHolderContainer {
             `${point} ${species} ${this.owner.acid} ${label} ${point}`.toUpperCase()
         );
     }
+    
+    remove() {
+        return this.restore();
+    }
 
     restore() {
         let point = this.begin;
