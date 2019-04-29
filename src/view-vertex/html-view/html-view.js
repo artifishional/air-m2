@@ -9,6 +9,7 @@ import { NODE_TYPES } from "./def"
 import Layer from "./layer"
 import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
+import { ModelVertex } from "../../model-vertex"
 
 let UNIQUE_VIEW_KEY = 0;
 
@@ -78,10 +79,23 @@ export default class HTMLView extends LiveSchema {
 				target: container.target,
 				acids: this.layers.map( ({ acid }) => acid ),
 			} ] );
+
+			//todo need layers sup
+			const modelvertex = layers.get(this.acid) || layers.get(-1);
+			const modelstream = modelvertex.layer.obtain("", modelvertex.vars);
 			
 			const cache = new Cached( {
 				constructor: (signature, data) => {
-	
+
+
+					const modelvertex = new ModelVertex(["$", { source: () => modelstream.map(([data]) => {
+						const res = data.find( (obj) => Object.keys(signature)
+							.every( key => signature[key] === obj[key]) )
+						return res;
+					}) }]);
+
+					layers = new Map([ ...layers, [this.acid, { layer: modelvertex, vars: {} } ]]);
+
 					//todo need refactor
 					if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
 						return this.createTeeEntity( { $: { layers },
@@ -102,11 +116,7 @@ export default class HTMLView extends LiveSchema {
 
 			const store = [];
 			
-			//todo need layers sup
-			const modelvertex = layers.get(this.acid);
-			
-			sweep.add(modelvertex.layer.obtain("", modelvertex.vars)
-				.at( ([ childs, { action = "default" } = {} ]) => {
+			sweep.add(modelstream.at( ([ childs, { action = "default" } = {} ]) => {
 
 				//if(action === "default") {
 
