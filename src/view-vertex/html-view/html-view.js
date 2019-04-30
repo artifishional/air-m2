@@ -51,7 +51,9 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	createKitLayer( { $: { modelschema,
-		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) }, kit = {}, ...args
+		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) },
+		signature: parentContainerSignature = null,
+		...args
 	} ) {
 		
 		function equal(prop, sign, letter) {
@@ -87,24 +89,26 @@ export default class HTMLView extends LiveSchema {
 			const cache = new Cached( {
 				constructor: (signature, data) => {
 
-
 					const modelvertex = new ModelVertex(["$", { source: () => modelstream.map(([data]) => {
 						const res = data.find( (obj) => Object.keys(signature)
 							.every( key => signature[key] === obj[key]) )
-						return res;
+						return res || [];
 					}) }]);
+
+					modelvertex.parent = (layers.get(this.acid) || layers.get(-1)).layer;
 
 					layers = new Map([ ...layers, [this.acid, { layer: modelvertex, vars: {} } ]]);
 
 					//todo need refactor
 					if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
 						return this.createTeeEntity( { $: { layers },
-							kit: { [this.acid]: signature, ...kit }, ...args
+							signature: {...signature, $: parentContainerSignature },
+							...args
 						} );
 					}
 					else {
 						return this.createNextLayers( { $: { layers },
-							kit: { [this.acid]: signature, ...kit },
+							signature: {...signature, $: parentContainerSignature },
 							...args
 						} );
 					}
@@ -241,8 +245,8 @@ export default class HTMLView extends LiveSchema {
 		return (this.acid+"").indexOf(name) > -1;
 	}
 
-	createLayer(owner, { targets, resources } ) {
-		return new Layer( this, owner, { targets, resources } );
+	createLayer(owner, { targets, resources }, args ) {
+		return new Layer( this, owner, { targets, resources }, args );
 	}
 
 	createNextLayers( { $: { layers }, ...args } ) {
@@ -320,7 +324,8 @@ export default class HTMLView extends LiveSchema {
 								...comps[i].container.targets( "datas", comps[i].resources ),
 								...container.targets("actives", comps[i].resources )
 							],
-						}
+						},
+						args
 					).stream),
 					([{ stage: a }], [{ stage: b }]) => a === b,
 					( ...layers ) => [ { ...state, stage: layers[0][0].stage } ]
@@ -513,7 +518,7 @@ export default class HTMLView extends LiveSchema {
 			.filter( ({ name }) => events.includes(name) )
 			.map( ({ name, value }) => ({
 				name: name.replace(/^on/, ""),
-				hn: new Function("event", "options", "request", "key", "req", value )
+				hn: new Function("event", "options", "request", "key", "signature", "req", value )
 			}) );
 		
 		let stream = node.getAttribute("stream");

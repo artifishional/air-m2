@@ -17,9 +17,11 @@ export default class Layer {
 		return animate( targets, keyframes, this.layer.prop.key );
 	}
 
-    constructor( layer, { schema }, { targets, resources }) {
+    constructor( layer, { schema }, { targets, resources }, { signature }) {
 
 		this.layer = layer;
+
+		this.signature = signature;
 
 		//super( owner, { stream: { model, view, update }, targets } );
 		this.animateStream = this.createAnimateStream( { ...layer.prop, targets } );
@@ -141,6 +143,7 @@ export default class Layer {
 				this.props,
 				null, //({...args} = {}) => this.handler({ dissolve: false, ...args }),
 				this.layer.prop.key,
+				this.signature,
 				(action, {...args} = {}) => this.handler({ dissolve: false, action, ...args }),
 			);
 		}
