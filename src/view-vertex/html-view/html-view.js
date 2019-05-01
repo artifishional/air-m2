@@ -1,6 +1,13 @@
 import { BOOLEAN } from "../../def"
 import { stream, combine, keyF, sync } from "air-stream"
-import {routeNormalizer, routeToString, signature} from "../../utils"
+import {
+	equal,
+	routeNormalizer,
+	routeToString,
+	signature,
+	getfrompath,
+	calcsignature,
+} from "../../utils"
 import events from "../events"
 import JSON5 from "json5"
 import { LiveSchema } from "../../live-schema"
@@ -56,13 +63,6 @@ export default class HTMLView extends LiveSchema {
 		...args
 	} ) {
 		
-		function equal(prop, sign, letter) {
-			if(!prop.length) {
-				return Object.keys(sign).every( key => sign[key] === letter[key] )
-			}
-			throw "not supported yet"
-		}
-		
 		function removeElementFromArray(arr, elem) {
 			const indexOf = arr.indexOf(elem);
 			if(indexOf === -1) {
@@ -87,13 +87,15 @@ export default class HTMLView extends LiveSchema {
 			const modelstream = modelvertex.layer.obtain("", modelvertex.vars);
 			
 			const cache = new Cached( {
-				constructor: (signature, data) => {
-
-					const modelvertex = new ModelVertex(["$", { source: () => modelstream.map(([data]) => {
-						const res = data.find( (obj) => Object.keys(signature)
-							.every( key => signature[key] === obj[key]) )
+				constructor: (data) => {
+					
+					const _signature = calcsignature(data, this.prop.kit.prop);
+					
+					const modelvertex = new ModelVertex(["$", { source: () => modelstream.map(([state]) => {
+						const childs = getfrompath(state, this.prop.kit.getter);
+						const res = childs.find( child => signature(_signature, child) )
 						return res || [];
-					}) }]);
+					}).distinct(equal) }]);
 
 					modelvertex.parent = (layers.get(this.acid) || layers.get(-1)).layer;
 
@@ -102,13 +104,13 @@ export default class HTMLView extends LiveSchema {
 					//todo need refactor
 					if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
 						return this.createTeeEntity( { $: { layers },
-							signature: {...signature, $: parentContainerSignature },
+							signature: {..._signature, $: parentContainerSignature },
 							...args
 						} );
 					}
 					else {
 						return this.createNextLayers( { $: { layers },
-							signature: {...signature, $: parentContainerSignature },
+							signature: {..._signature, $: parentContainerSignature },
 							...args
 						} );
 					}
@@ -120,44 +122,41 @@ export default class HTMLView extends LiveSchema {
 
 			const store = [];
 			
-			sweep.add(modelstream.at( ([ childs, { action = "default" } = {} ]) => {
+			sweep.add(modelstream.at( ([ state, { action = "default" } = {} ]) => {
+				
+				const childs = getfrompath(state, this.prop.kit.getter);
+				
+				let domTreePlacment = container.begin;
+				
+				const deleted = [ ...store];
 
-				//if(action === "default") {
-
-					let domTreePlacment = container.begin;
-					
-					const deleted = [ ...store];
-
-					childs.map( (signature, index) => {
-
-						const exist = store.find( ({ signature: $ }) => equal([], signature, $ ) );
-						if(!exist) {
-							const box = new PlaceHolderContainer(this, { type: "item" });
-							domTreePlacment.after(box.target);
-							domTreePlacment = box.end;
-							cache.createIfNotExist( signature )
-								.at( ([ { stage, container: { target } } ]) => {
-									if(stage === 1) {
-										box.append( target );
-									}
-								});
-							store.push( { signature, box } );
-						}
-						else {
-							removeElementFromArray(deleted, exist);
-							domTreePlacment.after(exist.box.target);
-							domTreePlacment = exist.box.end;
-						}
-
-					} );
-					
-					deleted.map( ({ box, signature: $ }) => {
-						const deleted = store.findIndex( ({ signature, box }) => equal([], signature, $));
-						store.splice(deleted, 1);
-						box.remove();
-					} );
-
-				//}
+				childs.map( (child, index) => {
+					const _signature = calcsignature(child, this.prop.kit.prop);
+					const exist = store.find( ({ signature: $ }) => signature(_signature, $ ) );
+					if(!exist) {
+						const box = new PlaceHolderContainer(this, { type: "item" });
+						domTreePlacment.after(box.target);
+						domTreePlacment = box.end;
+						cache.createIfNotExist( child )
+							.at( ([ { stage, container: { target } } ]) => {
+								if(stage === 1) {
+									box.append( target );
+								}
+							});
+						store.push( { signature: _signature, box } );
+					}
+					else {
+						removeElementFromArray(deleted, exist);
+						domTreePlacment.after(exist.box.target);
+						domTreePlacment = exist.box.end;
+					}
+				} );
+				
+				deleted.map( ({ box, signature: $ }) => {
+					const deleted = store.findIndex( ({ signature, box }) => equal([], signature, $));
+					store.splice(deleted, 1);
+					box.remove();
+				} );
 
 			} ));
 
@@ -749,16 +748,20 @@ function cuttee(node, key) {
 	}
 }
 
+const REG_GETTER_KIT = /\(([a-zA-Z0-9\.\-\[\]]+)\)?\{([a-zA-Z0-9\.\-\[\]\,]+)\}?/;
+
 function cutkit(node, key) {
 	const raw = node.getAttribute("kit");
 	if(raw === null) {
 		return null;
 	}
 	else if(raw === "") {
-		return true;
+		return { getter: null, prop: [] };
 	}
-	else
-		return raw
+	else {
+		const [_, getter, rawSignature] = raw.match(REG_GETTER_KIT);
+		return { getter, prop: rawSignature.split(",") };
+	}
 }
 
 function slot( { key, acid } ) {

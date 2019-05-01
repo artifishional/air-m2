@@ -99,7 +99,7 @@ export function searchBySignature(sign, arr, sprop = "key") {
     })
 }
 
-export const equal = (a, b) => {
+export function equal(a, b) {
     if(a === b) {
         return true;
     }
@@ -117,9 +117,9 @@ export const equal = (a, b) => {
         }
         return false;
     }
-};
+}
 
-export const signature = (sign, target) => {
+export function signature(sign, target) {
 
     if(sign === BOOLEAN) {
         return !!target;
@@ -137,6 +137,36 @@ export const signature = (sign, target) => {
         }
         return false;
     }
-};
+}
+
+export function getfrompath(argv, path) {
+	if(path) {
+		return new Function(`argv`, `try{ return argv.${path} } catch(e) { return null }`)(argv);
+	}
+	else {
+		return argv;
+	}
+}
+
+export function settopath(argv, path, value) {
+    const chapters = path.split(/\.|\[|\]\./);
+	const res = chapters.slice(0, -1).reduce( (acc, key) => acc[key] || (acc[key] = {}), argv);
+    return res[chapters.slice(-1)[0]] = value;
+}
+
+export function calcsignature(state, prop) {
+    if(prop.length) {
+	    return prop.reduce((acc, key) => {
+		    if(/\[|\]|\./.test(key)) {
+	            settopath( acc, key, getfrompath(state, key) );
+            }
+	        else {
+		        acc[key] = state[key];
+            }
+		    return acc;
+	    }, {});
+    }
+    return state;
+}
 
 export const copy = target => JSON.parse(JSON.stringify(target));
