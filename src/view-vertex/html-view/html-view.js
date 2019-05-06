@@ -91,25 +91,28 @@ export default class HTMLView extends LiveSchema {
 					
 					const _signature = calcsignature(data, this.prop.kit.prop);
 					
-					const modelvertex = new ModelVertex(["$", { source: () => modelstream.map(([state]) => {
-						const childs = getfrompath(state, this.prop.kit.getter);
-						const res = childs.find( child => signature(_signature, child) )
-						return res || [];
-					}).distinct(equal) }]);
+					const modelvertex = new ModelVertex(["$", {
+						glassy: true,
+						source: () => modelstream.map(([state]) => {
+							const childs = getfrompath(state, this.prop.kit.getter);
+							const res = childs.find( child => signature(_signature, child) )
+							return res || [];
+						}).distinct(equal)
+					}]);
 
 					modelvertex.parent = (layers.get(this.acid) || layers.get(-1)).layer;
 
-					layers = new Map([ ...layers, [this.acid, { layer: modelvertex, vars: {} } ]]);
+					const _layers = new Map([ ...layers, [this.acid, { layer: modelvertex, vars: {} } ]]);
 
 					//todo need refactor
 					if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
-						return this.createTeeEntity( { $: { layers },
+						return this.createTeeEntity( { $: { layers: _layers },
 							signature: {..._signature, $: parentContainerSignature },
 							...args
 						} );
 					}
 					else {
-						return this.createNextLayers( { $: { layers },
+						return this.createNextLayers( { $: { layers: _layers },
 							signature: {..._signature, $: parentContainerSignature },
 							...args
 						} );
@@ -166,6 +169,7 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	createEntity( { $: { modelschema,
+		parentViewLayers = [],
 		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) }, ...args
 	} ) {
 		return stream( (emt, { sweep, over }) => {
@@ -224,15 +228,15 @@ export default class HTMLView extends LiveSchema {
 				*/
 				
 				if(this.layers.some( ({ prop: { kit } }) => kit )) {
-					over.add(this.createKitLayer( { $: { layers }, ...args } ).on(emt));
+					over.add(this.createKitLayer( { $: { layers, parentViewLayers }, ...args } ).on(emt));
 				}
 				else {
 					//todo need refactor
 					if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
-						over.add(this.createTeeEntity( { $: { layers }, ...args } ).on(emt));
+						over.add(this.createTeeEntity( { $: { layers, parentViewLayers }, ...args } ).on(emt));
 					}
 					else {
-						over.add(this.createNextLayers( { $: { layers }, ...args } ).on(emt));
+						over.add(this.createNextLayers( { $: { layers, parentViewLayers }, ...args } ).on(emt));
 					}
 				}
 				
@@ -244,16 +248,15 @@ export default class HTMLView extends LiveSchema {
 		return (this.acid+"").indexOf(name) > -1;
 	}
 
-	createLayer(owner, { targets, resources }, args ) {
-		return new Layer( this, owner, { targets, resources }, args );
+	createLayer(owner, { poppet = false, targets, resources }, args ) {
+		return new Layer( this, owner, { poppet, targets, resources }, args );
 	}
 
-	createNextLayers( { $: { layers }, ...args } ) {
+	createNextLayers( { $: { layers, parentViewLayers = [] }, ...args } ) {
 		return stream( (emt, { sweep, over }) => {
 
 			const container = new PlaceHolderContainer(this, { type: "layers" });
-
-			let actives = [];
+			
 			let state = {
 				acids: this.layers.map( ({ acid }) => acid ),
 				acid: this.acid,
@@ -261,15 +264,66 @@ export default class HTMLView extends LiveSchema {
 				key: this.key, 
 				target: container.target
 			};
-			
-			sweep.add( () => actives.map( x => x.clear() ) );
 
+			
+			
 			sweep.add( combine( [
 				...this.layers.map( (layer) =>
-					layer.createNodeEntity( { $: { container, layers }, ...args } )
+					layer.createNodeEntity( { $: { container, layers, parentViewLayers }, ...args } )
 				),
-				this.createChildrenEntity( { $: { container, layers }, ...args } ),
+				this.createChildrenEntity( { $: { container, layers, parentViewLayers }, ...args } ),
 			] ).at( (comps) => {
+				
+				const rlayers = this.layers.map(
+					( layer, i ) => {
+						
+						const targets = [
+							...comps[i].container.targets( "datas", comps[i].resources ),
+							...container.targets("actives", comps[i].resources )
+						];
+						
+						if(targets.length) {
+							return layer.createLayer(
+								{ schema: { model: layers.get(layer.acid) } },
+								{ resources: comps[i].resources, targets },
+								args
+							).stream;
+						}
+						
+						else {
+							parentLayers.push( (targets) => {
+								return layer.createLayer(
+									{ schema: { model: layers.get(layer.acid) } },
+									{ resources: comps[i].resources, targets },
+									args
+								).stream;
+							} );
+						}
+						
+						return null;
+						
+					})
+					.filter( Boolean );
+				
+				if(!rlayers.length) {
+					rlayers.push(this.createLayer(
+						{ schema: null },
+						{ poppet: true, resources: [], targets: [] },
+						{}
+					).stream);
+				}
+				
+				over.add(sync(
+					rlayers,
+					([{ stage: a }], [{ stage: b }]) => a === b,
+					( ...layers ) => [ { ...state, stage: layers[0][0].stage } ]
+				).on( emt ));
+				
+				
+				
+				
+				
+				
 				const children = comps.pop();
 				container.append(...comps.map( ({ container: { target } }) => target));
 				const slots = container.slots();
@@ -315,22 +369,7 @@ export default class HTMLView extends LiveSchema {
 						container.append( ...children.map( ( [{ target }] ) => target ) );
 					}
 				}
-				over.add(sync(this.layers.map(
-					( layer, i ) => layer.createLayer(
-						{ schema: { model: layers.get(layer.acid) } },
-						{ resources: comps[i].resources,
-							targets: [
-								...comps[i].container.targets( "datas", comps[i].resources ),
-								...container.targets("actives", comps[i].resources )
-							],
-						},
-						args
-					).stream),
-					([{ stage: a }], [{ stage: b }]) => a === b,
-					( ...layers ) => [ { ...state, stage: layers[0][0].stage } ]
-				)
-					.on( emt )
-				);
+				
 			}) );
 		} );
 	}
@@ -552,9 +591,12 @@ export default class HTMLView extends LiveSchema {
 		const kit = cutkit(node, key);
         const preload = !["", "true"].includes(node.getAttribute("nopreload"));
         
+        const useOwnerProps = node.parentNode.tagName.toUpperCase() === "UNIT";
+        
 		const keyframes = [];
 
 		const prop = {
+			useOwnerProps,  //has use parentproperties
 			kit,            //kit's container
             tee,            //switch mode
             preload,        //must be fully loaded before readiness
@@ -748,7 +790,7 @@ function cuttee(node, key) {
 	}
 }
 
-const REG_GETTER_KIT = /\(([a-zA-Z0-9\.\-\[\]]+)\)?\{([a-zA-Z0-9\.\-\[\]\,]+)\}?/;
+const REG_GETTER_KIT = /(?:\(([a-zA-Z0-9\.\-\[\]]+)\))?(?:\{([a-zA-Z0-9\.\-\[\]\,]+)\})?/;
 
 function cutkit(node, key) {
 	const raw = node.getAttribute("kit");
@@ -759,8 +801,8 @@ function cutkit(node, key) {
 		return { getter: null, prop: [] };
 	}
 	else {
-		const [_, getter, rawSignature] = raw.match(REG_GETTER_KIT);
-		return { getter, prop: rawSignature.split(",") };
+		const [_, getter, rawSignature = ""] = raw.match(REG_GETTER_KIT);
+		return { getter, prop: rawSignature.split(",").filter(Boolean) };
 	}
 }
 

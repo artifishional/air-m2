@@ -117,7 +117,7 @@ export function equal(a, b) {
         }
         return false;
     }
-}
+};
 
 export function signature(sign, target) {
 
@@ -137,7 +137,7 @@ export function signature(sign, target) {
         }
         return false;
     }
-}
+};
 
 export function getfrompath(argv, path) {
 	if(path) {
@@ -155,7 +155,7 @@ export function settopath(argv, path, value) {
 }
 
 export function calcsignature(state, prop) {
-    if(prop.length) {
+	if(prop.length) {
 	    return prop.reduce((acc, key) => {
 		    if(/\[|\]|\./.test(key)) {
 	            settopath( acc, key, getfrompath(state, key) );
@@ -166,7 +166,7 @@ export function calcsignature(state, prop) {
 		    return acc;
 	    }, {});
     }
-    return state;
+	return state;
 }
 
 export const copy = target => JSON.parse(JSON.stringify(target));

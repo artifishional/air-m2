@@ -17,10 +17,12 @@ export default class Layer {
 		return animate( targets, keyframes, this.layer.prop.key );
 	}
 
-    constructor( layer, { schema }, { targets, resources }, { signature }) {
+    constructor( layer, { schema }, { poppet, targets, resources }, { signature }) {
 
+		this.poppet = poppet;
+		
 		this.layer = layer;
-
+		
 		this.signature = signature;
 
 		//super( owner, { stream: { model, view, update }, targets } );
@@ -70,7 +72,7 @@ export default class Layer {
 					emt( [ this.state ] );
 				}
 			} ));
-			if(checkModelNecessity( { layer, targets } )) {
+			if(!this.poppet && checkModelNecessity( { layer, targets } )) {
 				sweep.add( this.handler = combine([
 					this.schema.model.layer.obtain("", this.schema.model.vars),
 					this.schema.model.layer.obtain("#intl"),
@@ -140,7 +142,7 @@ export default class Layer {
 			this.layer.prop.handlers.find( ({ name }) => event.type === name ).hn.call(
 				event.target,
 				event,
-				this.props,
+				this.layer.prop,
 				null, //({...args} = {}) => this.handler({ dissolve: false, ...args }),
 				this.layer.prop.key,
 				this.signature,

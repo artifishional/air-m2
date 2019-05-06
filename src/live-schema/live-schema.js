@@ -100,7 +100,12 @@ export default class LiveSchema extends Schema {
                 return this.parent._get({route: [key, ...route]}, from);
             }
             if (key === "..") {
-                return this.parent._get({route}, from);
+                if(this.prop.glassy) {
+	                return this.parent._get({route: [ key, ...route ]}, from);
+                }
+                else {
+	                return this.parent._get({route}, from);
+                }
             }
             else {
                 return stream((emt, { over }) =>
