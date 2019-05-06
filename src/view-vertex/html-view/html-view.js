@@ -58,6 +58,7 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	createKitLayer( { $: { modelschema,
+		parentViewLayers,
 		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) },
 		signature: parentContainerSignature = null,
 		...args
@@ -106,13 +107,13 @@ export default class HTMLView extends LiveSchema {
 
 					//todo need refactor
 					if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
-						return this.createTeeEntity( { $: { layers: _layers },
+						return this.createTeeEntity( { $: { layers: _layers, parentViewLayers },
 							signature: {..._signature, $: parentContainerSignature },
 							...args
 						} );
 					}
 					else {
-						return this.createNextLayers( { $: { layers: _layers },
+						return this.createNextLayers( { $: { layers: _layers, parentViewLayers },
 							signature: {..._signature, $: parentContainerSignature },
 							...args
 						} );
@@ -168,10 +169,14 @@ export default class HTMLView extends LiveSchema {
 
 	}
 
-	createEntity( { $: { modelschema,
-		parentViewLayers = [],
+	createEntity( { $: {
+		modelschema,
+		parentViewLayers,
 		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) }, ...args
 	} ) {
+		if(!this.prop.useOwnerProps) {
+			parentViewLayers = [];
+		}
 		return stream( (emt, { sweep, over }) => {
 			let state = { stage: 0, target: null, active: false };
 			const clayers = new Map(this.layers.map(
@@ -265,45 +270,59 @@ export default class HTMLView extends LiveSchema {
 				target: container.target
 			};
 
-			
-			
+			const currentCommonViewLayers = parentViewLayers;
+			parentViewLayers = [ ...parentViewLayers ];
+
+			parentViewLayers.push(...this.layers.map(
+				( layer ) => ({ schema: { model: layers.get(layer.acid) }, layer })
+			));
+
 			sweep.add( combine( [
-				...this.layers.map( (layer) =>
-					layer.createNodeEntity( { $: { container, layers, parentViewLayers }, ...args } )
-				),
+				...this.layers.map( (layer) => layer.createNodeEntity(  ) ),
 				this.createChildrenEntity( { $: { container, layers, parentViewLayers }, ...args } ),
 			] ).at( (comps) => {
-				
-				const rlayers = this.layers.map(
-					( layer, i ) => {
-						
+
+
+				const children = comps.pop();
+				container.append(...comps.map( ({ container: { target } }) => target));
+
+
+				let rlayers = [];
+
+				rlayers.push(...this.layers
+					.map( ( layer, i ) => {
+
 						const targets = [
 							...comps[i].container.targets( "datas", comps[i].resources ),
 							...container.targets("actives", comps[i].resources )
 						];
-						
+
 						if(targets.length) {
 							return layer.createLayer(
 								{ schema: { model: layers.get(layer.acid) } },
-								{ resources: comps[i].resources, targets },
+								{ resources: [], targets },
 								args
 							).stream;
 						}
-						
-						else {
-							parentLayers.push( (targets) => {
-								return layer.createLayer(
-									{ schema: { model: layers.get(layer.acid) } },
-									{ resources: comps[i].resources, targets },
-									args
-								).stream;
-							} );
-						}
-						
+
 						return null;
-						
+
 					})
-					.filter( Boolean );
+					.filter( Boolean )
+				);
+
+				const targets = [ ...container.targets("actives", [] ) ];
+
+				if(targets.length) {
+					
+					rlayers.push( ...currentCommonViewLayers.map( ({ layer, schema }) => {
+						return layer.createLayer(
+							{ schema },
+							{ resources: [], targets },
+							args
+						).stream;
+					} ) );
+				}
 				
 				if(!rlayers.length) {
 					rlayers.push(this.createLayer(
@@ -312,69 +331,50 @@ export default class HTMLView extends LiveSchema {
 						{}
 					).stream);
 				}
-				
-				over.add(sync(
-					rlayers,
-					([{ stage: a }], [{ stage: b }]) => a === b,
-					( ...layers ) => [ { ...state, stage: layers[0][0].stage } ]
-				).on( emt ));
-				
-				
-				
-				
-				
-				
-				const children = comps.pop();
-				container.append(...comps.map( ({ container: { target } }) => target));
-				const slots = container.slots();
 
+
+				const slots = container.slots();
 				if(children.length) {
 					if(slots.length) {
-
-
-
-						//if(_slots.size !== children.length) debugger;
-
 						children.map( ([{ target, acids }]) => {
-
 							const place = slots
 								.filter( ({ acid }) => acids.includes(acid) )
 								.reduce(( exist, {slot, acid} ) => {
-								//const acid = slot.getAttribute("acid");
-
-								if(!exist) {
-									exist = slot;
-									//cache.set(acid, slot);
-								}
-								else if(
-									exist.parentNode.nodeType !== NODE_TYPES.ELEMENT_NODE &&
-									slot.parentNode.nodeType === NODE_TYPES.ELEMENT_NODE
-								) {
-									exist.remove();
-									exist = slot;
-									//cache.set(acid, slot);
-								}
-								else {
-									slot.remove();
-								}
-								return exist;
-							}, null);
-
-
+									if(!exist) {
+										exist = slot;
+									}
+									else if(
+										exist.parentNode.nodeType !== NODE_TYPES.ELEMENT_NODE &&
+										slot.parentNode.nodeType === NODE_TYPES.ELEMENT_NODE
+									) {
+										exist.remove();
+										exist = slot;
+									}
+									else {
+										slot.remove();
+									}
+									return exist;
+								}, null);
 							place.replaceWith( target );
 						} );
-						
 					}
 					else {
 						container.append( ...children.map( ( [{ target }] ) => target ) );
 					}
 				}
-				
+
+				over.add(sync(
+					rlayers,
+					([{ stage: a }], [{ stage: b }]) => a === b,
+					( ...layers ) => [ { ...state, stage: layers[0][0].stage } ]
+				).on( emt ));
+
+
 			}) );
 		} );
 	}
 
-	createNodeEntity( ) {
+	createNodeEntity() {
 		return stream( (emt, { sweep }) => {
 			sweep.add(combine( this.prop.resources ).at( ( resources ) => {
 				const container = new PlaceHolderContainer( this, { type: "node" } );
@@ -392,7 +392,7 @@ export default class HTMLView extends LiveSchema {
 		return this.layers.every( ({ acid, prop: { tee } }) => signature( tee, layers.get(acid) ) );
 	}
 
-	createTeeEntity( { $: { layers }, ...args } ) {
+	createTeeEntity( { $: { layers, parentViewLayers }, ...args } ) {
 
 		const teeLayers = this.layers
 			.filter( ({ prop: { tee } }) => tee )
@@ -442,7 +442,7 @@ export default class HTMLView extends LiveSchema {
 			}*/
 
 			let _inner = null;
-			const view = this.createNextLayers( { $: { layers }, ...args } );
+			const view = this.createNextLayers( { $: { layers, parentViewLayers }, ...args } );
 			sweep.add( modelschema.at( (data) => {
 				const connect = () => {
 					sweep.add( childHook = view
@@ -519,10 +519,10 @@ export default class HTMLView extends LiveSchema {
 		});
 	}
 
-	createChildrenEntity( { $: { container: { target, begin }, layers }, ...args } ) {
+	createChildrenEntity( { $: { layers, parentViewLayers }, ...args } ) {
 		return combine( this.item
 			.filter( ({ prop: { template } }) => !template )
-			.map(x => x.obtain( "", { $: { layers }, ...args } ))
+			.map(x => x.obtain( "", { $: { layers, parentViewLayers }, ...args } ))
 		);
 	}
 	
@@ -592,11 +592,21 @@ export default class HTMLView extends LiveSchema {
         const preload = !["", "true"].includes(node.getAttribute("nopreload"));
         
         const useOwnerProps = node.parentNode.tagName.toUpperCase() === "UNIT";
-        
+
+        const controlled = [ ...node.childNodes ].some( node => {
+			if(node.nodeType === 1 && !["UNIT", "PLUG", "STYLE"].includes(node.tagName.toUpperCase())) {
+				return true;
+			}
+			else if( node.nodeType === 3 && node.nodeValue[0] === "{" ) {
+				return true;
+			}
+		} );
+
 		const keyframes = [];
 
 		const prop = {
-			useOwnerProps,  //has use parentproperties
+			controlled,     //has one or more active childrens (text or node)
+			useOwnerProps,  //must consider parent props
 			kit,            //kit's container
             tee,            //switch mode
             preload,        //must be fully loaded before readiness
@@ -636,6 +646,12 @@ export default class HTMLView extends LiveSchema {
 	mergeProperties( name, value ) {
 		if(name === "stream") {
 			return this.prop.stream;
+		}
+		else if(name === "useOwnerProps") {
+			return value || this.prop.useOwnerProps;
+		}
+		else if(name === "controlled") {
+			return value || this.prop.controlled;
 		}
 		/*else if(name === "template") {
 			return this.prop.template || value;
