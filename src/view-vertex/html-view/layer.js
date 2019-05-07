@@ -72,6 +72,7 @@ export default class Layer {
 					emt( [ this.state ] );
 				}
 			} ));
+
 			if(!this.poppet && checkModelNecessity( { layer, targets } )) {
 				sweep.add( this.handler = combine([
 					this.schema.model.layer.obtain("", this.schema.model.vars),
@@ -99,6 +100,11 @@ export default class Layer {
 			}
 			sweep.add( () => this.clear() );
 		} );
+
+		this.stream = this.layer.prop.plug.reduce( (acc, plug) => {
+			this.stream = plug( { source: acc, schema, resources, targets } );
+		}, this.stream );
+
     }
 
 	complete(emt) {

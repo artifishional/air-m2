@@ -1,0 +1,1 @@
+export const VIEW_PLUGINS = new Map();

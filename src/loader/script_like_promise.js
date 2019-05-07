@@ -1,3 +1,5 @@
+import { VIEW_PLUGINS } from "../globals"
+
 class ModuleLoadEvent extends Event {
 
     constructor({ module, script }) {
@@ -10,7 +12,11 @@ class ModuleLoadEvent extends Event {
 
 Object.defineProperty(window, "__m2unit__", {
     set(module) {
-        window.dispatchEvent(new ModuleLoadEvent({ module, script: document.currentScript }));
+        const script = document.currentScript;
+        if(VIEW_PLUGINS.has(script)) {
+            VIEW_PLUGINS.set( script, [ ...VIEW_PLUGINS.get(script), module ] )
+        }
+        window.dispatchEvent(new ModuleLoadEvent({ module, script }));
     }
 });
 

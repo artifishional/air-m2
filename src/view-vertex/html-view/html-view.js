@@ -1,4 +1,5 @@
 import { BOOLEAN } from "../../def"
+import { VIEW_PLUGINS } from "../../globals"
 import { stream, combine, keyF, sync } from "air-stream"
 import {
 	equal,
@@ -48,6 +49,7 @@ export default class HTMLView extends LiveSchema {
 		this.prop.stream = this.prop.stream || "";
 		this.prop.handlers = this.prop.handlers || [];
 		this.prop.tee = this.prop.tee || null;
+		this.prop.plug = this.prop.plug || [];
 		this.prop.keyframes = this.prop.keyframes || [];
 		this.prop.node = this.prop.node || document.createDocumentFragment();
 		this.traits = [];
@@ -602,9 +604,21 @@ export default class HTMLView extends LiveSchema {
 			}
 		} );
 
+        [...node.querySelectorAll("script")]
+			.map( script => {
+
+				const src = document.createElement("script");
+				src.textContent = script.textContent;
+				
+
+			} );
+
+        const plug = VIEW_PLUGINS.get(node);
+
 		const keyframes = [];
 
 		const prop = {
+			plug,			//view plugins
 			controlled,     //has one or more active childrens (text or node)
 			useOwnerProps,  //must consider parent props
 			kit,            //kit's container
@@ -660,6 +674,7 @@ export default class HTMLView extends LiveSchema {
 			return [ ...this.prop.tee, ...value];
 		}*/
 		else if([
+			"plug",
 			"kit",
 			"preload",
 			"key",
