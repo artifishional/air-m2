@@ -275,10 +275,19 @@ export default class HTMLView extends LiveSchema {
 			const currentCommonViewLayers = parentViewLayers;
 			parentViewLayers = [ ...parentViewLayers ];
 
-			parentViewLayers.push(...this.layers.map(
-				( layer ) => ({ schema: { model: layers.get(layer.acid) }, layer })
-			));
-
+			parentViewLayers.push(...this.layers
+				.map( ( layer ) => {
+					if([
+						layer.prop.handlers.length,
+						layer.prop.keyframes.length,
+						layer.prop.plug.length,
+					].some(Boolean)) {
+						return { schema: { model: layers.get(layer.acid) }, layer };
+					}
+				})
+				.filter( Boolean )
+			);
+			
 			sweep.add( combine( [
 				...this.layers.map( (layer) => layer.createNodeEntity(  ) ),
 				this.createChildrenEntity( { $: { container, layers, parentViewLayers }, ...args } ),
@@ -401,10 +410,7 @@ export default class HTMLView extends LiveSchema {
 			.map( ({ acid }) => acid );
 
 		const teeStreamLayers = new Map([...layers].filter( ([acid]) => teeLayers.includes(acid) ));
-
-
-
-		//выбрать те слои с данными, в которых присутсвует tee
+		
 		const modelschema = combine(
 			[...teeStreamLayers].map( ([, { layer, vars } ]) => layer.obtain("", vars) ),
 			(...layers) => layers.map( ly => Array.isArray(ly) ? ly[0] : ly )
@@ -555,9 +561,9 @@ export default class HTMLView extends LiveSchema {
 		}
 		
 		const handlers = [ ...node.attributes ]
-			.filter( ({ name }) => events.includes(name) )
+			.filter( ({ name }) => events.includes(name) || name.indexOf("on:") === 0 )
 			.map( ({ name, value }) => ({
-				name: name.replace(/^on/, ""),
+				name: name.replace(/^on(:)?/, ""),
 				hn: new Function("event", "options", "request", "key", "signature", "req", value )
 			}) );
 		
@@ -603,21 +609,20 @@ export default class HTMLView extends LiveSchema {
 				return true;
 			}
 		} );
-
-        [...node.querySelectorAll("view-source")]
+		
+		const plug = [...node.querySelectorAll("view-source")]
 			.map( plug => {
 				const src = document.createElement("script");
 				VIEW_PLUGINS.set(src, null);
 				src.textContent = plug.textContent;
 				document.head.append( src );
-				const res = VIEW_PLUGINS.get(src);
+				const res = VIEW_PLUGINS.get(src).default;
+				VIEW_PLUGINS.delete(src);
 				plug.remove();
 				src.remove();
 				return res;
 			} );
-
-        const plug = VIEW_PLUGINS.get(node);
-
+        
 		const keyframes = [];
 
 		const prop = {
@@ -633,7 +638,7 @@ export default class HTMLView extends LiveSchema {
 			template,       //template node
 			id,             //tree m2 advantages id
 			type,           //view node type [node -> unit, switcher -> tee]
-			//source,         //m2 advantages source path if module
+			//source,       //m2 advantages source path if module
 			handlers,       //event handlers
 			path,           //absolute path
 			node,           //xml target node
@@ -641,7 +646,7 @@ export default class HTMLView extends LiveSchema {
 			stream,         //link to model stream todo obsolete io
 			resources,      //related resources
 		};
-
+		
 		const res = src.acid !== -1 && src.lift( [ uvk, prop ], src, { acid } ) ||
 			new HTMLView( [ uvk, prop ], src, { acid } );
 		

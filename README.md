@@ -1,26 +1,29 @@
 # m2
 
-## Plugging
+## Inline plugging
 
 the simplest plug-in has the form:
 
-```js
+```html
+<unit>
+    <view-source> 
+ ```
+ 
+ ```js
 import { stream } from "m2"
-
-export default () => stream((emt, { hook }) => {
-
-    const target = document.createElement("div");
-    target.textContent = "this is a plugin";
-
-    //when the component is fully loaded and ready to work
-    emt( { action: "complete", node: { target } } );
-
-    //controller
-    hook.add( ({action}) => {
-        emt( { action: `${action}-complete`,  } );
-    } );
-
-});
+ 
+export default ({ source/*, targets */}) => {
+        return stream( (emt, { over }) => {
+            over.add(source.on((evt, src) => {
+                emt(evt, src);
+            }));
+        } );
+    }
+```
+ 
+```html
+    </view-source>
+</unit>
 ```
 
 ## View engine
@@ -179,6 +182,45 @@ where environment variables:
 - ``` "onkeyup" ```
 - ``` "onwheel" ```
 - ``` "onscroll" ```
+
+    also supported custom events
+
+- ``` "on:custom-event" ```
+
+    [Creating and triggering events in JavaScript](https://developer.mozilla.org/en-US/docs/Web/Guide/Events/Creating_and_triggering_events)
+    
+```html
+<view-source>
+```
+```
+import { stream } from "m2"
+
+        class MyEvent extends Event {
+            constructor() {
+                super("my-event");
+                this.myData = 100;
+            }
+            log() {
+                console.log("check", this);
+            }
+        }
+
+        export default ({ source, targets }) => {
+            return stream( (emt, { over }) => {
+
+                over.add(source.on((evt, src) => {
+
+                    setTimeout( () => {
+                        targets[0].node.dispatchEvent(new MyEvent());
+                    }, 1000);
+
+                    emt(evt, src);
+
+                }));
+            } );
+        }
+``` 
+```</view-source>``` 
 
 ### Switcher
 

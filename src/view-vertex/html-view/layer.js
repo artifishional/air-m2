@@ -102,7 +102,7 @@ export default class Layer {
 		} );
 
 		this.stream = this.layer.prop.plug.reduce( (acc, plug) => {
-			this.stream = plug( { source: acc, schema, resources, targets } );
+			return plug( { source: acc, schema, resources, targets } );
 		}, this.stream );
 
     }
@@ -115,11 +115,6 @@ export default class Layer {
 	}
 
 	handleEvent(event) {
-		
-		if(event.type === "pointerleave") {
-			console.log(event);
-		}
-		
 		if(event.currentTarget === window) {
 			if(
 				event.type === "click" &&
