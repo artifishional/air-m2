@@ -604,13 +604,16 @@ export default class HTMLView extends LiveSchema {
 			}
 		} );
 
-        [...node.querySelectorAll("script")]
-			.map( script => {
-
+        [...node.querySelectorAll("view-source")]
+			.map( plug => {
 				const src = document.createElement("script");
-				src.textContent = script.textContent;
-				
-
+				VIEW_PLUGINS.set(src, null);
+				src.textContent = plug.textContent;
+				document.head.append( src );
+				const res = VIEW_PLUGINS.get(src);
+				plug.remove();
+				src.remove();
+				return res;
 			} );
 
         const plug = VIEW_PLUGINS.get(node);

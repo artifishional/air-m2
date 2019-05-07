@@ -14,7 +14,7 @@ Object.defineProperty(window, "__m2unit__", {
     set(module) {
         const script = document.currentScript;
         if(VIEW_PLUGINS.has(script)) {
-            VIEW_PLUGINS.set( script, [ ...VIEW_PLUGINS.get(script), module ] )
+            VIEW_PLUGINS.set( script, module );
         }
         window.dispatchEvent(new ModuleLoadEvent({ module, script }));
     }
