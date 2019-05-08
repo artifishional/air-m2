@@ -14,7 +14,7 @@ import JSON5 from "json5"
 import { LiveSchema } from "../../live-schema"
 import resource from "../../loader/resource"
 import { NODE_TYPES } from "./def"
-import Layer from "./layer"
+import { Layer, BaseLayer } from "./layer"
 import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
 import { ModelVertex } from "../../model-vertex"
@@ -256,7 +256,10 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	createLayer(owner, { poppet = false, targets, resources }, args ) {
-		return new Layer( this, owner, { poppet, targets, resources }, args );
+		if(poppet) {
+			return new BaseLayer( this, { targets } );
+		}
+		return new Layer( this, owner, { targets, resources }, args );
 	}
 
 	createNextLayers( { $: { layers, parentViewLayers = [] }, ...args } ) {

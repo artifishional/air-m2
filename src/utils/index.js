@@ -54,7 +54,10 @@ export function argvroute( route ) {
     );
 }
 
+const EMPTY_ROUTE = { route: [] };
+
 export function routeNormalizer(route) {
+    if(!route) return EMPTY_ROUTE;
     try {
         return {
             route: route.split("/")
