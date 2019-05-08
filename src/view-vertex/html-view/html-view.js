@@ -868,7 +868,7 @@ function img() {
  */
 function is( node, name ) {
 	name = name.toUpperCase();
-	return [ `M2-${name}`, name ].includes( node.tagName );
+	return [ `M2-${name}`, name ].includes( node.tagName.toUpperCase() );
 }
 
 //the workaround is tied to the querySelectorAll,

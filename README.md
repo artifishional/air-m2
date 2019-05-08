@@ -343,3 +343,4 @@ the simplest path has the form:
 - ``` "./{name: abc, kind: 10}" ``` - directories with a complex name
 - ``` "./cat-a[kind=10]" ``` - passing arguments
 - ``` "./#component-id" ``` - search by id
+- ``` "./@component-key" ``` - search by key

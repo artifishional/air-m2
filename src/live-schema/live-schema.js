@@ -34,6 +34,10 @@ export default class LiveSchema extends Schema {
         return this.item.find( ({prop}) => prop.id === id );
     }
 
+    findByKey(key) {
+        return this.item.find( ({key:x}) => x === key );
+    }
+
     /**
      * todo temporary solution
      * the parser should create layers with packages
@@ -85,7 +89,14 @@ export default class LiveSchema extends Schema {
 
     _get({route: [key, ...route]}, from = {src: this, route: [key, ...route] }) {
         if (key) {
-            if(key[0] === "#") {
+            if(key[0] === "@") {
+                if(this.key === key.substr(1)) return this._get({route}, from);
+                const exist = this.findByKey(key.substr(1));
+                if(exist) return exist._get({route}, from);
+                if(!this.parent) throw `module "@${key}" not found from ${from}`;
+                return this.parent._get({route: [key, ...route]}, from);
+            }
+            else if(key[0] === "#") {
                 if(this.id === key) return this._get({route}, from);
                 const exist = this.findId(key.substr(1));
                 if(exist) return exist._get({route}, from);
