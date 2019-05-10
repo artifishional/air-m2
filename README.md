@@ -2,7 +2,7 @@
 
 ## Inline plugging
 
-####view plugin
+#### view plugin
 
 the simplest plug-in has the form:
 
@@ -28,7 +28,7 @@ export default ({ source/*, targets */}) => {
 </unit>
 ```
 
-####stream plugin
+#### stream plugin
 
 you can also modify the data stream before use:
 
