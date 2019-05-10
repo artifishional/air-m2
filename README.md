@@ -41,9 +41,7 @@ you can also modify the data stream before use:
 import { stream } from "m2"
  
 export default ({ obtain }) => 
-	stream( (emt, { over }) => {
-        over.add(obtain().map( data => [data] ));
-    } );
+	obtain().map( data => [data] )
 ```
  
 ```html
