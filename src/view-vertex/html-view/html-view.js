@@ -50,6 +50,7 @@ export default class HTMLView extends LiveSchema {
 		this.prop.handlers = this.prop.handlers || [];
 		this.prop.tee = this.prop.tee || null;
 		this.prop.plug = this.prop.plug || [];
+		this.prop.streamplug = this.prop.streamplug || [];
 		this.prop.keyframes = this.prop.keyframes || [];
 		this.prop.node = this.prop.node || document.createDocumentFragment();
 		this.traits = [];
@@ -180,44 +181,46 @@ export default class HTMLView extends LiveSchema {
 			parentViewLayers = [];
 		}
 		return stream( (emt, { sweep, over }) => {
-			let state = { stage: 0, target: null, active: false };
-			const clayers = new Map(this.layers.map(
-				({ acid: _acid, src: { acid }, prop: { stream } }, i, arr) => {
-					if(stream[0] === "^") {
-						const eLayer =
-							arr.slice(0, i).find( ({ prop: { stream } }) => stream[0] !== "^" );
-						if(!eLayer) {
-							throw `the first view layer cannot refer to the predecessor stream`
+			const clayers = new Map(
+				this.layers.map(
+					({ acid: _acid, src: { acid }, prop: { streamplug, stream } }, i, arr) => {
+						let layer = null;
+						let vars = null;
+						let resultStreamPath = "";
+						if(stream[0] === "^") {
+							const eLayer =
+								arr.slice(0, i).find( ({ prop: { stream } }) => stream[0] !== "^" );
+							if(!eLayer) {
+								throw `the first view layer cannot refer to the predecessor stream`
+							}
+							const { src: { acid }, prop: { stream: pstream } } = eLayer;
+							//stream inheritance
+							if(pstream === "" && !stream.substr(1)) {
+								layer = layers.get(acid).layer;
+								vars = layers.get(acid).vars;
+							}
+							resultStreamPath = pstream + stream.substr(1);
+							layer = layers.get(acid).layer;
+							vars = routeNormalizer(pstream + stream.substr(1));
 						}
-						const { src: { acid }, prop: { stream: pstream } } = eLayer;
-						
-						//stream inheritance
-						if(pstream === "" && !stream.substr(1)) {
-							return [ _acid, {
-								layer: layers.get(acid).layer.get(""),
-								vars: layers.get(acid).vars,
-							}];
+						if(stream === "") {
+							resultStreamPath = stream;
+							layer = layers.get(acid).layer;
+							vars = layers.get(acid).vars;
 						}
-						
-						return [_acid, {
-							layer: layers.get(acid).layer.get( pstream + stream.substr(1) ),
-							vars: routeNormalizer(pstream + stream.substr(1)),
-						}];
-					}
-					if(stream === "") {
-						return [ _acid, {
-							layer: layers.get(acid).layer.get(stream),
-							vars: layers.get(acid).vars,
-						}];
-					}
-					else {
-						return [_acid, {
-							layer: (layers.get(acid) || [...layers][0][1] ).layer.get(stream),
-							vars: routeNormalizer(stream),
-						}];
-					}
-				}
-			));
+						else {
+							resultStreamPath = stream;
+							layer = (layers.get(acid) || [...layers][0][1] ).layer;
+							vars = routeNormalizer(stream);
+						}
+						layer = streamplug.reduce( (acc, source) => {
+							const res = new ModelVertex(["$", { glassy: true, source }]);
+							res.parent = acc;
+							return res;
+						}, layer);
+						return [_acid, { layer: layer.get(resultStreamPath), vars }];
+					})
+			);
 			sweep.add( combine(
 				[...clayers].map( ([, { layer } ]) => layer ),
 				(...layers) => new Map([ ...clayers].map( ([ acid, { vars: { route, ...vars } } ], i) => [
@@ -270,7 +273,8 @@ export default class HTMLView extends LiveSchema {
 			let state = {
 				acids: this.layers.map( ({ acid }) => acid ),
 				acid: this.acid,
-				stage: 0, container, 
+				stage: 0,
+				container,
 				key: this.key, 
 				target: container.target
 			};
@@ -293,7 +297,7 @@ export default class HTMLView extends LiveSchema {
 			
 			sweep.add( combine( [
 				...this.layers.map( (layer) => layer.createNodeEntity(  ) ),
-				this.createChildrenEntity( { $: { container, layers, parentViewLayers }, ...args } ),
+				this.createChildrenEntity( { $: { layers, parentViewLayers }, ...args } ),
 			] ).at( (comps) => {
 
 
@@ -613,6 +617,19 @@ export default class HTMLView extends LiveSchema {
 			}
 		} );
 		
+		const streamplug = [...node.querySelectorAll("stream-source")]
+			.map( plug => {
+				const src = document.createElement("script");
+				VIEW_PLUGINS.set(src, null);
+				src.textContent = plug.textContent;
+				document.head.append( src );
+				const res = VIEW_PLUGINS.get(src).default;
+				VIEW_PLUGINS.delete(src);
+				plug.remove();
+				src.remove();
+				return res;
+			} );
+		
 		const plug = [...node.querySelectorAll("view-source")]
 			.map( plug => {
 				const src = document.createElement("script");
@@ -629,7 +646,8 @@ export default class HTMLView extends LiveSchema {
 		const keyframes = [];
 
 		const prop = {
-			plug,			//view plugins
+			streamplug,		//stream inline plugins
+			plug,			//view inline plugins
 			controlled,     //has one or more active childrens (text or node)
 			useOwnerProps,  //must consider parent props
 			kit,            //kit's container
@@ -685,6 +703,7 @@ export default class HTMLView extends LiveSchema {
 			return [ ...this.prop.tee, ...value];
 		}*/
 		else if([
+			"streamplug",
 			"plug",
 			"kit",
 			"preload",

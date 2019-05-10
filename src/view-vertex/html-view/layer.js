@@ -29,10 +29,11 @@ export class BaseLayer {
 					this.animateHandler({ data: [ {}, { action: "fade-out" } ] });
 				}
 			} );
-
+			/*
 			this.loaderTimeoutID = setTimeout( () =>
 				console.warn(`too long loading layer`, this.layer), 5000
 			);
+			*/
 			sweep.add(this.animateHandler = this.animateStream.at( ({ action }) => {
 				if(action === "fade-out-complete") {
 					this.state = { ...this.state, stage: 1 };
@@ -55,7 +56,7 @@ export class BaseLayer {
 	clear() { }
 
 	complete(emt) {
-		clearTimeout(this.loaderTimeoutID);
+		//clearTimeout(this.loaderTimeoutID);
 		this.state = { ...this.state, stage: 1 };
 		emt.kf();
 		emt([this.state, {action: "complete", data: null}]);
