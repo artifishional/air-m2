@@ -196,14 +196,17 @@ export default class HTMLView extends LiveSchema {
 							const { src: { acid }, prop: { stream: pstream } } = eLayer;
 							//stream inheritance
 							if(pstream === "" && !stream.substr(1)) {
+								resultStreamPath = stream;
 								layer = layers.get(acid).layer;
 								vars = layers.get(acid).vars;
 							}
-							resultStreamPath = pstream + stream.substr(1);
-							layer = layers.get(acid).layer;
-							vars = routeNormalizer(pstream + stream.substr(1));
+							else {
+								resultStreamPath = pstream + stream.substr(1);
+								layer = layers.get(acid).layer;
+								vars = routeNormalizer(pstream + stream.substr(1));
+							}
 						}
-						if(stream === "") {
+						else if(stream === "") {
 							resultStreamPath = stream;
 							layer = layers.get(acid).layer;
 							vars = layers.get(acid).vars;
@@ -767,7 +770,7 @@ function pathParser(str) {
 		.filter( Boolean )
 }
 
-const REG_GETTER_ATTRIBUTE = /\(([a-zA-Z_]{1}[\[\]\.a-zA-Z\-_0-9]*?)\)/g;
+const REG_GETTER_ATTRIBUTE = /\(([a-zA-Z_][\[\]\.a-zA-Z\-_0-9]*?)\)/g;
 
 
 function parseKeyProps( { classList, ...prop } ) {
