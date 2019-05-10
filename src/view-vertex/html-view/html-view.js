@@ -53,7 +53,6 @@ export default class HTMLView extends LiveSchema {
 		this.prop.streamplug = this.prop.streamplug || [];
 		this.prop.keyframes = this.prop.keyframes || [];
 		this.prop.node = this.prop.node || document.createDocumentFragment();
-		this.traits = [];
 	}
 
 	createActiveNodeTarget(node, resources) {
@@ -99,7 +98,7 @@ export default class HTMLView extends LiveSchema {
 						glassy: true,
 						source: () => modelstream.map(([state]) => {
 							const childs = getfrompath(state, this.prop.kit.getter);
-							const res = childs.find( child => signature(_signature, child) )
+							const res = childs.find( child => signature(_signature, child) );
 							return res || [];
 						}).distinct(equal)
 					}]);
@@ -129,7 +128,7 @@ export default class HTMLView extends LiveSchema {
 
 			const store = [];
 			
-			sweep.add(modelstream.at( ([ state, { action = "default" } = {} ]) => {
+			sweep.add(modelstream.at( ([ state ]) => {
 				
 				const childs = getfrompath(state, this.prop.kit.getter);
 				
@@ -137,7 +136,7 @@ export default class HTMLView extends LiveSchema {
 				
 				const deleted = [ ...store];
 
-				childs.map( (child, index) => {
+				childs.map( child => {
 					const _signature = calcsignature(child, this.prop.kit.prop);
 					const exist = store.find( ({ signature: $ }) => signature(_signature, $ ) );
 					if(!exist) {
@@ -160,7 +159,7 @@ export default class HTMLView extends LiveSchema {
 				} );
 				
 				deleted.map( ({ box, signature: $ }) => {
-					const deleted = store.findIndex( ({ signature, box }) => equal([], signature, $));
+					const deleted = store.findIndex( ({ signature }) => equal([], signature, $));
 					store.splice(deleted, 1);
 					box.remove();
 				} );
@@ -360,7 +359,7 @@ export default class HTMLView extends LiveSchema {
 						children.map( ([{ target, acids }]) => {
 							const place = slots
 								.filter( ({ acid }) => acids.includes(acid) )
-								.reduce(( exist, {slot, acid} ) => {
+								.reduce(( exist, {slot} ) => {
 									if(!exist) {
 										exist = slot;
 									}
@@ -426,18 +425,13 @@ export default class HTMLView extends LiveSchema {
 			(...layers) => layers.map( ly => Array.isArray(ly) ? ly[0] : ly )
 		);
 
-		return stream( (emt, { sweep, hook }) => {
-
+		return stream( (emt, { sweep }) => {
 			let state = {
 				acids: this.layers.map( ({ acid }) => acid ),
 				acid: this.acid, key: this.key, stage: 0, active: false, target: null
 			};
-			let reqState = { stage: 1 };
-			let loaderTarget = null;
-			let loaderHook = null;
 			let childHook = null;
 			let loaderContainer = null;
-
 			const container = new PlaceHolderContainer( this, { type: "entity" } );
 			state.target = container.target;
 			state.container = container;
@@ -470,7 +464,7 @@ export default class HTMLView extends LiveSchema {
 									state = { ...state, load: false };
 									loaderContainer.restore();
 								}
-								const [ { stage, target, container: inner } ] = data;
+								const [ { stage, container: inner } ] = data;
 								_inner = inner;
 								if(state.stage === 0) {
 									state = { ...state, stage: 1 };
@@ -770,7 +764,7 @@ function pathParser(str) {
 		.filter( Boolean )
 }
 
-const REG_GETTER_ATTRIBUTE = /\(([a-zA-Z_][\[\]\.a-zA-Z\-_0-9]*?)\)/g;
+const REG_GETTER_ATTRIBUTE = /\(([a-zA-Z_][\[\].a-zA-Z\-_0-9]*?)\)/g;
 
 
 function parseKeyProps( { classList, ...prop } ) {
@@ -841,22 +835,20 @@ function cuttee(node, key) {
 	else if(rawTee[0] === "{") {
 
 		//autocomplete { value } boolean
-		rawTee = rawTee.replace(/\{\s*([a-zA-Z0-9]+|\"[\-\!\&\$\?\*a-zA-Z0-9]+\")\s*\}/g, (_, vl) => {
+		rawTee = rawTee.replace(/{\s*([a-zA-Z0-9]+|"[\-!&$?*a-zA-Z0-9]+")\s*}/g, (_, vl) => {
 			return "{" +  vl + ":$bool" + "}"
 		});
 
 		return new Function("$bool", "return" + rawTee)(BOOLEAN);
-
-		return JSON5.parse(rawTee);
 	}
 	else {
 		return rawTee;
 	}
 }
 
-const REG_GETTER_KIT = /(?:\(([a-zA-Z0-9\.\-\[\]]+)\))?(?:\{([a-zA-Z0-9\.\-\[\]\,]+)\})?/;
+const REG_GETTER_KIT = /(?:\(([a-zA-Z0-9.\-\[\]]+)\))?(?:{([a-zA-Z0-9.\-\[\],]+)})?/;
 
-function cutkit(node, key) {
+function cutkit(node) {
 	const raw = node.getAttribute("kit");
 	if(raw === null) {
 		return null;
