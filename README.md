@@ -2,6 +2,8 @@
 
 ## Inline plugging
 
+####view plugin
+
 the simplest plug-in has the form:
 
 ```html
@@ -23,6 +25,29 @@ export default ({ source/*, targets */}) => {
  
 ```html
     </view-source>
+</unit>
+```
+
+####stream plugin
+
+you can also modify the data stream before use:
+
+```html
+<unit>
+    <stream-source> 
+ ```
+ 
+ ```js
+import { stream } from "m2"
+ 
+export default ({ obtain }) => 
+	stream( (emt, { over }) => {
+        over.add(obtain().map( data => [data] ));
+    } );
+```
+ 
+```html
+    </stream-source>
 </unit>
 ```
 
