@@ -1,4 +1,5 @@
 import {NODE_TYPES} from "./def"
+import { getfrompath } from "../../utils"
 
 
 class NumberFormat {
@@ -93,15 +94,11 @@ function gtargeting(parent, res = []) {
     return res;
 }
 
-function getfrompath(argv, path) {
-    return new Function(`argv`, `try{ return argv.${path} } catch(e) { return null }`)(argv);
-}
-
 function templater(vl, intl = null, argv, resources) {
     
     function filler(template, argv) {
-        if(template.search(/\([\[\]a-zA-Z\-_.0-9]+\)/) > -1) {
-            return filler(template.replace(/\(([[\]a-zA-Z\-_.0-9]+)\)/g, ( _, path ) => {
+        if(template.search(/\([\[\]a-zA-Z\-_.0-9]*\)/) > -1) {
+            return filler(template.replace(/\(([[\]a-zA-Z\-_.0-9]*)\)/g, ( _, path ) => {
                 return getfrompath( argv, path );
             }), argv);
         }
@@ -110,14 +107,14 @@ function templater(vl, intl = null, argv, resources) {
     
     if(vl.indexOf("intl") === 1) {
         if(!intl) return null;
-        const [_, name, template] = vl.match(/^{intl.([a-zA-Z0-9_\-]+),(.*)}$/);
+        const [_, name, template] = vl.match(/^{intl.([a-zA-Z0-9_\-]*),(.*)}$/);
         const format = getformat( name, resources );
         format.currency = format.currency || intl.currency;
         if(!isNaN(+template)) {
             const formatter = new NumberFormat(intl.locale, format);
             return formatter.format(+template);
         }
-        else if(template.search(/\([\[\]a-zA-Z\-_.0-9]+\)/) > -1) {
+        else if(template.search(/\([\[\]a-zA-Z\-_.0-9]*\)/) > -1) {
             const res = filler(template, argv);
             const formatter = new NumberFormat(intl.locale, format);
             return formatter.format(res);
@@ -143,7 +140,7 @@ function templater(vl, intl = null, argv, resources) {
             return formatter.format(0).replace( "0", templates.join("") );
         }
     }
-    else if(vl.search(/\([\[\]a-zA-Z\-_.0-9]+\)/) > -1) {
+    else if(vl.search(/\([\[\]a-zA-Z\-_.0-9]*\)/) > -1) {
         return vl.replace(/{(.*)}/, (_, lit) => {
             return filler( lit, argv );
         });
@@ -151,7 +148,7 @@ function templater(vl, intl = null, argv, resources) {
     else if(vl.indexOf("lang") === 1) {
         if(!intl) return null;
 
-        const [_, name] = vl.match(/^{lang\.([a-zA-Z0-9_\-]+)}$/);
+        const [_, name] = vl.match(/^{lang\.([a-zA-Z0-9_\-]*)}$/);
         const template = getlang(name, resources, intl);
 
         const templates = gtemplate(template).map( ({ vl, type }) => {

@@ -99,9 +99,17 @@ export default class HTMLView extends LiveSchema {
 						source: () => modelstream.map(([state]) => {
 							const childs = getfrompath(state, this.prop.kit.getter);
 							const res = childs.find( child => signature(_signature, child) );
-							return res || [];
+							return [res] || [];
 						}).distinct(equal)
 					}]);
+					
+					let sign;
+					if(typeof _signature !== "object") {
+						sign = { default: _signature };
+					}
+					else {
+						sign = _signature;
+					}
 
 					modelvertex.parent = (layers.get(this.acid) || layers.get(-1)).layer;
 
@@ -110,13 +118,13 @@ export default class HTMLView extends LiveSchema {
 					//todo need refactor
 					if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
 						return this.createTeeEntity( { $: { layers: _layers, parentViewLayers },
-							signature: {..._signature, $: parentContainerSignature },
+							signature: {...sign, $: parentContainerSignature },
 							...args
 						} );
 					}
 					else {
 						return this.createNextLayers( { $: { layers: _layers, parentViewLayers },
-							signature: {..._signature, $: parentContainerSignature },
+							signature: {...sign, $: parentContainerSignature },
 							...args
 						} );
 					}
@@ -857,7 +865,7 @@ function cutkit(node) {
 		return { getter: null, prop: [] };
 	}
 	else {
-		const [_, getter, rawSignature = ""] = raw.match(REG_GETTER_KIT);
+		const [_, getter = "", rawSignature = ""] = raw.match(REG_GETTER_KIT);
 		return { getter, prop: rawSignature.split(",").filter(Boolean) };
 	}
 }
