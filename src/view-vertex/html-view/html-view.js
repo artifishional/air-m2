@@ -94,7 +94,7 @@ export default class HTMLView extends LiveSchema {
 					
 					const _signature = calcsignature(data, this.prop.kit.prop);
 					
-					const modelvertex = new ModelVertex(["$", {
+					const modelvertex = new ModelVertex(["$$", {
 						glassy: true,
 						source: () => modelstream.map(([state]) => {
 							const childs = getfrompath(state, this.prop.kit.getter);
@@ -224,7 +224,7 @@ export default class HTMLView extends LiveSchema {
 							vars = routeNormalizer(stream);
 						}
 						layer = streamplug.reduce( (acc, source) => {
-							const res = new ModelVertex(["$", { glassy: true, source }]);
+							const res = new ModelVertex(["$$", { glassy: true, source }]);
 							res.parent = acc;
 							return res;
 						}, layer);
