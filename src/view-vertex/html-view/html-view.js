@@ -99,7 +99,7 @@ export default class HTMLView extends LiveSchema {
 						source: () => modelstream.map(([state]) => {
 							const childs = getfrompath(state, this.prop.kit.getter);
 							const res = childs.find( child => signature(_signature, child) );
-							return [res] || [];
+							return res !== undefined ? [res] : [];
 						}).distinct(equal)
 					}]);
 					
@@ -821,7 +821,14 @@ function parseKeyFrames( { node } ) {
 							return `(argv.${reg})`;
 						});
 						const handler = new Function("argv", "ttm", `return ${functionBuilder}`);
-						prop = (argv) => parseKeyProps(handler(argv));
+						prop = (argv) => {
+							try {
+								return parseKeyProps(handler(argv));
+							}
+							catch (e) {
+								return {};
+							}
+						};
 					}
 					return [ offset, prop ];
 				} );
