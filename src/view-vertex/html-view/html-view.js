@@ -99,8 +99,10 @@ export default class HTMLView extends LiveSchema {
 						source: () => modelstream.map(([state]) => {
 							const childs = getfrompath(state, this.prop.kit.getter);
 							const res = childs.find( child => signature(_signature, child) );
-							return res !== undefined ? [res] : [];
-						}).distinct(equal)
+							return res !== undefined ? [res] : null;
+						})
+							.filter(Boolean)
+							.distinct(equal)
 					}]);
 					
 					let sign;

@@ -1,3 +1,4 @@
+import "./global-this"
 export * from "air-stream"
 export * from "./live-schema"
 export * from "./loader"
