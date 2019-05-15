@@ -98,6 +98,33 @@ localization
 
 #### Actions definition
 
+##### Animation
+
+```html
+<keyframe [name = default] [duration = 5] >
+    <key [offset = 0] prop = {scale:0}></key>
+    <key [offset = 1] prop = {scale:1}></key>
+</keyframe>
+``` 
+
+inline fade-in fade-out supported
+```html
+<keyframe name = fade-in [duration = 5]>
+    <key [offset = 0] prop = {translateX:0}></key>
+    <key [offset = 1] prop = {translateX:100}></key>
+</keyframe>
+``` 
+
+binding data from stream
+```html
+<keyframe name = fade-in [duration = 5]>
+    <key prop = {scaleX:(x)}></key>
+</keyframe>
+``` 
+```js 
+[{x: 1.5}]
+```
+
 ##### Class controllers
 
 
