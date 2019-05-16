@@ -7,7 +7,6 @@ const FONT_LOADING_TIMEOUT = 30000;
 
 export default ({ style, path, ...args }) =>
   stream(async (emt, { sweep }) => {
-
     let isActive = true;
     let fontFaceStyle = null;
     const commonStyle = document.createElement("style");
@@ -54,8 +53,8 @@ export default ({ style, path, ...args }) =>
               }
             }
           }
-          rawCommonCSSContent += csstree.generate(node);
         }
+        rawCommonCSSContent += csstree.generate(node);
       } else {
         rawCommonCSSContent += csstree.generate(node);
       }
