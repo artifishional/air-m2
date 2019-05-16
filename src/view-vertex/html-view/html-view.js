@@ -265,10 +265,6 @@ export default class HTMLView extends LiveSchema {
 			} ) );
 		} );
 	}
-	
-	acidis(name) {
-		return (this.acid+"").indexOf(name) > -1;
-	}
 
 	createLayer(owner, { poppet = false, targets, resources }, args ) {
 		if(poppet) {
@@ -559,6 +555,14 @@ export default class HTMLView extends LiveSchema {
 		if(!(node instanceof Element)) {
 			return new HTMLView( ["", {}], src, { createEntity: node } );
 		}
+		
+		//TODO: (improvement required)
+		// currently clones the entire contents and then
+		// removes it from the parent element to solve the shared units problem
+
+		const cur = node.cloneNode(true);
+		node.parentNode.append(cur);
+		node = cur;
 
 		const { path = "./", key: pkey = uvk } = (src || {}).prop || {};
 
@@ -614,7 +618,8 @@ export default class HTMLView extends LiveSchema {
         const preload = !["", "true"].includes(node.getAttribute("nopreload"));
         
         const useOwnerProps = node.parentNode.tagName.toUpperCase() === "UNIT";
-
+		node.remove();
+        
         const controlled = [ ...node.childNodes ].some( node => {
 			if(node.nodeType === 1 && !["UNIT", "PLUG", "STYLE"].includes(node.tagName.toUpperCase())) {
 				return true;
