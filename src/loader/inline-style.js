@@ -71,8 +71,6 @@ export default ({ style, path, ...args }) =>
       targets.map(({ raw, type }) => {
         if (type === "font") {
           return new FontFaceObserver(raw).load(null, FONT_LOADING_TIMEOUT);
-        } else if (type === "img") {
-          return new ImagePreloader().preload(raw);
         }
       })
     ).then(() => {
