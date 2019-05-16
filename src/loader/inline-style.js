@@ -62,8 +62,8 @@ export default ({ style, path, ...args }) =>
               }
             }
           }
-          rawCommonCSSContent += csstree.generate(node);
         }
+        rawCommonCSSContent += csstree.generate(node);
       } else {
         rawCommonCSSContent += csstree.generate(node);
       }
