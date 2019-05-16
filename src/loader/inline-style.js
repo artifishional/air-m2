@@ -7,6 +7,7 @@ const FONT_LOADING_TIMEOUT = 30000;
 
 export default ({ style, path, ...args }) =>
   stream(async (emt, { sweep }) => {
+
     let isActive = true;
     let fontFaceStyle = null;
     const commonStyle = document.createElement("style");
