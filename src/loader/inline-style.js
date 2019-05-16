@@ -5,8 +5,17 @@ import ImagePreloader from "image-preloader";
 
 const FONT_LOADING_TIMEOUT = 30000;
 
+function FileReader(blob) {
+	return new Promise( (resolver) => {
+		const reader = new globalThis.FileReader();
+		reader.readAsDataURL(blob);
+		reader.onloadend = resolver;
+	} );
+}
+
 export default ({ style, path, ...args }) =>
-  stream((emt, { sweep }) => {
+  stream(async (emt, { sweep }) => {
+
     let isActive = true;
     let fontFaceStyle = null;
     const commonStyle = document.createElement("style");
@@ -17,46 +26,48 @@ export default ({ style, path, ...args }) =>
     let rawCommonCSSContent = "";
 
     const ast = csstree.parse(style.textContent);
-    ast.children.forEach(node => {
+    for (const node of ast.children.toArray()) {
       const { type, name, block } = node;
       if (type === "Atrule" && name === "font-face") {
-        block.children.forEach(prop => {
+        for (const prop of block.children.toArray()) {
           const { type, property, value } = prop;
           if (type === "Declaration" && property === "font-family") {
-            value.children.forEach(e => {
+            for (const e of value.children.toArray()) {
               targets.push({ raw: e.value.replace(/"/g, ""), type: "font" });
-            });
+            }
           }
           if (type === "Declaration" && property === "src") {
-            value.children.forEach(e => {
+            for (const e of value.children.toArray()) {
               const { type, value } = e;
               if (type === "Url") {
                 e.value.value = "m2units/" + path + value.value.replace(/"/g, "");
               }
-            });
+            }
           }
-        });
+        }
         rawFontCSSContent += csstree.generate(node);
       } else if (type === "Rule") {
-        block.children.forEach(prop => {
+        for (const prop of block.children.toArray()) {
           const { property, value } = prop;
           if (property === "background-image" || property === "background") {
-            value.children.forEach(e => {
+            for (const e of value.children.toArray()) {
               const { type, value } = e;
               if (type === "Url") {
-                const v = "m2units/" + path + value.value.replace(/"/g, "");
-                value.value = v;
-                targets.push({ raw: v, type: "img" });
+                await fetch("m2units/" + path + value.value.replace(/"/g, ""))
+                    .then(r => r.blob())
+                    .then(FileReader)
+                    .then( ({ target: { result: base64 } }) => {
+	                    value.value = base64;
+                    } )
               }
-            });
+            }
           }
-        });
+        }
         rawCommonCSSContent += csstree.generate(node);
       } else {
         rawCommonCSSContent += csstree.generate(node);
       }
-    });
-
+    }
     commonStyle.textContent = rawCommonCSSContent;
     if (rawFontCSSContent) {
       fontFaceStyle = document.createElement("style");
