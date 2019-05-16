@@ -5,8 +5,17 @@ import ImagePreloader from "image-preloader";
 
 const FONT_LOADING_TIMEOUT = 30000;
 
+function FileReader(blob) {
+  return new Promise( (resolver) => {
+    const reader = new globalThis.FileReader();
+    reader.readAsDataURL(blob);
+    reader.onloadend = resolver;
+  } );
+}
+
 export default ({ style, path, ...args }) =>
   stream(async (emt, { sweep }) => {
+
     let isActive = true;
     let fontFaceStyle = null;
     const commonStyle = document.createElement("style");
@@ -44,12 +53,12 @@ export default ({ style, path, ...args }) =>
             for (const e of value.children.toArray()) {
               const { type, value } = e;
               if (type === "Url") {
-                const v = "m2units/" + path + value.value.replace(/"/g, "");
-                await fetch(v).then(r => r.blob()).then((blob) => {
-                  const url = URL.createObjectURL(blob);
-                  value.value = url;
-                  targets.push({ raw: url, type: "img" });
-                })
+                await fetch("m2units/" + path + value.value.replace(/"/g, ""))
+                    .then(r => r.blob())
+                    .then(FileReader)
+                    .then( ({ target: { result: base64 } }) => {
+                      value.value = base64;
+                    } )
               }
             }
           }
@@ -71,6 +80,8 @@ export default ({ style, path, ...args }) =>
       targets.map(({ raw, type }) => {
         if (type === "font") {
           return new FontFaceObserver(raw).load(null, FONT_LOADING_TIMEOUT);
+        } else if (type === "img") {
+          return new ImagePreloader().preload(raw);
         }
       })
     ).then(() => {
