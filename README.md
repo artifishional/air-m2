@@ -101,7 +101,7 @@ localization
 ##### Animation
 
 ```html
-<keyframe [name = default] [duration = 5] >
+<keyframe [name = default] [prop = {easing:"linear",duration:5}] >
     <key [offset = 0] prop = {scale:0}></key>
     <key [offset = 1] prop = {scale:1}></key>
 </keyframe>
