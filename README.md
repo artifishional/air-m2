@@ -125,6 +125,30 @@ binding data from stream
 [{x: 1.5}]
 ```
 
+##### Inline (local) CSS styles & SASS
+
+```html
+<unit>
+   <style [type="text/scss"]> <!-- to enable SASS processing -->
+```
+```style
+    body { /* global selector */
+        padding: 0;
+        margin: 0;
+    }
+    
+    :scope { /* local selector */
+        width: 100%;
+        background-color: #0026ff;
+        height: 100%;
+    }
+```
+```html
+   </style>
+   <div></div>
+</unit>
+```
+
 ##### Class controllers
 
 

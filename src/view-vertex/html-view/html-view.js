@@ -282,7 +282,7 @@ export default class HTMLView extends LiveSchema {
 				acid: this.acid,
 				stage: 0,
 				container,
-				key: this.key, 
+				key: this.key,
 				target: container.target
 			};
 
@@ -605,20 +605,16 @@ export default class HTMLView extends LiveSchema {
 		
         //TODO REVERSE
 		const style = node.querySelectorAll("* > style");
+		const styles = [...style];
 		//const style = [...node.children].filter(byTagName("STYLE"));
 		
-		[...style].map( style => {
+		styles.map( style => {
 			if(style.parentNode.tagName !== "UNIT") {
 				console.warn("style can only be subordinate to the unit \n" + style.textContent);
 			}
+			style.remove();
 		} );
-
-        if(style.length) {
-			resources.push(...[...style].map( style => {
-				style.remove();
-				return resource(pack, { type: "inline-style", style })
-			} ));
-		}
+		resources.push(...styles.map( style => resource(pack, { type: "inline-style", style }) ));
 		
         const tee = cuttee(node, key);
 		const kit = cutkit(node, key);
@@ -663,7 +659,7 @@ export default class HTMLView extends LiveSchema {
 				src.remove();
 				return res;
 			} );
-        
+   
 		const keyframes = [];
 
 		const prop = {
@@ -702,6 +698,15 @@ export default class HTMLView extends LiveSchema {
 		
 		res.prop.node = document.createDocumentFragment();
 		res.prop.node.append( ...node.childNodes );
+		
+		[...styles].map( style => {
+			style.textContent = style.textContent.replace(":scope", `[data-scope-acid-${res.acid}]`);
+		} );
+		
+		styles.length && [...res.prop.node.children]
+			.map( node => {
+				node.setAttribute(`data-scope-acid-${res.acid}`, "");
+			} );
 		
 		return res;
 		
