@@ -168,12 +168,11 @@ export default class HTMLView extends LiveSchema {
 					}
 				} );
 				
-				deleted.map( ({ box, signature: $ }) => {
-					const deleted = store.findIndex( ({ signature }) => equal([], signature, $));
+				deleted.map( item => {
+					const deleted = store.indexOf(item);
 					store.splice(deleted, 1);
-					box.remove();
+					item.box.remove();
 				} );
-
 			} ));
 
 
