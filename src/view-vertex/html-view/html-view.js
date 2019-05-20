@@ -629,7 +629,8 @@ export default class HTMLView extends LiveSchema {
 			}
 		} );
 		
-		const streamplug = [...node.querySelectorAll("stream-source")]
+		const streamplug = [...node.children]
+            .filter(byTagName("STREAM-SOURCE"))
 			.map( plug => {
 				const src = document.createElement("script");
 				VIEW_PLUGINS.set(src, null);
@@ -642,7 +643,8 @@ export default class HTMLView extends LiveSchema {
 				return res;
 			} );
 		
-		const plug = [...node.querySelectorAll("view-source")]
+		const plug = [...node.children]
+			.filter(byTagName("VIEW-SOURCE"))
 			.map( plug => {
 				const src = document.createElement("script");
 				VIEW_PLUGINS.set(src, null);
@@ -905,6 +907,10 @@ function img() {
 function is( node, name ) {
 	name = name.toUpperCase();
 	return [ `M2-${name}`, name ].includes( node.tagName.toUpperCase() );
+}
+
+function byTagName(tagName) {
+	return node => node.tagName.toUpperCase() === tagName;
 }
 
 //the workaround is tied to the querySelectorAll,
