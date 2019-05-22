@@ -700,7 +700,7 @@ export default class HTMLView extends LiveSchema {
 		res.prop.node.append( ...node.childNodes );
 		
 		[...styles].map( style => {
-			style.textContent = style.textContent.replace(":scope", `[data-scope-acid-${res.acid}]`);
+			style.textContent = style.textContent.replace(/:scope/g, `[data-scope-acid-${res.acid}]`);
 		} );
 		
 		styles.length && [...res.prop.node.children]
