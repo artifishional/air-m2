@@ -602,11 +602,8 @@ export default class HTMLView extends LiveSchema {
                 .parse(node.getAttribute("resources") || "[]")
                 .map( x => resource(pack, x) )
             ];
-		
-        //TODO REVERSE
-		const style = node.querySelectorAll("* > style");
-		const styles = [...style];
-		//const style = [...node.children].filter(byTagName("STYLE"));
+
+		const styles = [...node.children].filter(byTagName("STYLE"));
 		
 		styles.map( style => {
 			if(style.parentNode.tagName !== "UNIT") {
