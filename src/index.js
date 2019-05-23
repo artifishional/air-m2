@@ -11,3 +11,8 @@ import * as _utils from "./utils/index"
 export const utils = _utils;
 export const uid = () => __uid++;
 let __uid = 1;
+
+import MobileDetect from "mobile-detect"
+export const $_IS_MOBILE = !["iPad", null].includes(
+    new MobileDetect(window.navigator.userAgent).mobile()
+);
