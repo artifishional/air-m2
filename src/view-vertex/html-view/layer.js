@@ -194,7 +194,6 @@ export class Layer extends BaseLayer {
 					.map( ({ node }) => node.removeEventListener(name, this, false) )
 			}
 		});
-		clearTimeout(this.loaderTimeoutID);
 	}
 
 }

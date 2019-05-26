@@ -210,14 +210,13 @@ export default class HTMLView extends LiveSchema {
 							}
 							else {
 								resultStreamPath = pstream + stream.substr(1);
-								layer = layers.get(acid).layer;
+								layer = (layers.get(acid) || layers.get(-1)).layer;
 								vars = routeNormalizer(pstream + stream.substr(1));
 							}
 						}
 						else if(stream === "") {
 							resultStreamPath = stream;
-							layer = layers.get(acid).layer;
-							vars = layers.get(acid).vars;
+							({ layer, vars } = layers.get(acid) || layers.get(-1) );
 						}
 						else {
 							resultStreamPath = stream;
