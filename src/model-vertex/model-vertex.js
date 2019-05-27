@@ -1,6 +1,7 @@
 import { LiveSchema } from "../live-schema"
 import { ObservableCollection } from "../observable-collection"
 import { stream } from "air-stream"
+import { equal } from "../utils"
 
 function frommodule(module, _key = "main") {
 	return [ _key,
