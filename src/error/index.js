@@ -2,7 +2,8 @@ import { stream } from "../"
 
 export class Error {
 
-    constructor( { code } ) {
+    constructor( { code }, rid ) {
+        canceled.add(rid);
         Error.defaultEmitter.emt.kf();
         Error.defaultEmitter.emt( { code } );
     }
@@ -14,3 +15,4 @@ export class Error {
 } )).on(() => {});
 
 export const error = () => Error.default;
+export const canceled = new Set();

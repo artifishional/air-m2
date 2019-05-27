@@ -138,15 +138,19 @@ export default class LiveSchema extends Schema {
     }
 	
 	createEntity() { throw "io" }
-    
+
+    findEntity(args) {
+        return this.entities.find( ({ signature }) => equal( signature, args ) );
+    }
+
     entity( { $ = {}, ...args } ) {
-        let exist = this.entities.find( ({ signature }) => equal( signature, args ) );
+        let exist = this.findEntity(args);
         if(!exist) {
             exist = {
                 entity: this.createEntity( { $, ...args } ),
-	            signature: args,
+                signature: args,
             };
-	        this.entities.push( exist );
+            this.entities.push( exist );
         }
         return exist.entity;
     }

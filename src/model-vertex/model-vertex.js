@@ -49,6 +49,11 @@ export default class ModelVertex extends LiveSchema {
 		} );
 	}
 
+	findEntity(args) {
+		//protection of duplication of original layers
+		return this.layers.slice(-1)[0].entities.find( ({ signature }) => equal( signature, args ) );
+	}
+
 	parse( module, src ) {
 		let exist = null;
 	    if(Array.isArray(module)) {
