@@ -3,11 +3,11 @@ import {Loader} from "pixi.js"
 
 export default class ObservableTexture extends Observable {
 
-    constructor( { url, ...args } ) {
+    constructor( { url, revision, ...args } ) {
         const loader = new Loader();
         super( emt => {
             loader.add({
-                url,
+                url: revision ? `${url}?revision=${revision}` : url,
                 crossOrigin: true,
                 onComplete: res => {
                     this.res = res;
