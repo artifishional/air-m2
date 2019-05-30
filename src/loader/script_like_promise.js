@@ -24,7 +24,7 @@ export default function ({path, revision}) {
     if(/.\.js$/g.test(path)) {
         return new Promise((resolve, reject) => {
             const script = document.createElement("script");
-            script.src = revision ? `${path}?revision=${revision}` : path;
+            script.src = revision ? `${path}?rev=${revision}` : path;
             let hn = null;
             //script.addEventListener("load", resolve);
             window.addEventListener("m2SourceModuleLoad", hn = (event) => {
@@ -41,7 +41,7 @@ export default function ({path, revision}) {
     else if(/.\.json$/g.test(path)) {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            xhr.open("GET", revision ? `${path}?revision=${revision}` : path, true);
+            xhr.open("GET", revision ? `${path}?rev=${revision}` : path, true);
             xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
             xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');
             xhr.onload = () => {
@@ -53,7 +53,7 @@ export default function ({path, revision}) {
     else if (/.\.html$/g.test(path)) {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            xhr.open("GET", revision ? `${path}?revision=${revision}` : path, true);
+            xhr.open("GET", revision ? `${path}?rev=${revision}` : path, true);
             xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
             xhr.setRequestHeader('Content-type', 'text/html; charset=utf-8');
             xhr.onload = () => {

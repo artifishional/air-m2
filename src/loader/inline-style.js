@@ -43,9 +43,9 @@ export default ({ style, path, revision, ...args }) =>
                 let url = "m2units/" + path + value.value.replace(/"/g, "")
                 if (revision) {
                   if (url.indexOf('?') > -1) {
-                    url = `${url}&revision=${revision}`
+                    url = `${url}&rev=${revision}`
                   } else {
-                    url = `${url}?revision=${revision}`
+                    url = `${url}?rev=${revision}`
                   }
                 }
                 e.value.value = "m2units/" + path + value.value.replace(/"/g, "");
@@ -64,9 +64,9 @@ export default ({ style, path, revision, ...args }) =>
                 let url = "m2units/" + path + value.value.replace(/"/g, "")
                 if (revision) {
                   if (url.indexOf('?') > -1) {
-                    url = `${url}&revision=${revision}`
+                    url = `${url}&rev=${revision}`
                   } else {
-                    url = `${url}?revision=${revision}`
+                    url = `${url}?rev=${revision}`
                   }
                 }
                 await fetch(url)

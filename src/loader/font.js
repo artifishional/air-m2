@@ -9,7 +9,7 @@ export default class ObservableFont extends Observable {
         style.textContent =
             `@font-face { 
                 font-family: '${family}'; 
-                src: url('${revision ? `${url}?revision=${revision}` : url}') format('${ /\.[a-z0-9]{3,4}$/g.exec(url)[0].replace(".", "") }'); 
+                src: url('${revision ? `${url}?rev=${revision}` : url}') format('${ /\.[a-z0-9]{3,4}$/g.exec(url)[0].replace(".", "") }'); 
             }`;
         document.head.appendChild(style);
         super( emt => {

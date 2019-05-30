@@ -7,7 +7,7 @@ export default class ObservableTexture extends Observable {
         const loader = new Loader();
         super( emt => {
             loader.add({
-                url: revision ? `${url}?revision=${revision}` : url,
+                url: revision ? `${url}?rev=${revision}` : url,
                 crossOrigin: true,
                 onComplete: res => {
                     this.res = res;
