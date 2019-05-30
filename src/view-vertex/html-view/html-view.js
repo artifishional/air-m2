@@ -605,7 +605,7 @@ export default class HTMLView extends LiveSchema {
 		const styles = [...node.children].filter(byTagName("STYLE"));
 		
 		styles.map( style => {
-			if(style.parentNode.tagName !== "UNIT") {
+			if(style.parentNode.tagName.toUpperCase() !== "UNIT") {
 				console.warn("style can only be subordinate to the unit \n" + style.textContent);
 			}
 			style.remove();
