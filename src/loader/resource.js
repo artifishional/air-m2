@@ -10,7 +10,7 @@ const revision = document.currentScript.getAttribute('revision')
 
 export default function({ path }, { style, type, rel, url, ...args }) {
   if (type === "inline-style") {
-    return ObservableInlineStyle({ style, path, ...args });
+    return ObservableInlineStyle({ style, path, revision, ...args });
   } else if (type === "texture") {
     throw "unsupported in current version";
     //return new ObservableTexture({url: `./m2units/${path}${url}` })

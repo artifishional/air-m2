@@ -13,7 +13,7 @@ function FileReader(blob) {
 	} );
 }
 
-export default ({ style, path, ...args }) =>
+export default ({ style, path, revision, ...args }) =>
   stream(async (emt, { sweep }) => {
 
     let isActive = true;
@@ -40,6 +40,14 @@ export default ({ style, path, ...args }) =>
             for (const e of value.children.toArray()) {
               const { type, value } = e;
               if (type === "Url") {
+                let url = "m2units/" + path + value.value.replace(/"/g, "")
+                if (revision) {
+                  if (url.indexOf('?') > -1) {
+                    url = `${url}&revision=${revision}`
+                  } else {
+                    url = `${url}?revision=${revision}`
+                  }
+                }
                 e.value.value = "m2units/" + path + value.value.replace(/"/g, "");
               }
             }
@@ -53,7 +61,15 @@ export default ({ style, path, ...args }) =>
             for (const e of value.children.toArray()) {
               const { type, value } = e;
               if (type === "Url") {
-                await fetch("m2units/" + path + value.value.replace(/"/g, ""))
+                let url = "m2units/" + path + value.value.replace(/"/g, "")
+                if (revision) {
+                  if (url.indexOf('?') > -1) {
+                    url = `${url}&revision=${revision}`
+                  } else {
+                    url = `${url}?revision=${revision}`
+                  }
+                }
+                await fetch(url)
                     .then(r => r.blob())
                     .then(FileReader)
                     .then( ({ target: { result: base64 } }) => {
