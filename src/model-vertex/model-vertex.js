@@ -50,10 +50,10 @@ export default class ModelVertex extends LiveSchema {
 		} );
 	}
 
-	findEntity(args) {
+	merge( data ) {
 		//protection of duplication of original layers
-		return [].concat(...this.layers.map( ({ entities }) => entities ) )
-			.find( ({ signature }) => equal( signature, args ) );
+		super.merge( data );
+		this.layers.map( layer => layer.entities = this.entities );
 	}
 
 	parse( module, src ) {
