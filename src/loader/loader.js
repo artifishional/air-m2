@@ -1,14 +1,13 @@
 import { stream } from "air-stream"
 import include from "./script_like_promise"
 import html from "./html"
+import { REVISION as revision } from '../globals'
 
 const schtypes = {
     "js": "/index.js",
     "json": "/index.json",
     "html": "/index.html",
 };
-
-const revision = document.currentScript.getAttribute('revision')
 
 export default class Loader {
 

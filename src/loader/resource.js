@@ -5,8 +5,7 @@ import ObservableStyle from "./style";
 import Languages from "./languages";
 import Internalization from "./intl";
 import ObservableInlineStyle from "./inline-style";
-
-const revision = document.currentScript.getAttribute('revision')
+import { REVISION as revision } from '../globals'
 
 export default function({ path }, { style, type, rel, url, ...args }) {
   if (type === "inline-style") {
