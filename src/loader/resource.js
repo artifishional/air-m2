@@ -5,23 +5,24 @@ import ObservableStyle from "./style";
 import Languages from "./languages";
 import Internalization from "./intl";
 import ObservableInlineStyle from "./inline-style";
+import { REVISION as revision } from '../globals'
 
 export default function({ path }, { style, type, rel, url, ...args }) {
   if (type === "inline-style") {
-    return ObservableInlineStyle({ style, path, ...args });
+    return ObservableInlineStyle({ style, path, revision, ...args });
   } else if (type === "texture") {
     throw "unsupported in current version";
     //return new ObservableTexture({url: `./m2units/${path}${url}` })
   } else if (type === "img") {
-    return ObservableImage({ url: `./m2units/${path}${url}` });
+    return ObservableImage({ url: `./m2units/${path}${url}`, revision });
   } else if (type === "font") {
-    return new ObservableFont({ url: `./m2units/${path}${url}`, ...args });
+    return new ObservableFont({ url: `./m2units/${path}${url}`, revision, ...args });
   } else if (type === "style") {
-    return ObservableStyle({ url: `./m2units/${path}${url}`, ...args });
+    return ObservableStyle({ url: `./m2units/${path}${url}`, revision, ...args });
   } else if (type === "formatters") {
-    return Internalization({ url: `./m2units/${path}${url}`, ...args });
+    return Internalization({ url: `./m2units/${path}${url}`, revision, ...args });
   } else if (type === "languages") {
-    return Languages({ url: `./m2units/${path}${url}`, ...args });
+    return Languages({ url: `./m2units/${path}${url}`, revision, ...args });
   } else if (type === "sound") {
     const _path = path.split("/").filter(Boolean);
     const _rel = rel.split("/").filter(Boolean);

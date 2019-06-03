@@ -1,6 +1,7 @@
 import { stream } from "air-stream"
 import include from "./script_like_promise"
 import html from "./html"
+import { REVISION as revision } from '../globals'
 
 const schtypes = {
     "js": "/index.js",
@@ -25,7 +26,7 @@ export default class Loader {
         else {
             let module = null;
             if (schtype === "html") {
-                module = html({path: `${this.rpath}${path}`})
+                module = html({path: `${this.rpath}${path}`, revision})
                     .map( html => ({ data: html.content, pack: { path: _path + "/" } }) )
             }
             else {
@@ -35,7 +36,7 @@ export default class Loader {
                         emt({data: module});
                     } );
                     */
-                    include({path: `${this.rpath}${path}`}).then(({module}) => {
+                    include({path: `${this.rpath}${path}`, revision}).then(({module}) => {
                         emt( { data: module, pack: { path: _path + "/" } } );
                     } );
                 } );

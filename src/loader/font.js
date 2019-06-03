@@ -4,12 +4,12 @@ import {Observable} from "air-stream"
 export default class ObservableFont extends Observable {
 
     //todo need cathce
-    constructor( { url, family, size, ...args } ) {
+    constructor( { url, revision, family, size, ...args } ) {
         const style = document.createElement("style");
         style.textContent =
             `@font-face { 
                 font-family: '${family}'; 
-                src: url('${url}') format('${ /\.[a-z0-9]{3,4}$/g.exec(url)[0].replace(".", "") }'); 
+                src: url('${revision ? `${url}?rev=${revision}` : url}') format('${ /\.[a-z0-9]{3,4}$/g.exec(url)[0].replace(".", "") }'); 
             }`;
         document.head.appendChild(style);
         super( emt => {

@@ -1,6 +1,6 @@
 import stream from "./xhr"
 
-export default ({url}) => stream({path: url, content: { type: "application/xml" }})
+export default ({url, revision}) => stream({path: url, revision, content: { type: "application/xml" }})
     .map( xhr => {
 
         const parser = new DOMParser();
