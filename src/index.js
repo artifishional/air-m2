@@ -1,4 +1,4 @@
-import "./global-this"
+import "./polyfills"
 export * from "air-stream"
 export * from "./live-schema"
 export * from "./loader"

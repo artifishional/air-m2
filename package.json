@@ -9,15 +9,16 @@
     "minor": "npm version minor && npm publish && git push origin"
   },
   "dependencies": {
-    "air-schema": "^0.1.5",
     "air-anime": "^0.1.0",
+    "air-schema": "^0.1.5",
     "air-stream": "^0.7.0",
     "css-tree": "^1.0.0-alpha.29",
     "fontfaceobserver": "^2.1.0",
     "howler": "^2.0.15",
     "image-preloader": "^1.1.1",
     "json5": "^2.0.1",
-    "mobile-detect": "^1.4.3"
+    "mobile-detect": "^1.4.3",
+    "resize-observer-polyfill": "^1.5.1"
   },
   "repository": {
     "type": "git",
