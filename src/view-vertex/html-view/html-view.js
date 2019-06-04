@@ -629,7 +629,8 @@ export default class HTMLView extends LiveSchema {
 		} );
 		
 		const streamplug = [...node.children]
-            .filter(byTagName("STREAM-SOURCE"))
+			.filter(byTagName("script"))
+			.filter(byAttr("data-source-type", "stream-source"))
 			.map( plug => {
 				const src = document.createElement("script");
 				VIEW_PLUGINS.set(src, null);
@@ -643,7 +644,8 @@ export default class HTMLView extends LiveSchema {
 			} );
 		
 		const plug = [...node.children]
-			.filter(byTagName("VIEW-SOURCE"))
+			.filter(byTagName("script"))
+			.filter(byAttr("data-source-type", "view-source"))
 			.map( plug => {
 				const src = document.createElement("script");
 				VIEW_PLUGINS.set(src, null);
@@ -918,7 +920,12 @@ function is( node, name ) {
 }
 
 function byTagName(tagName) {
+	tagName = tagName.toUpperCase();
 	return node => node.tagName.toUpperCase() === tagName;
+}
+
+function byAttr(attrName, attrValue) {
+	return node => node.getAttribute(attrName) === attrValue;
 }
 
 //the workaround is tied to the querySelectorAll,
