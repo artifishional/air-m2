@@ -216,7 +216,10 @@ export default class HTMLView extends LiveSchema {
 						}
 						else if(stream === "") {
 							resultStreamPath = stream;
-							({ layer, vars } = layers.get(acid) || layers.get(-1) );
+							({ layer, vars } = layers.get(acid) || layers.get(-1) ||
+									//todo hack - unresolved stream source path
+									[...layers][0][1]
+							);
 						}
 						else {
 							resultStreamPath = stream;
