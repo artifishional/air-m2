@@ -337,29 +337,7 @@ export default class HTMLView extends LiveSchema {
 					})
 					.filter( Boolean )
 				);
-
-				const targets = [ ...container.targets("actives", [] ) ];
-
-				if(targets.length) {
-					
-					rlayers.push( ...currentCommonViewLayers.map( ({ layer, schema }) => {
-						return layer.createLayer(
-							{ schema },
-							{ resources: [], targets },
-							args
-						).stream;
-					} ) );
-				}
 				
-				if(!rlayers.length) {
-					rlayers.push(this.createLayer(
-						{ schema: null },
-						{ poppet: true, resources: [], targets: [] },
-						{}
-					).stream);
-				}
-
-
 				const slots = container.slots();
 				if(children.length) {
 					if(slots.length) {
@@ -388,6 +366,24 @@ export default class HTMLView extends LiveSchema {
 					else {
 						container.append( ...children.map( ( [{ target }] ) => target ) );
 					}
+				}
+				
+				const targets = [ ...container.targets("actives", [] ) ];
+				if(targets.length) {
+					rlayers.push( ...currentCommonViewLayers.map( ({ layer, schema }) => {
+						return layer.createLayer(
+							{ schema },
+							{ resources: [], targets },
+							args
+						).stream;
+					} ) );
+				}
+				if(!rlayers.length) {
+					rlayers.push(this.createLayer(
+						{ schema: null },
+						{ poppet: true, resources: [], targets: [] },
+						{}
+					).stream);
 				}
 
 				over.add(sync(
@@ -718,7 +714,12 @@ export default class HTMLView extends LiveSchema {
 			return this.prop.stream;
 		}
 		else if(name === "useOwnerProps") {
-			return value || this.prop.useOwnerProps;
+			if(!value) {
+				return false;
+			}
+			else {
+				return this.prop.useOwnerProps;
+			}
 		}
 		else if(name === "controlled") {
 			return value || this.prop.controlled;
