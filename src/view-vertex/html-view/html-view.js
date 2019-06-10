@@ -320,6 +320,7 @@ export default class HTMLView extends LiveSchema {
 					.map( ( layer, i ) => {
 
 						const targets = [
+							...container.targets("sounds", comps[i].resources ),
 							...comps[i].container.targets( "datas", comps[i].resources ),
 							...container.targets("actives", comps[i].resources )
 						];
