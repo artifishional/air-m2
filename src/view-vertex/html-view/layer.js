@@ -65,10 +65,6 @@ export class BaseLayer {
 
 export class Layer extends BaseLayer {
 
-	createAnimateStream( { keyframes, targets } ) {
-		return animate( targets, keyframes, this.layer.prop.key );
-	}
-
 	sweep( sweep, emt ) {
 		if(this.checkModelNecessity( )) {
 			sweep.add( this.handler = combine([

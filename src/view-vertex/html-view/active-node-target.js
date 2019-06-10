@@ -172,13 +172,12 @@ export default class ActiveNodeTarget {
     constructor(node, resources) {
         this.resources = resources;
         this.node = node;
-        this.type = node.nodeType === NODE_TYPES.TEXT_NODE ? "data" : "active";
-        if(this.type === "data") {
-            this.template = node.textContent;
+        if (node.nodeType === NODE_TYPES.ELEMENT_NODE && node.tagName.toLocaleUpperCase() === 'SOUND') {
+            this.type = 'sound'
+        } else {
+            this.type = node.nodeType === NODE_TYPES.TEXT_NODE ? "data" : "active";
         }
-        else {
-            this.template = null;
-        }
+        this.template = this.type === 'data' ? node.textContent : null;
         this.intl = null;
     }
 
