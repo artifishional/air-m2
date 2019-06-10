@@ -177,55 +177,37 @@ or
 
 ##### Sound controls
 
-you can use sounds in frames
-
-```js
-/*<div m2 = '["name", */
-{ frames: [
-    [ "action-name", { duration: -1/*immediately*/, sound: "my-sound" }, ],
-    /*...*/
-]}
-/*]'></div>*/
+```html
+<keyframe name="sound" prop="{duration: -1, sound: 'sound'}" ></keyframe>
 ```
+Sound will be played once
 
 or
 
-```js
-/*<div m2 = '["name", */
-{ frames: [
-    [ "action-name", { duration: 1 }, 
-       [50, { sound: "my-sound" }],
-       [100, { sound: "my-sound2" }]
-     ],
-    /*...*/
-]}
-/*]'></div>*/
+```html
+<keyframe name="sound2" prop="{duration: 2}">
+    <key offset="0.2" prop={sound:'sound'} ></key>
+    <key offset="0.7" prop={sound:'sound'} ></key>
+</keyframe>
+
 ```
+Sounds will be played 2 times with certain offsets and will be stopped if duration of animation less than duration of sounds 
 
 , where 
-- ```sound``` - file name without extension from the directory ``` component/res/sounds ```
+- ```sound``` - name of resource declared in ```<sound>``` tag
+
+Sound reesource declaration
+```html
+<sound name="sound" rel="../sound"></sound>
+```
+, where 
+- ```name``` - name of resource
+- ```rel``` - file name without extension from the directory
+``` component/res/sounds/sound ```
 
 if you want to use the general sounds for components, you can go up the nesting levels
 
-```sound: "../../my-sound"```
-
-
-if you are going to transfer the name of the sound from the model, you must specify it in the resources used
-
-```js
-/*<div m2 = '["name", */
-{ 
-    resources: [ { type: "sound", rel: "my-sound", name: "alias-name" } ]
-    frames: [ [ "action-name" ] ]
-}
-/*]'></div>*/
-```
-
-, where 
-- ```rel``` - file name without extension from the directory ``` component/res/sounds ```
-- ```name``` - name to be transferred from the model, to example:
-
-``` [ "action-name", { sound: "alias-name" } ] ```
+```rel="../../sound"```
 
 #### Reactions definition
 
