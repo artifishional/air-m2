@@ -121,7 +121,14 @@ export class Layer extends BaseLayer {
 		});
 
 		this.stream = this.layer.prop.plug.reduce( (acc, plug) => {
-			return plug( { source: acc, schema, resources, targets } );
+			return plug( {
+				obtain: (path = "", vars = {}) =>
+					schema.model.layer.obtain(path, { ...schema.model.vars, ...vars }),
+				source: acc,
+				schema,
+				resources,
+				targets
+			} );
 		}, this.stream );
 
     }
