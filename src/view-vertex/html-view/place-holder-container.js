@@ -33,7 +33,7 @@ export default class PlaceHolderContainer {
             `${point} ${species} ${this.owner.acid} ${label} ${point}`.toUpperCase()
         );
     }
-    
+
     remove() {
         return this.restore();
     }
@@ -68,11 +68,15 @@ export default class PlaceHolderContainer {
         else if(type === "actives") {
             return this._targets.filter( ({ type }) => type === "active" );
         }
+        else if(type === "sounds") {
+            return this._targets.filter( ({ type }) => type === "sound" );
+        }
     }
 
     //todo optimize with tree walker
     defineTargets( resources ) {
         const { target, begin = target.firstChild, end = target.lastChild  } = this;
+
         const res = [];
         let cur = begin;
         while (cur !== end) {
