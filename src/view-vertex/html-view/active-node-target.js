@@ -174,6 +174,7 @@ export default class ActiveNodeTarget {
         this.node = node;
         if (node.nodeType === NODE_TYPES.ELEMENT_NODE && node.tagName.toLocaleUpperCase() === 'SOUND') {
             this.type = 'sound'
+            node.remove()
         } else {
             this.type = node.nodeType === NODE_TYPES.TEXT_NODE ? "data" : "active";
         }
