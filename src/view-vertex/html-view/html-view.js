@@ -1,6 +1,7 @@
 import { BOOLEAN } from "../../def"
 import { VIEW_PLUGINS } from "../../globals"
 import { stream, combine, keyF, sync } from "air-stream"
+import StylesController from "./styles-controller"
 import {
 	equal,
 	routeNormalizer,
@@ -50,6 +51,7 @@ export default class HTMLView extends LiveSchema {
 		this.prop.handlers = this.prop.handlers || [];
 		this.prop.tee = this.prop.tee || null;
 		this.prop.plug = this.prop.plug || [];
+		this.prop.styles = this.prop.styles || [];
 		this.prop.streamplug = this.prop.streamplug || [];
 		this.prop.keyframes = this.prop.keyframes || [];
 		this.prop.node = this.prop.node || document.createDocumentFragment();
@@ -370,7 +372,15 @@ export default class HTMLView extends LiveSchema {
 				}
 				
 				const targets = [ ...container.targets("actives", [] ) ];
+				
 				if(targets.length) {
+					
+					if(this.prop.styles.length) {
+						targets.map(({node}) =>
+							node.setAttribute(`data-scope-acid-${this.acid}`, "")
+						);
+					}
+					
 					rlayers.push( ...currentCommonViewLayers.map( ({ layer, schema }) => {
 						return layer.createLayer(
 							{ schema },
@@ -400,7 +410,11 @@ export default class HTMLView extends LiveSchema {
 
 	createNodeEntity() {
 		return stream( (emt, { sweep }) => {
-			sweep.add(combine( this.prop.resources ).at( ( resources ) => {
+			sweep.add(combine( [
+				...this.prop.resources,
+				...this.prop.styles.map( (style, priority) =>
+					StylesController.get( style, this.acid, priority, this.prop.pack ) )
+			] ).at( ( resources ) => {
 				const container = new PlaceHolderContainer( this, { type: "node" } );
 				container.append(this.prop.node.cloneNode(true));
 				const imgs = resources.filter(({type}) => type === "img");
@@ -605,12 +619,11 @@ export default class HTMLView extends LiveSchema {
 		const styles = [...node.children].filter(byTagName("STYLE"));
 		
 		styles.map( style => {
-			if(style.parentNode.tagName.toUpperCase() !== "UNIT") {
-				console.warn("style can only be subordinate to the unit \n" + style.textContent);
-			}
+			//todo hack
+			style.pack = pack;
 			style.remove();
 		} );
-		resources.push(...styles.map( style => resource(pack, { type: "inline-style", style }) ));
+		//resources.push(...styles.map( style => resource(pack, { type: "inline-style", style }) ));
 		
         const tee = cuttee(node, key);
 		const kit = cutkit(node, key);
@@ -661,6 +674,7 @@ export default class HTMLView extends LiveSchema {
 		const keyframes = [];
 
 		const prop = {
+			styles,         //inline style defenitions
 			streamplug,		//stream inline plugins
 			plug,			//view inline plugins
 			controlled,     //has one or more active childrens (text or node)
@@ -697,14 +711,14 @@ export default class HTMLView extends LiveSchema {
 		res.prop.node = document.createDocumentFragment();
 		res.prop.node.append( ...node.childNodes );
 		
-		[...styles].map( style => {
+		/*[...styles].map( style => {
 			style.textContent = style.textContent.replace(/:scope/g, `[data-scope-acid-${res.acid}]`);
-		} );
+		} );*/
 		
-		styles.length && [...res.prop.node.children]
+		/*styles.length && [...res.prop.node.children]
 			.map( node => {
 				node.setAttribute(`data-scope-acid-${res.acid}`, "");
-			} );
+			} );*/
 		
 		return res;
 		
@@ -724,6 +738,9 @@ export default class HTMLView extends LiveSchema {
 		}
 		else if(name === "controlled") {
 			return value || this.prop.controlled;
+		}
+		else if(name === "styles") {
+			return [ ...this.prop.styles, ...value.filter( style => !this.prop.styles.includes(style) ) ];
 		}
 		/*else if(name === "template") {
 			return this.prop.template || value;

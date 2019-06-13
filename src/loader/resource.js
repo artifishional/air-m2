@@ -7,9 +7,9 @@ import Internalization from "./intl";
 import ObservableInlineStyle from "./inline-style";
 import { REVISION as revision } from '../globals'
 
-export default function({ path }, { style, type, rel, url, ...args }) {
+export default function({ path }, { type, rel, url, ...args }) {
   if (type === "inline-style") {
-    return ObservableInlineStyle({ style, path, revision, ...args });
+    return ObservableInlineStyle({ path, revision, ...args });
   } else if (type === "texture") {
     throw "unsupported in current version";
     //return new ObservableTexture({url: `./m2units/${path}${url}` })

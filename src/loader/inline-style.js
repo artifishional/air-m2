@@ -13,102 +13,126 @@ function FileReader(blob) {
 	} );
 }
 
-export default ({ style, path, revision, ...args }) =>
-  stream(async (emt, { sweep }) => {
-
-    let isActive = true;
-    let fontFaceStyle = null;
-    const commonStyle = document.createElement("style");
-    commonStyle.textContent = "";
-
-    const targets = [];
-    let rawFontCSSContent = "";
-    let rawCommonCSSContent = "";
-
-    const ast = csstree.parse(style.textContent);
-    for (const node of ast.children.toArray()) {
-      const { type, name, block } = node;
-      if (type === "Atrule" && name === "font-face") {
-        for (const prop of block.children.toArray()) {
-          const { type, property, value } = prop;
-          if (type === "Declaration" && property === "font-family") {
-            for (const e of value.children.toArray()) {
-              targets.push({ raw: e.value.replace(/"/g, ""), type: "font" });
-            }
-          }
-          if (type === "Declaration" && property === "src") {
-            for (const e of value.children.toArray()) {
-              const { type, value } = e;
-              if (type === "Url") {
-                let url = "m2units/" + path + value.value.replace(/"/g, "")
-                if (revision) {
-                  if (url.indexOf('?') > -1) {
-                    url = `${url}&rev=${revision}`
-                  } else {
-                    url = `${url}?rev=${revision}`
-                  }
-                }
-                e.value.value = "m2units/" + path + value.value.replace(/"/g, "");
-              }
-            }
-          }
-        }
-        rawFontCSSContent += csstree.generate(node);
-      } else if (type === "Rule") {
-        for (const prop of block.children.toArray()) {
-          const { property, value } = prop;
-          if (property === "background-image" || property === "background") {
-            for (const e of value.children.toArray()) {
-              const { type, value } = e;
-              if (type === "Url") {
-                let url = "m2units/" + path + value.value.replace(/"/g, "")
-                if (revision) {
-                  if (url.indexOf('?') > -1) {
-                    url = `${url}&rev=${revision}`
-                  } else {
-                    url = `${url}?rev=${revision}`
-                  }
-                }
-                await fetch(url)
-                    .then(r => r.blob())
-                    .then(FileReader)
-                    .then( ({ target: { result: base64 } }) => {
-	                    value.value = base64;
-                    } )
-              }
-            }
-          }
-        }
-        rawCommonCSSContent += csstree.generate(node);
-      } else {
-        rawCommonCSSContent += csstree.generate(node);
-      }
+function inject(style, priority) {
+    if(!PRIORITY[priority]) {
+	    const style = document.createElement("style");
+	    style.setAttribute("data-priority", `${priority}`);
+	    PRIORITY[priority-1].after(style);
+	    PRIORITY[priority] = style;
     }
-    commonStyle.textContent = rawCommonCSSContent;
-    if (rawFontCSSContent) {
-      fontFaceStyle = document.createElement("style");
-      fontFaceStyle.textContent = rawFontCSSContent;
-      document.head.appendChild(fontFaceStyle);
-    }
+	style.setAttribute("data-priority", `${priority}`);
+	PRIORITY[priority].before(style);
+}
 
-    Promise.all(
-      targets.map(({ raw, type }) => {
-        if (type === "font") {
-          return new FontFaceObserver(raw).load(null, FONT_LOADING_TIMEOUT);
-        } else if (type === "img") {
-          return new ImagePreloader().preload(raw);
+const PRIORITY = [];
+
+export default ({ acid, priority, style, path, revision, ...args }) => {
+ 
+	return stream(async (emt, {sweep}) => {
+	    
+	    if(!PRIORITY[0]) {
+		    const zero = document.createElement("style");
+		    zero.setAttribute("data-priority", "0");
+		    document.head.append(zero);
+		    PRIORITY[0] = zero;
         }
-      })
-    ).then(() => {
-      if (isActive) {
-        document.head.appendChild(commonStyle);
-        emt({ type: "inline-style", style: commonStyle, ...args });
-      }
-    });
-
-    sweep.add(() => {
-      isActive = false;
-      commonStyle.remove();
-      fontFaceStyle && fontFaceStyle.remove();
-    });
-  });
+	    
+	    style.textContent = style.textContent.replace(/:scope/g, `[data-scope-acid-${acid}]`);
+	    
+		let isActive = true;
+		let fontFaceStyle = null;
+		const commonStyle = document.createElement("style");
+		commonStyle.textContent = "";
+		
+		const targets = [];
+		let rawFontCSSContent = "";
+		let rawCommonCSSContent = "";
+		
+		const ast = csstree.parse(style.textContent);
+		for (const node of ast.children.toArray()) {
+			const {type, name, block} = node;
+			if (type === "Atrule" && name === "font-face") {
+				for (const prop of block.children.toArray()) {
+					const {type, property, value} = prop;
+					if (type === "Declaration" && property === "font-family") {
+						for (const e of value.children.toArray()) {
+							targets.push({raw: e.value.replace(/"/g, ""), type: "font"});
+						}
+					}
+					if (type === "Declaration" && property === "src") {
+						for (const e of value.children.toArray()) {
+							const {type, value} = e;
+							if (type === "Url") {
+								let url = "m2units/" + path + value.value.replace(/"/g, "")
+								if (revision) {
+									if (url.indexOf('?') > -1) {
+										url = `${url}&rev=${revision}`
+									} else {
+										url = `${url}?rev=${revision}`
+									}
+								}
+								e.value.value = "m2units/" + path + value.value.replace(/"/g, "");
+							}
+						}
+					}
+				}
+				rawFontCSSContent += csstree.generate(node);
+			} else if (type === "Rule") {
+				for (const prop of block.children.toArray()) {
+					const {property, value} = prop;
+					if (property === "background-image" || property === "background") {
+						for (const e of value.children.toArray()) {
+							const {type, value} = e;
+							if (type === "Url") {
+								let url = "m2units/" + path + value.value.replace(/"/g, "")
+								if (revision) {
+									if (url.indexOf('?') > -1) {
+										url = `${url}&rev=${revision}`
+									} else {
+										url = `${url}?rev=${revision}`
+									}
+								}
+								await fetch(url)
+									.then(r => r.blob())
+									.then(FileReader)
+									.then(({target: {result: base64}}) => {
+										value.value = base64;
+									})
+							}
+						}
+					}
+				}
+				rawCommonCSSContent += csstree.generate(node);
+			} else {
+				rawCommonCSSContent += csstree.generate(node);
+			}
+		}
+		commonStyle.textContent = rawCommonCSSContent;
+		if (rawFontCSSContent) {
+			fontFaceStyle = document.createElement("style");
+			fontFaceStyle.textContent = rawFontCSSContent;
+			document.head.appendChild(fontFaceStyle);
+		}
+		
+		Promise.all(
+			targets.map(({raw, type}) => {
+				if (type === "font") {
+					return new FontFaceObserver(raw).load(null, FONT_LOADING_TIMEOUT);
+				} else if (type === "img") {
+					return new ImagePreloader().preload(raw);
+				}
+			})
+		).then(() => {
+			if (isActive) {
+			    inject(commonStyle, priority);
+				emt({type: "inline-style", style: commonStyle, ...args});
+			}
+		});
+		
+		sweep.add(() => {
+			isActive = false;
+			commonStyle.remove();
+			fontFaceStyle && fontFaceStyle.remove();
+		});
+	});
+}
