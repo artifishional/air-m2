@@ -179,7 +179,7 @@ or
 
 ```html
 <keyframe name="animation-name">
-    <key prop="sound: 'sound-name'"></key>
+    <key prop={sound:'sound-name'}></key>
 </keyframe>
 ```
 Sound will be played once
