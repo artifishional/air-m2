@@ -178,7 +178,9 @@ or
 ##### Sound controls
 
 ```html
-<keyframe name="animation-name" prop="{duration: -1, sound: 'sound-name'}" ></keyframe>
+<keyframe name="animation-name">
+    <key prop="sound: 'sound-name'"></key>
+</keyframe>
 ```
 Sound will be played once
 
