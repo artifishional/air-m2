@@ -625,8 +625,11 @@ export default class HTMLView extends LiveSchema {
 			style.remove();
 		} );
 		//resources.push(...styles.map( style => resource(pack, { type: "inline-style", style }) ));
-		
-        const tee = cuttee(node, key);
+
+		const sounds = [...node.children].filter(byTagName("SOUND"));
+		resources.push(...sounds.map( sound => resource(pack, { type: "sound", name: sound.getAttribute("name") || "", rel: sound.getAttribute("rel") || ""}) ));
+
+		const tee = cuttee(node, key);
 		const kit = cutkit(node, key);
         const preload = !["", "true"].includes(node.getAttribute("nopreload"));
         

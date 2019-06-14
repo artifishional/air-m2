@@ -178,16 +178,16 @@ or
 ##### Sound controls
 
 ```html
-<keyframe name="sound" prop="{duration: -1, sound: 'sound'}" ></keyframe>
+<keyframe name="animation-name" prop="{duration: -1, sound: 'sound-name'}" ></keyframe>
 ```
 Sound will be played once
 
 or
 
 ```html
-<keyframe name="sound2" prop="{duration: 2}">
-    <key offset="0.2" prop={sound:'sound'} ></key>
-    <key offset="0.7" prop={sound:'sound'} ></key>
+<keyframe name="animation-name" prop="{duration: 2}">
+    <key offset="0.2" prop={sound:'sound-name'} ></key>
+    <key offset="0.7" prop={sound:'sound-name'} ></key>
 </keyframe>
 
 ```
@@ -196,18 +196,18 @@ Sounds will be played 2 times with certain offsets and will be stopped if durati
 , where 
 - ```sound``` - name of resource declared in ```<sound>``` tag
 
-Sound reesource declaration
+Sound resource declaration
 ```html
-<sound name="sound" rel="../sound"></sound>
+<sound name="sound-name" rel="sound-resource"></sound>
 ```
 , where 
 - ```name``` - name of resource
 - ```rel``` - file name without extension from the directory
-``` component/res/sounds/sound ```
+``` component/res/sounds/sound-resource ```
 
 if you want to use the general sounds for components, you can go up the nesting levels
 
-```rel="../../sound"```
+```rel="../../sound-resource"```
 
 #### Reactions definition
 

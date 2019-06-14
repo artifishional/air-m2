@@ -30,7 +30,7 @@ export default function({ path }, { type, rel, url, ...args }) {
       _rel.splice(0, 1);
       _path.splice(-1, 1);
     }
-    return new Sound({ url: `./m2units/${_path.join("/")}/res/sounds/${_rel.join("/")}`, name: url, ...args });
+    return new Sound({ url: `./m2units/${_path.join("/")}/res/sounds/${_rel.join("/")}`, name, ...args });
   } else {
     throw "unsupported resource type";
   }
