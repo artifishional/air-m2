@@ -51,6 +51,7 @@ export default class HTMLView extends LiveSchema {
 		this.prop.handlers = this.prop.handlers || [];
 		this.prop.tee = this.prop.tee || null;
 		this.prop.plug = this.prop.plug || [];
+		this.prop.label = this.prop.label || "";
 		this.prop.styles = this.prop.styles || [];
 		this.prop.streamplug = this.prop.streamplug || [];
 		this.prop.keyframes = this.prop.keyframes || [];
@@ -603,7 +604,7 @@ export default class HTMLView extends LiveSchema {
 		Object.keys( stream ).map( prop => stream[prop] === "$key" && (stream[prop] = key) );
 		stream = routeToString(stream);
 
-		const acid = node.getAttribute("acid") || "";
+		const label = node.getAttribute("label") || "";
 
 		const template = ["", "true"].includes(node.getAttribute("template"));
 		const id = node.getAttribute("id") || "$";
@@ -674,6 +675,7 @@ export default class HTMLView extends LiveSchema {
 		const keyframes = [];
 
 		const prop = {
+			label,			//debug layer label
 			styles,         //inline style defenitions
 			streamplug,		//stream inline plugins
 			plug,			//view inline plugins
@@ -697,8 +699,8 @@ export default class HTMLView extends LiveSchema {
 			resources,      //related resources
 		};
 		
-		const res = src.acid !== -1 && src.lift( [ uvk, prop ], src, { acid } ) ||
-			new HTMLView( [ uvk, prop ], src, { acid } );
+		const res = src.acid !== -1 && src.lift( [ uvk, prop ], src ) ||
+			new HTMLView( [ uvk, prop ], src );
 		
 		//[...node.childNodes].map( next => setup( next, res.prop ));
 

@@ -20,7 +20,6 @@ function inject(style, priority) {
 	    PRIORITY[priority-1].after(style);
 	    PRIORITY[priority] = style;
     }
-	style.setAttribute("data-priority", `${priority}`);
 	PRIORITY[priority].before(style);
 }
 

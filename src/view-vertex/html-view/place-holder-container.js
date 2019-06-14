@@ -14,8 +14,7 @@ export default class PlaceHolderContainer {
 
     slots() {
         return [ ...this.target.querySelectorAll(`slot[acid]`) ]
-            .map( slot => ({ acid: slot.getAttribute("acid"), slot }) )
-            .map( ({ acid, slot }) => ({ slot, acid: acid.indexOf("-") > 0 ? acid : +acid }));
+            .map( slot => ({ acid: +slot.getAttribute("acid"), slot }) )
     }
 
     append(...nodes) {
@@ -30,7 +29,7 @@ export default class PlaceHolderContainer {
                 this.owner.prop.key :
             "";
         return document.createComment(
-            `${point} ${species} ${this.owner.acid} ${label} ${point}`.toUpperCase()
+            `${point} ${species} ${this.owner.acid} ${this.owner.prop.label} ${label} ${point}`.toUpperCase()
         );
     }
 
