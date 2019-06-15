@@ -6,7 +6,7 @@ import {
 	equal,
 	routeNormalizer,
 	routeToString,
-	signature,
+	signature as signatureEquals,
 	getfrompath,
 	calcsignature,
 } from "../../utils"
@@ -30,10 +30,10 @@ class Cached {
 		this.constructor = constructor;
 	}
 
-	createIfNotExist( signature, data ) {
-		let exist = this.__cache.find( ({ signature: x }) => signature === x );
+	createIfNotExist( data, signature ) {
+		let exist = this.__cache.find( ({ signature: x }) => signatureEquals(signature, x) );
 		if(!exist) {
-			exist = { signature, cell: this.constructor(signature, data) };
+			exist = { signature, cell: this.constructor(data, data) };
 			this.__cache.push(exist);
 		}
 		return exist.cell;
@@ -95,13 +95,13 @@ export default class HTMLView extends LiveSchema {
 			const cache = new Cached( {
 				constructor: (data) => {
 					
-					const _signature = calcsignature(data, this.prop.kit.prop);
+					const signature = calcsignature(data, this.prop.kit.prop);
 					
 					const modelvertex = new ModelVertex(["$$", {
 						glassy: true,
 						source: () => modelstream.map(([state]) => {
 							const childs = getfrompath(state, this.prop.kit.getter);
-							const res = childs.find( child => signature(_signature, child) );
+							const res = childs.find( child => signatureEquals(signature, child) );
 							return res !== undefined ? [res] : null;
 						})
 							.filter(Boolean)
@@ -109,11 +109,11 @@ export default class HTMLView extends LiveSchema {
 					}]);
 					
 					let sign;
-					if(typeof _signature !== "object") {
-						sign = { default: _signature };
+					if(typeof signature !== "object") {
+						sign = { default: signature };
 					}
 					else {
-						sign = _signature;
+						sign = signature;
 					}
 
 					modelvertex.parent = (layers.get(this.acid) || layers.get(-1)).layer;
@@ -150,19 +150,20 @@ export default class HTMLView extends LiveSchema {
 				const deleted = [ ...store];
 
 				childs.map( child => {
-					const _signature = calcsignature(child, this.prop.kit.prop);
-					const exist = store.find( ({ signature: $ }) => signature(_signature, $ ) );
+					const signature = calcsignature(child, this.prop.kit.prop);
+					const exist = store.find( ({ signature: $ }) => signatureEquals(signature, $ ) );
 					if(!exist) {
 						const box = new PlaceHolderContainer(this, { type: "item" });
 						domTreePlacment.after(box.target);
 						domTreePlacment = box.end;
-						cache.createIfNotExist( child )
-							.at( ([ { stage, container: { target } } ]) => {
+						cache.createIfNotExist( child, signature )
+							.at( ([ { stage, container } ]) => {
+								container.remove();
 								if(stage === 1) {
-									box.append( target );
+									box.append( container.target );
 								}
 							});
-						store.push( { signature: _signature, box } );
+						store.push( { signature, box } );
 					}
 					else {
 						removeElementFromArray(deleted, exist);
@@ -428,7 +429,7 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	teeSignatureCheck( layers ) {
-		return this.layers.every( ({ acid, prop: { tee } }) => signature( tee, layers.get(acid) ) );
+		return this.layers.every( ({ acid, prop: { tee } }) => signatureEquals( tee, layers.get(acid) ) );
 	}
 
 	createTeeEntity( { $: { layers, parentViewLayers }, ...args } ) {
