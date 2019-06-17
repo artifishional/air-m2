@@ -13,14 +13,18 @@ function FileReader(blob) {
 	} );
 }
 
-function inject(style, priority) {
-    if(!PRIORITY[priority]) {
-	    const style = document.createElement("style");
-	    style.setAttribute("data-priority", `${priority}`);
-	    PRIORITY[priority-1].before(style);
-	    PRIORITY[priority] = style;
+function createPrioritySystemStyle(priority) {
+    while(PRIORITY.length < priority+1) {
+        const style = document.createElement("style");
+        PRIORITY.push(style);
+        style.setAttribute("data-priority", `${PRIORITY.length-1}`);
+        PRIORITY[PRIORITY.length-2].before(style);
     }
-	PRIORITY[priority].after(style);
+}
+
+function inject(style, priority) {
+    createPrioritySystemStyle(priority);
+    PRIORITY[priority].after(style);
 }
 
 const PRIORITY = [];
