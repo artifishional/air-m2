@@ -17,10 +17,10 @@ function inject(style, priority) {
     if(!PRIORITY[priority]) {
 	    const style = document.createElement("style");
 	    style.setAttribute("data-priority", `${priority}`);
-	    PRIORITY[priority-1].after(style);
+	    PRIORITY[priority-1].before(style);
 	    PRIORITY[priority] = style;
     }
-	PRIORITY[priority].before(style);
+	PRIORITY[priority].after(style);
 }
 
 const PRIORITY = [];
