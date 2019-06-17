@@ -414,8 +414,10 @@ export default class HTMLView extends LiveSchema {
 		return stream( (emt, { sweep }) => {
 			sweep.add(combine( [
 				...this.prop.resources,
-				...this.prop.styles.map( (style, priority) =>
-					StylesController.get( style, this.acid, priority, this.prop.pack ) )
+				...this.prop.styles.map( (style, priority) => {
+					priority = +(style.getAttribute("priority") || priority);
+					return StylesController.get(style, this.acid, priority, this.prop.pack)
+				})
 			] ).at( ( resources ) => {
 				const container = new PlaceHolderContainer( this, { type: "node" } );
 				container.append(this.prop.node.cloneNode(true));
