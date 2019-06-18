@@ -11,6 +11,9 @@ function frommodule(module, _key = "main") {
 			}
 		}),
 		...Object.keys(module).filter(key => key !== "default").map( key => {
+			if(key === "*") {
+				return module[key];
+			}
 			if(typeof module[key] === "function") {
 				return [ key, { source: module[key] } ];
 			}
