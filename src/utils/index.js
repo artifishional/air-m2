@@ -120,7 +120,7 @@ export function equal(a, b) {
         }
         return false;
     }
-};
+}
 
 export function signature(sign, target) {
 
@@ -140,15 +140,20 @@ export function signature(sign, target) {
         }
         return false;
     }
-};
+}
 
 export function getfrompath(argv, path) {
+    let res;
 	if(path) {
-		return new Function(`argv`, `try{ return argv.${path} } catch(e) { return null }`)(argv);
+		res = new Function(`argv`, `return argv.${path}`)(argv);
 	}
 	else {
-		return argv;
+		res = argv;
 	}
+	if(res === undefined) {
+	    throw "unable to get data";
+    }
+	return res;
 }
 
 export function settopath(argv, path, value) {

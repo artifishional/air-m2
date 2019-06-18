@@ -106,7 +106,9 @@ function templater(vl, intl = null, argv, resources) {
     }
     
     if(vl.indexOf("intl") === 1) {
-        if(!intl) return null;
+        if(!intl) {
+            throw "'intl' can not be used here";
+        }
         const [_, name, template] = vl.match(/^{intl.([a-zA-Z0-9_\-]*),(.*)}$/);
         const format = getformat( name, resources );
         format.currency = format.currency || intl.currency;
@@ -135,7 +137,7 @@ function templater(vl, intl = null, argv, resources) {
                 }
             } );
             if(templates.some(x => x === null)) {
-                return null;
+                throw "some templates can not be initialized";
             }
             return formatter.format(0).replace( "0", templates.join("") );
         }
@@ -146,8 +148,9 @@ function templater(vl, intl = null, argv, resources) {
         });
     }
     else if(vl.indexOf("lang") === 1) {
-        if(!intl) return null;
-
+        if(!intl) {
+	        throw "'intl' can not be used here";
+        }
         const [_, name] = vl.match(/^{lang\.([a-zA-Z0-9_\-]*)}$/);
         const template = getlang(name, resources, intl);
 
@@ -159,9 +162,9 @@ function templater(vl, intl = null, argv, resources) {
                 return vl;
             }
         } );
-        if(templates.some(x => x === null)) {
-            return null;
-        }
+	    if(templates.some(x => x === null)) {
+		    throw "some templates can not be initialized";
+	    }
         return templates.join("");
     }
     throw "unsupported template type";
@@ -173,7 +176,7 @@ export default class ActiveNodeTarget {
         this.resources = resources;
         this.node = node;
         if (node.nodeType === NODE_TYPES.ELEMENT_NODE && node.tagName.toLocaleUpperCase() === 'SOUND') {
-            this.type = 'sound'
+            this.type = 'sound';
             node.remove()
         } else {
             this.type = node.nodeType === NODE_TYPES.TEXT_NODE ? "data" : "active";
@@ -188,7 +191,10 @@ export default class ActiveNodeTarget {
 
     update(argv) {
         if(this.type === "data") {
-            this.node.textContent = templater( this.template, this.intl, argv, this.resources );
+            try {
+	            this.node.textContent = templater( this.template, this.intl, argv, this.resources );
+            }
+            catch (e) {}
         }
     }
 

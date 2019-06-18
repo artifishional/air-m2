@@ -143,7 +143,14 @@ export default class HTMLView extends LiveSchema {
 			
 			sweep.add(modelstream.at( ([ state ]) => {
 				
-				const childs = getfrompath(state, this.prop.kit.getter);
+				let childs;
+				
+				try {
+					childs = getfrompath(state, this.prop.kit.getter);
+				}
+				catch (e) {
+					childs = [];
+				}
 				
 				let domTreePlacment = container.begin;
 				
