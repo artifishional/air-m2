@@ -65,8 +65,8 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 					if (type === "Declaration" && property === "src") {
 						for (const e of value.children.toArray()) {
 							const {type, value} = e;
-							if (type === "Url") {
-								let url = "m2units/" + path + value.value.replace(/"/g, "")
+							if (type === "Url" && value.value.indexOf("data:image") === -1) {
+								let url = "m2units/" + path + value.value.replace(/"/g, "");
 								if (revision) {
 									if (url.indexOf('?') > -1) {
 										url = `${url}&rev=${revision}`
@@ -86,8 +86,8 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 					if (property === "background-image" || property === "background") {
 						for (const e of value.children.toArray()) {
 							const {type, value} = e;
-							if (type === "Url") {
-								let url = "m2units/" + path + value.value.replace(/"/g, "")
+							if (type === "Url" && value.value.indexOf("data:image") === -1) {
+								let url = "m2units/" + path + value.value.replace(/"/g, "");
 								if (revision) {
 									if (url.indexOf('?') > -1) {
 										url = `${url}&rev=${revision}`
