@@ -455,8 +455,12 @@ export default class HTMLView extends LiveSchema {
 			state.target = container.target;
 			state.container = container;
 
-			//todo temporary solution
-			
+			let loaderHook = null;
+			let loader = null;
+			let placeHolderHook = null;
+			let placeHolder = null;
+
+
 			/*if(!this.prop.preload) {
 				sweep.add( loaderHook = this.obtain( "#loader", { $: { layers } } )
 					.at( ([ { stage, container: inner, target } ]) => {
@@ -472,80 +476,107 @@ export default class HTMLView extends LiveSchema {
 				);
 			}*/
 
-			let _inner = null;
-			const view = this.createNextLayers( { $: { layers, parentViewLayers }, ...args } );
-			sweep.add( modelschema.at( (data) => {
+
+			// if lazy
+			if (!this.prop.preload) {
+				sweep.add(loaderHook = this.obtain('@loader', { $: { layers } })
+					.at((loaderData) => {
+						const { stage, container: inner, target } = loaderData[0]
+						loader = inner;
+						if(state.stage === 0 && stage > 0) {
+							container.append(target);
+							state = { ...state, load: true, stage: 1, };
+							emt.kf();
+							emt([state]);
+						}
+					})
+				);
+			}
+
+			const view = this.createNextLayers({ $: { layers, parentViewLayers }, ...args });
+			sweep.add(modelschema.at((data) => {
+
+
 				const connect = () => {
-					sweep.add( childHook = view
-						.connectable( (data) => {
-							if(data !== keyF) {
-								if(state.load) {
-									state = { ...state, load: false };
-									loaderContainer.restore();
-								}
-								const [ { stage, container: inner } ] = data;
-								_inner = inner;
-								if(state.stage === 0) {
-									state = { ...state, stage: 1 };
-									emt.kf();
-									emt( [ state ] );
-								}
-								if( stage === 1 ) {
-									if(state.active) {
-										childHook({action: "fade-in"});
-										container.begin.after( _inner.target );
-									}
-									else {
-										_inner && _inner.restore();
-										if(!this.prop.preload) {
-											childHook && sweep.force( childHook );
-											childHook = null;
-										}
-									}
+					sweep.add(placeHolderHook = view.connectable((hookData) => {
+						if (hookData !== keyF) {
+							const [{ stage, container: inner }] = hookData;
+							placeHolder = inner;
+							if (state.stage === 0) {
+								state = { ...state, stage: 1 };
+								emt.kf();
+								emt([state]);
+							}
+							if (stage === 1) {
+								if (state.active) {
+									placeHolderHook({ action: 'fade-in' });
+									container.begin.after(placeHolder.target);
+								} else {
+									placeHolder && placeHolder.restore();
 								}
 							}
-						} )
-					);
-					childHook.connect();
+							if (!this.prop.preload) {
+								if (stage === 1 && !state.active) {
+									placeHolderHook && sweep.force(placeHolderHook);
+									placeHolderHook = null;
+								}
+								if (stage === 2) {
+									loader && loader.restore()
+								}
+							}
+						}
+					}));
+					placeHolderHook.connect();
 				};
 
+				// is element active
 				const active = this.teeSignatureCheck(
-					new Map([ ...teeStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) )
+					new Map([...teeStreamLayers].map(([acid], i) => [acid, data[i]]))
 				);
 
-				if(!active && !this.prop.preload) {
-					//loaderContainer loaderContainer.restore();
+				// load not lazy
+				if (state.stage === 0 && this.prop.preload) {
+					connect();
+				}
+
+				if (!active && !this.prop.preload) {
+					loader && loader.restore() // hide preloader
 					state = { ...state, stage: 1 };
 					emt.kf();
-					emt( [ state ] );
+					emt([state]);
 				}
 
-				if(state.stage === 0) {
-					if(this.prop.preload) {
-						connect();
-					}
+				if (active && state.active !== active && !this.prop.preload && loader) {
+					loaderHook({ action: 'fade-in' });
+					container.begin.after(loader.target);
 				}
 
-				if(active !== state.active) {
-					state = { ...state, active };
-					if(active) {
-						if(!childHook) {
-							connect();
-						}
-						else {
-							if(state.stage === 1) {
-								childHook({action: "fade-in"});
-								container.begin.after( _inner.target );
+				// process visibility state
+				if (state.active !== active) {
+					state = { ...state, active }; // save active status
+					if (active) {
+						if (!placeHolderHook) {
+							// connect first if not connected
+							connect()
+						} else {
+							if (state.stage === 1) {
+								// console.log(loader)
+								// adding element if loaded
+								placeHolderHook({ action: 'fade-in' });
+								container.begin.after(placeHolder.target);
 							}
 						}
-					}
-					else {
-						if(childHook) {
-							childHook({action: "fade-out"});
+
+					} else {
+						// removing element
+						if (placeHolderHook) {
+							placeHolderHook({ action: 'fade-out' });
 						}
 					}
+
 				}
-			} ) );
+
+			}));
 
 		});
 	}
