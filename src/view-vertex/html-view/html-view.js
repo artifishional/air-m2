@@ -460,6 +460,8 @@ export default class HTMLView extends LiveSchema {
 				acid: this.acid, key: this.key, stage: 0, active: false, target: null
 			};
 			let childHook = null;
+			let loaderHook = null;
+
 			let loaderContainer = null;
 			const container = new PlaceHolderContainer( this, { type: "entity" } );
 			state.target = container.target;
@@ -467,12 +469,11 @@ export default class HTMLView extends LiveSchema {
 
 			//todo temporary solution
 			
-			/*if(!this.prop.preload) {
-				sweep.add( loaderHook = this.obtain( "#loader", { $: { layers } } )
+			if(!this.prop.preload) {
+				sweep.add( loaderHook = this.obtain( "@loader", { $: { layers } } )
 					.at( ([ { stage, container: inner, target } ]) => {
 						if(state.stage === 0 && stage > 0) {
 							loaderContainer = inner;
-							loaderTarget = target;
 							state = { ...state, load: true, stage: 1, };
 							container.append( target );
 							emt.kf();
@@ -480,7 +481,7 @@ export default class HTMLView extends LiveSchema {
 						}
 					} )
 				);
-			}*/
+			}
 
 			let _inner = null;
 			const view = this.createNextLayers( { $: { layers, parentViewLayers }, ...args } );
@@ -524,7 +525,7 @@ export default class HTMLView extends LiveSchema {
 				);
 
 				if(!active && !this.prop.preload) {
-					//loaderContainer loaderContainer.restore();
+					loaderContainer && loaderContainer.remove();
 					state = { ...state, stage: 1 };
 					emt.kf();
 					emt( [ state ] );
@@ -641,7 +642,9 @@ export default class HTMLView extends LiveSchema {
 
 		const tee = cuttee(node, key);
 		const kit = cutkit(node, key);
-        const preload = !["", "true"].includes(node.getAttribute("nopreload"));
+        const preload =
+			!["", "true"].includes(node.getAttribute("nopreload")) &&
+			!["", "true"].includes(node.getAttribute("lazy"));
         
         const useOwnerProps = node.parentNode.tagName.toUpperCase() === "UNIT";
 		node.remove();
@@ -722,7 +725,7 @@ export default class HTMLView extends LiveSchema {
 			, []));
 
 		keyframes.push(...parseKeyFrames( { node } ));
-		
+
 		res.prop.node = document.createDocumentFragment();
 		res.prop.node.append( ...node.childNodes );
 		
@@ -751,6 +754,14 @@ export default class HTMLView extends LiveSchema {
 				return this.prop.useOwnerProps;
 			}
 		}
+		else if(name === "preload") {
+			if(!value) {
+				return false;
+			}
+			else {
+				return this.prop.preload;
+			}
+		}
 		else if(name === "controlled") {
 			return value || this.prop.controlled;
 		}
@@ -767,7 +778,6 @@ export default class HTMLView extends LiveSchema {
 			"streamplug",
 			"plug",
 			"kit",
-			"preload",
 			"key",
 			"tee",
 			"template",
