@@ -45,13 +45,14 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 		let isActive = true;
 		let fontFaceStyle = null;
 
-		const targets = [];
-		let rawFontCSSContent = "";
-		let rawCommonCSSContent = "";
+		// const targets = [];
+		// let rawFontCSSContent = "";
+		// let rawCommonCSSContent = "";
 
 		const ast = csstree.parse(style.textContent);
 
 		const images = [];
+		const fonts = [];
 
 		csstree.walk(ast, async function(node, item, list) {
 			if (node.type === 'Url') {
@@ -67,8 +68,16 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 					}
 					images.push(url);
 				}
+			} else if (this.declaration && this.declaration.property === 'font-family') {
+				const font = node.value && node.value.replace(/"/g, "").replace(/,/g, "");
+				if (font) {
+					fonts.push(font);
+				}
 			}
 		});
+
+		const fontsSet = new Set(fonts);
+		console.warn([...fontsSet]);
 
 		const result = images.map(async (url) => {
 			const promise = new Promise((resolve, reject) => {
@@ -106,8 +115,6 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 						}
 						node.value.value = images[url];
 					}
-				} else if (this.atrule && this.atrule.name === "font-face") {
-					console.warn('whatever')
 				}
 			});
 
