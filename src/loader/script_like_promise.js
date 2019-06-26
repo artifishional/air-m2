@@ -1,3 +1,5 @@
+import { VIEW_PLUGINS } from "../globals"
+
 class ModuleLoadEvent extends Event {
 
     constructor({ module, script }) {
@@ -10,15 +12,19 @@ class ModuleLoadEvent extends Event {
 
 Object.defineProperty(window, "__m2unit__", {
     set(module) {
-        window.dispatchEvent(new ModuleLoadEvent({ module, script: document.currentScript }));
+        const script = document.currentScript;
+        if(VIEW_PLUGINS.has(script)) {
+            VIEW_PLUGINS.set( script, module );
+        }
+        window.dispatchEvent(new ModuleLoadEvent({ module, script }));
     }
 });
 
-export default function ({path}) {
+export default function ({path, revision}) {
     if(/.\.js$/g.test(path)) {
         return new Promise((resolve, reject) => {
             const script = document.createElement("script");
-            script.src = path;
+            script.src = revision ? `${path}?rev=${revision}` : path;
             let hn = null;
             //script.addEventListener("load", resolve);
             window.addEventListener("m2SourceModuleLoad", hn = (event) => {
@@ -35,7 +41,7 @@ export default function ({path}) {
     else if(/.\.json$/g.test(path)) {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            xhr.open("GET", path, true);
+            xhr.open("GET", revision ? `${path}?rev=${revision}` : path, true);
             xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
             xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');
             xhr.onload = () => {
@@ -47,7 +53,7 @@ export default function ({path}) {
     else if (/.\.html$/g.test(path)) {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            xhr.open("GET", path, true);
+            xhr.open("GET", revision ? `${path}?rev=${revision}` : path, true);
             xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
             xhr.setRequestHeader('Content-type', 'text/html; charset=utf-8');
             xhr.onload = () => {
