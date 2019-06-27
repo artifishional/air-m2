@@ -42,14 +42,13 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 		style.textContent = style.textContent.replace(/:scope/g, `[data-scope-acid-${acid}]`);
 
 		let isActive = true;
-		let fontFaceStyle = null;
 
 		const ast = csstree.parse(style.textContent);
 
 		const images = [];
 		const fonts = [];
 
-		csstree.walk(ast, async function(node, item, list) {
+		csstree.walk(ast, async function(node) {
 			if (node.type === 'Url') {
 				const value = node.value.value;
 				if (value.indexOf("data:image") === -1) {
@@ -103,7 +102,7 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 					...elem
 				}
 			}, {});
-			csstree.walk(ast, async function(node, item, list) {
+			csstree.walk(ast, async function(node) {
 				if (node.type === 'Url') {
 					const value = node.value.value;
 					node.value.value = images[value];
