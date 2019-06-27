@@ -1,7 +1,6 @@
 import { stream } from "air-stream";
 import csstree from "css-tree";
 import FontFaceObserver from "fontfaceobserver";
-import ImagePreloader from "image-preloader";
 
 const FONT_LOADING_TIMEOUT = 30000;
 
@@ -45,10 +44,6 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 		let isActive = true;
 		let fontFaceStyle = null;
 
-		// const targets = [];
-		// let rawFontCSSContent = "";
-		// let rawCommonCSSContent = "";
-
 		const ast = csstree.parse(style.textContent);
 
 		const images = [];
@@ -58,42 +53,50 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 			if (node.type === 'Url') {
 				const value = node.value.value;
 				if (value.indexOf("data:image") === -1) {
-					let url = "m2units/" + path + value.replace(/"/g, "");
-					if (revision) {
-						if (url.indexOf('?') > -1) {
-							url = `${url}&rev=${revision}`
-						} else {
-							url = `${url}?rev=${revision}`
-						}
-					}
-					images.push(url);
+					images.push(value);
 				}
-			} else if (this.declaration && this.declaration.property === 'font-family') {
-				const font = node.value && node.value.replace(/"/g, "").replace(/,/g, "");
-				if (font) {
-					fonts.push(font);
+			} else if (this.atrule && this.atrule.name === 'font-face') {
+				if (node.type === "Declaration" && node.property === 'font-family') {
+					const values = node.value && node.value.children && node.value.children
+						.toArray()
+						.map(({value}) => value.replace(/"/g, ""));
+					if (values) {
+						fonts.push(...values);
+					}
 				}
 			}
 		});
 
-		const fontsSet = new Set(fonts);
-		console.warn([...fontsSet]);
-
-		const result = images.map(async (url) => {
+		const imgPromises = images.map(async (value) => {
+			let url = "m2units/" + path + value.replace(/"/g, "");
+			if (revision) {
+				if (url.indexOf('?') > -1) {
+					url = `${url}&rev=${revision}`
+				} else {
+					url = `${url}?rev=${revision}`
+				}
+			}
 			const promise = new Promise((resolve, reject) => {
 				fetch(url)
 					.then(r => r.blob())
 					.then(FileReader)
 					.then(({target: {result: base64}}) => {
 						resolve({
-							[url]: base64
+							[value]: base64
 						})
 					})
 			});
 			return promise;
 		});
 
-		Promise.all(result).then((data) => {
+		const fontsPromises = fonts.map((font) => {
+			return new FontFaceObserver(font).load(null, FONT_LOADING_TIMEOUT);
+		})
+
+		Promise.all([
+			...imgPromises,
+			...fontsPromises
+		]).then((data) => {
 			const images = data.reduce((acc, elem) => {
 				return {
 					...acc,
@@ -105,15 +108,24 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 					const value = node.value.value;
 					node.value.value = images[value];
 					if (value.indexOf("data:image") === -1) {
-						let url = "m2units/" + path + value.replace(/"/g, "");
-						if (revision) {
-							if (url.indexOf('?') > -1) {
-								url = `${url}&rev=${revision}`
-							} else {
-								url = `${url}?rev=${revision}`
-							}
-						}
-						node.value.value = images[url];
+						node.value.value = images[value];
+					}
+				} else if (this.atrule && this.atrule.name === 'font-face') {
+					if (node.type === "Declaration" && node.property === 'src') {
+						node.value && node.value.children && node.value.children
+							.toArray()
+							.filter(({type}) => type === 'Url')
+							.map(({value}) => {
+								let url = "m2units/" + path + value.value.replace(/"/g, "");
+								if (revision) {
+									if (url.indexOf('?') > -1) {
+										url = `${url}&rev=${revision}`
+									} else {
+										url = `${url}?rev=${revision}`
+									}
+								}
+								value.value = url;
+							})
 					}
 				}
 			});
@@ -122,84 +134,11 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 			const commonStyle = document.createElement("style");
 			commonStyle.append(result);
 
-			// Promise.all(
-			// 	targets.map(({raw, type}) => {
-			// 		if (type === "font") {
-			// 			return new FontFaceObserver(raw).load(null, FONT_LOADING_TIMEOUT);
-			// 		} else if (type === "img") {
-			// 			return new ImagePreloader().preload(raw);
-			// 		}
-			// 	})
-			// ).then(() => {
 			if (isActive) {
 				inject(commonStyle, priority);
 				emt({type: "inline-style", style: commonStyle, ...args});
 			}
-			// });
 		})
-
-		// console.warn([...result]);
-
-		// csstree.walk(ast, async function(node, item, list) {
-		// 	if (list) {
-		// 		if (this.rule && node.type === 'Url') {
-		// 			const value = node.value.value;
-		// 			if (value.indexOf("data:image") === -1) {
-		// 				let url = "m2units/" + path + value.replace(/"/g, "");
-		// 				if (revision) {
-		// 					if (url.indexOf('?') > -1) {
-		// 						url = `${url}&rev=${revision}`
-		// 					} else {
-		// 						url = `${url}?rev=${revision}`
-		// 					}
-		// 				}
-		// 				await fetch(url)
-		// 					.then(r => r.blob())
-		// 					.then(FileReader)
-		// 					.then(({target: {result: base64}}) => {
-		// 						node.value.value = base64;
-		// 					})
-		// 			}
-		// 		} else if (this.atrule && this.atrule.name && node.type === 'Url') {
-		// 			const value = node.value.value;
-		// 			if (value.indexOf("data:image") === -1) {
-		// 				let url = "m2units/" + path + value.replace(/"/g, "");
-		// 				if (revision) {
-		// 					if (url.indexOf('?') > -1) {
-		// 						url = `${url}&rev=${revision}`
-		// 					} else {
-		// 						url = `${url}?rev=${revision}`
-		// 					}
-		// 				}
-		// 				await fetch(url)
-		// 					.then(r => r.blob())
-		// 					.then(FileReader)
-		// 					.then(({target: {result: base64}}) => {
-		// 						node.value.value = base64;
-		// 					})
-		// 			}
-		// 		}
-		// 	}
-		// });
-
-		// const result = csstree.generate(ast, { sourceMap: false });
-		// const commonStyle = document.createElement("style");
-		// commonStyle.append(result);
-
-		// Promise.all(
-		// 	targets.map(({raw, type}) => {
-		// 		if (type === "font") {
-		// 			return new FontFaceObserver(raw).load(null, FONT_LOADING_TIMEOUT);
-		// 		} else if (type === "img") {
-		// 			return new ImagePreloader().preload(raw);
-		// 		}
-		// 	})
-		// ).then(() => {
-		// 	if (isActive) {
-		// 	    inject(commonStyle, priority);
-		// 		emt({type: "inline-style", style: commonStyle, ...args});
-		// 	}
-		// });
 
 		sweep.add(() => {
 			isActive = false;
