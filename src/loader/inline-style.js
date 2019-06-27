@@ -142,8 +142,8 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 
 		sweep.add(() => {
 			isActive = false;
-			commonStyle.remove();
-			fontFaceStyle && fontFaceStyle.remove();
+			// commonStyle.remove();
+			// fontFaceStyle && fontFaceStyle.remove();
 		});
 	});
 }
