@@ -48,7 +48,7 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 		const images = [];
 		const fonts = [];
 
-		csstree.walk(ast, async function(node) {
+		csstree.walk(ast, function(node) {
 			if (node.type === 'Url') {
 				const value = node.value.value;
 				if (value.indexOf("data:image") === -1) {
@@ -66,7 +66,7 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 			}
 		});
 
-		const imgPromises = images.map(async (value) => {
+		const imgPromises = images.map((value) => {
 			let url = "m2units/" + path + value.replace(/"/g, "");
 			if (revision) {
 				if (url.indexOf('?') > -1) {
@@ -102,7 +102,7 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 					...elem
 				}
 			}, {});
-			csstree.walk(ast, async function(node) {
+			csstree.walk(ast, function(node) {
 				if (node.type === 'Url') {
 					const value = node.value.value;
 					node.value.value = images[value];
