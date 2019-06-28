@@ -232,6 +232,10 @@ where environment variables:
 - ``` "onpointerleave" ```
 - ``` "onpointerup" ```
 - ``` "onpointerdown" ```
+- ``` "onmouseenter" ```
+- ``` "onmouseleave" ```
+- ``` "onmouseover" ```
+- ``` "onmouseout" ```
 - ``` "onchange" ```
 - ``` "oninput" ```
 - ``` "onglobalkeydown" (synthetic)```
