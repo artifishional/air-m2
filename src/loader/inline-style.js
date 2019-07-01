@@ -76,9 +76,9 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 							value.value = url;
 						})
 				}
-			} else if (node.type === 'Url') {
+			} else if ((this.rule || this.atrule && this.atrule.name === 'media') && node.type === 'Url') {
 				const value = node.value.value;
-				if (value.indexOf("data:image") === -1) {
+				if (value.indexOf("data:") === -1) {
 					dataForLoading.push({
 						type: 'image',
 						resource: value,
