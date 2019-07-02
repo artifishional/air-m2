@@ -46,6 +46,7 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 		const ast = csstree.parse(style.textContent);
 
 		const dataForLoading = [];
+		const fonts = [];
 
 		csstree.walk(ast, function(node) {
 			if (this.atrule && this.atrule.name === 'font-face') {
@@ -54,7 +55,7 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 						.toArray()
 						.map(({value}) => value.replace(/"/g, ""));
 					if (values) {
-						dataForLoading.push({
+						fonts.push({
 							type: 'font',
 							resource: values,
 							target: null
@@ -65,7 +66,7 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 						.toArray()
 						.filter(({type}) => type === 'Url')
 						.map(({value}) => {
-							let url = "m2units/" + path + value.value.replace(/"/g, "");
+							let url = "./m2units/" + path + value.value.replace(/"/g, "");
 							if (revision) {
 								if (url.indexOf('?') > -1) {
 									url = `${url}&rev=${revision}`
@@ -88,7 +89,7 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 			}
 		});
 
-		const promises = dataForLoading.reduce((acc, {type, resource, target}) => {
+		const promises = dataForLoading.map(({type, resource, target}) => {
 			if (type === 'image') {
 				let url = "m2units/" + path + resource.replace(/"/g, "");
 				if (revision) {
@@ -104,33 +105,42 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 						.then(FileReader)
 						.then(({target: {result: base64}}) => {
 							target.value = base64;
-							resolve();
+							resolve('done');
 						})
 				});
-				return [
-					...acc,
-					promise
-				]
-			} else {
-				const fontPromises = resource.map((res) => {
-					return new FontFaceObserver(res).load(null, FONT_LOADING_TIMEOUT);
-				});
-				return [
-					...acc,
-					...fontPromises
-				]
+				return promise;
 			}
-		}, []);
+		});
 
 		Promise.all(promises).then(() => {
 			const result = csstree.generate(ast, { sourceMap: false });
 			const commonStyle = document.createElement("style");
-			commonStyle.append(result);
-
-			if (isActive) {
-				inject(commonStyle, priority);
-				emt({type: "inline-style", style: commonStyle, ...args});
+			if(fonts.length) {
+				commonStyle.append(result);
+				document.head.appendChild(commonStyle);
+				Promise.all(
+					fonts.reduce((acc, {type, resource, target}) => {
+						const fontPromises = resource.map((res) => {
+							return new FontFaceObserver(res).load(null, FONT_LOADING_TIMEOUT);
+						});
+						return [
+							...acc,
+							...fontPromises
+						]
+					}, [])
+				).then(() => {
+					if (isActive) {
+						emt({type: "inline-style", style: commonStyle, ...args});
+					}
+				})
+			} else {
+				commonStyle.append(result);
+				if (isActive) {
+					inject(commonStyle, priority);
+					emt({type: "inline-style", style: commonStyle, ...args});
+				}
 			}
+
 		});
 
 		sweep.add(() => {
