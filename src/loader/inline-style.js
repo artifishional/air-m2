@@ -43,6 +43,9 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 
 		let isActive = true;
 
+		const commonStyle = document.createElement("style");
+		let fontStyle = null;
+
 		const ast = csstree.parse(style.textContent);
 
 		const dataForLoading = [];
@@ -114,37 +117,34 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 
 		Promise.all(promises).then(() => {
 			const result = csstree.generate(ast, { sourceMap: false });
-			const commonStyle = document.createElement("style");
+			commonStyle.append(result);
 			if(fonts.length) {
-				commonStyle.append(result);
-				document.head.appendChild(commonStyle);
-				Promise.all(
-					fonts.reduce((acc, {type, resource, target}) => {
-						const fontPromises = resource.map((res) => {
-							return new FontFaceObserver(res).load(null, FONT_LOADING_TIMEOUT);
-						});
-						return [
-							...acc,
-							...fontPromises
-						]
-					}, [])
-				).then(() => {
-					if (isActive) {
-						emt({type: "inline-style", style: commonStyle, ...args});
-					}
-				})
-			} else {
-				commonStyle.append(result);
+				fontStyle = document.createElement("style");
+				fontStyle.append(result);
+				document.head.appendChild(fontStyle);
+			}
+			Promise.all(
+				fonts.reduce((acc, {type, resource, target}) => {
+					const fontPromises = resource.map((res) => {
+						return new FontFaceObserver(res).load(null, FONT_LOADING_TIMEOUT);
+					});
+					return [
+						...acc,
+						...fontPromises
+					]
+				}, [])
+			).then(() => {
 				if (isActive) {
 					inject(commonStyle, priority);
 					emt({type: "inline-style", style: commonStyle, ...args});
 				}
-			}
-
+			})
 		});
 
 		sweep.add(() => {
 			isActive = false;
+			commonStyle.remove();
+			fontStyle && fontStyle.remove();
 		});
 	});
 }
