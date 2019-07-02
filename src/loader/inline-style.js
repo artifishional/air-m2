@@ -88,7 +88,7 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 			}
 		});
 
-		const promises = dataForLoading.map(({type, resource, target}) => {
+		const promises = dataForLoading.reduce((acc, {type, resource, target}) => {
 			if (type === 'image') {
 				let url = "m2units/" + path + resource.replace(/"/g, "");
 				if (revision) {
@@ -98,7 +98,7 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 						url = `${url}?rev=${revision}`
 					}
 				}
-				return new Promise((resolve) => {
+				const promise =  new Promise((resolve) => {
 					fetch(url)
 						.then(r => r.blob())
 						.then(FileReader)
@@ -107,10 +107,20 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 							resolve();
 						})
 				});
+				return [
+					...acc,
+					promise
+				]
 			} else {
-				return new FontFaceObserver(resource).load(null, FONT_LOADING_TIMEOUT);
+				const fontPromises = resource.map((res) => {
+					return new FontFaceObserver(res).load(null, FONT_LOADING_TIMEOUT);
+				});
+				return [
+					...acc,
+					...fontPromises
+				]
 			}
-		});
+		}, []);
 
 		Promise.all(promises).then(() => {
 			const result = csstree.generate(ast, { sourceMap: false });
