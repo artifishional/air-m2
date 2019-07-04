@@ -43,7 +43,13 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 
 		let isActive = true;
 
+		let fontFaceStyle = null;
 		const commonStyle = document.createElement("style");
+		commonStyle.textContent = "";
+
+		let rawFontCSSContent = "";
+		let rawCommonCSSContent = "";
+
 		let fontStyle = null;
 
 		const ast = csstree.parse(style.textContent);
@@ -116,15 +122,22 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 		});
 
 		Promise.all(promises).then(() => {
-			const result = csstree.generate(ast, { sourceMap: false });
-			commonStyle.append(result);
-			if(fonts.length) {
-				fontStyle = document.createElement("style");
-				fontStyle.append(result);
-				document.head.appendChild(fontStyle);
+			for (const node of ast.children.toArray()) {
+				const {type, name} = node;
+				if (type === "Atrule" && name === "font-face") {
+					rawFontCSSContent += csstree.generate(node);
+				} else {
+					rawCommonCSSContent += csstree.generate(node);
+				}
+			}
+			commonStyle.textContent = rawCommonCSSContent;
+			if (rawFontCSSContent) {
+				fontFaceStyle = document.createElement("style");
+				fontFaceStyle.textContent = rawFontCSSContent;
+				document.head.appendChild(fontFaceStyle);
 			}
 			Promise.all(
-				fonts.reduce((acc, {type, resource, target}) => {
+				fonts.reduce((acc, {resource}) => {
 					const fontPromises = resource.map((res) => {
 						return new FontFaceObserver(res).load(null, FONT_LOADING_TIMEOUT);
 					});
