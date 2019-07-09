@@ -62,6 +62,21 @@ export default class HTMLView extends LiveSchema {
 		return new ActiveNodeTarget(node, resources);
 	}
 
+	findByLabel(label) {
+		if(this.layers.some(({ prop: { label: x } }) => x === label)) {
+			return this;
+		}
+		else {
+			for(let i = 0; i < this.item.length; i ++ ) {
+				const res = this.item[i].findByLabel(label);
+				if(res) {
+					return res;
+				}
+			}
+		}
+		return null;
+	}
+
 	createKitLayer( { $: { modelschema,
 		parentViewLayers,
 		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) },
