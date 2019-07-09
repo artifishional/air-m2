@@ -53,7 +53,7 @@ export default class LiveSchema extends Schema {
                 packs.map( (pkj, index) => {
                     const { type = "url" } = nextToLoad.prop.use[index];
                     if(type === "url") {
-                        this.appendData( pkj );
+                        this.appendData( pkj, nextToLoad.src );
                     }
                     else {
                         this.merge( pkj );
