@@ -1,5 +1,5 @@
 import { BOOLEAN } from "../def"
-
+import JSON5 from 'json5';
 
 /**
  *
@@ -41,35 +41,28 @@ export function forEachFromData(func) {
     })
 }
 
-export function argvroute( route ) {
-    return JSON.parse(((
-        route
-        .split("/")
-        .filter(x => !".".includes(x))
-        .slice(-1)[0] || "")
-        .match( /\[.*\]/ ) || ["{}"])[0]
-        .replace(/\[(.*)\]/, (_, x) => `{${x}}` )
-        .replace("=", ":")
-        .replace(/\"{0,1}([$0-9\-_a-zA-Z]{1,77})\"{0,1}/g, (_, x) => `"${x}"`)
-    );
-}
-
 const EMPTY_ROUTE = { route: [] };
-
-export function routeNormalizer(route) {
-    if(!route) return EMPTY_ROUTE;
+const parseNumbers = (k, v) => isFinite(v) ? parseFloat(v) : v;
+export function routeNormalizer (route) {
+    if (!route) return EMPTY_ROUTE;
     try {
-        return {
-            route: route.split("/")
-            //an empty string includes
-                .map(x => x.replace(/\[.*]/, ""))
-                .filter(x => !".".includes(x))
-                .map(x => x[0] === "{" ? JSON.parse(x.replace(/"?([$a-zA-Z0-9\-_]+)"?/g, (_, x)=> `"${x}"`)) : x),
-            ...argvroute( route ),
-        }
-    }
-    catch(e) {
-        throw `can't parse this route: ${route}`
+        const parts = route.split('/');
+        if (parts.some(x => x.match(/(\[.*].+$|\[.*].*\[.*])/))) throw `argv should be at the end of path element ${route}`;
+
+        const _route = parts
+          .map(x => x.replace(/\[.*]/, ''))
+          .filter(x => !'.'.includes(x))
+          .map(x => x[0] === '{' ? JSON5.parse(x.replace(/"?([$a-zA-Z0-9\-_]+)"?/g, (_, x) => `"${x}"`), parseNumbers) : x);
+
+
+        const params = parts.reduce((acc, x) => {
+            let match = x.match(/\[(.*)]$/);
+            return { ...acc, ...(match ? JSON5.parse(`{${match[1].replace(/=([^"',\s\]{}]+)/g, (_, x) => isFinite(x) ? `=${x}` : `="${x}"`).replace(/=/g, ':')}}`) : {}) };
+        }, {});
+
+        return { route: _route, ...params };
+    } catch (e) {
+        throw new Error(e);
     }
 }
 
