@@ -42,74 +42,85 @@ export function forEachFromData(func) {
 }
 
 const EMPTY_ROUTE = { route: [] };
-const allowedChars = `abcdefghijklmnopqrsntuvwxyzABCDEFGHIJKLMNOPQRSNTUVWXYZ0123456789$-_,."'`.split('');
-
-// quote processing
+const allowedChars = `abcdefghijklmnopqrsntuvwxyzABCDEFGHIJKLMNOPQRSNTUVWXYZ0123456789$-_,.`.split('');
 export const parseRoute = (route, lvl = []) => {
   const _route = [];
   let _params = {};
   const type = lvl.length ? lvl[lvl.length - 1] : 'path';
-
   let res;
   let idx = 0;
   let collector = '';
+
   while (idx < route.length) {
     const char = route[idx];
-    if (allowedChars.includes((char))) {
-      collector += char;
-    } else {
-      switch (char) {
-        case '=':
-          if (type === '[') {
-            collector += ':';
-          }
-          break;
-        case '/':
-          if (type === 'path') {
-            if (collector.length) {
-              _route.push(collector);
-            }
-            collector = '';
-          } else {
-            collector += char;
-          }
-          break;
-        case '{':
-          res = parseRoute(route.slice(idx + 1), [...lvl, '{']);
-          if (type !== 'path') {
-            collector += `{${res.collector}}`;
-          } else {
-            _route.push(JSON5.parse(`{${res.collector}}`));
-          }
-          idx += res.offset;
-          break;
-        case '}':
-          if (type === '{') {
-            return { offset: idx, collector };
-          }
-          break;
-        case '[':
-          if (type === 'path') {
-            res = parseRoute(route.slice(idx + 1), [...lvl, '[']);
-            _params = { ..._params, ...JSON5.parse(`{${res.collector}}`) };
-            idx += res.offset;
-          } else if (type === '{') {
-            collector += '[';
-          }
-          break;
-        case ']':
-          if (type === '{') {
-            idx++;
-            collector += ']';
-            return { offset: idx, collector, type };
-          } else if (type === '[') {
-            return { offset: idx, collector, type };
-          }
-          break;
-        default:
-          collector += char;
-      }
 
+    if (['\'', '"'].includes(type)) {
+      if (['\'', '"'].includes(char) && route[idx - 1] !== '\\') {
+        return { offset: idx + 1, collector };
+      } else {
+        collector += char;
+      }
+    } else {
+      if (allowedChars.includes(char)) {
+        collector += char;
+      } else {
+        switch (char) {
+          case `'`:
+          case `"`:
+            res = parseRoute(route.slice(idx + 1), [...lvl, char]);
+            collector += `${char}${res.collector}${char}`;
+            idx += res.offset;
+            break;
+          case '=':
+            if (type === '[') {
+              collector += ':';
+            }
+            break;
+          case '/':
+            if (type === 'path') {
+              if (collector.length) {
+                _route.push(collector);
+              }
+              collector = '';
+            } else {
+              collector += char;
+            }
+            break;
+          case '{':
+            res = parseRoute(route.slice(idx + 1), [...lvl, '{']);
+            if (type !== 'path') {
+              collector += `{${res.collector}}`;
+            } else {
+              _route.push(JSON5.parse(`{${res.collector}}`));
+            }
+            idx += res.offset;
+            break;
+          case '}':
+            if (type === '{') {
+              return { offset: idx, collector };
+            }
+            break;
+          case '[':
+            if (type === 'path') {
+              res = parseRoute(route.slice(idx + 1), [...lvl, '[']);
+              _params = { ..._params, ...JSON5.parse(`{${res.collector}}`) };
+              idx += res.offset;
+            } else if (type === '{') {
+              collector += '[';
+            }
+            break;
+          case ']':
+            if (type === '{') {
+              collector += ']';
+            } else
+              if (type === '[') {
+              return { offset: idx, collector, type };
+            }
+            break;
+          default:
+            collector += char;
+        }
+      }
     }
     idx++;
   }
@@ -128,7 +139,6 @@ export function routeNormalizer (route) {
   if (~route.indexOf('route=')) throw new Error('"route" param not allowed');
   return parseRoute(route);
 }
-
 
 //todo req. to separate the operation on the paths in an entity
 export function routeToString( { route, ...args } ) {

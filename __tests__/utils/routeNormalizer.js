@@ -2,6 +2,7 @@ import { routeNormalizer, routeNormalizer2 } from '../../src/utils';
 
 const routes = [
   {
+    message: 'Parse empty route',
     path: '',
     expected: { route: [] }
   },
@@ -85,10 +86,14 @@ const routes = [
     path: './{name:123,b:[1,2,3]}/foo[route=1]/bar[a={foo:[1,2,3]},b={x:{y:{z:"abc"}}}]/baz[c=4][d=1.2]',
     expected: 'exception'
   },
-  // {
-  //   path: './{name:123,b:\'dontparse[1,2,3]\'}/foo[a=1]/bar[a={foo:[1,2,3]},b={x:{y:{z:"abc"}}}]/baz[c=4][d=1.2]',
-  //   expected: { a: { foo: [1, 2, 3] }, b: { x: { y: { z: 'abc' } } }, c: 4, d: 1.2, route: [ {name: 123, b: 'dontparse[1,2,3]' }, 'foo', 'bar', 'baz'] }
-  // }
+  {
+    path: './{name:123,b:\'dont\\\'parse[1,2,3]\'}/foo[a=1]/bar[a={foo:[1,2,3]},b={x:{y:{z:"abc"}}}]/baz[c=4][d=1.2]',
+    expected: { a: { foo: [1, 2, 3] }, b: { x: { y: { z: 'abc' } } }, c: 4, d: 1.2, route: [ {name: 123, b: 'dont\'parse[1,2,3]' }, 'foo', 'bar', 'baz'] }
+  },
+  {
+    path: './{name:[1,2,3],b:\'dont\\\'parse[1,2,3]\'}/foo[a=1]/bar[a={foo:[1,2,3]},b={x:{y:{z:"abc"}}}]/baz[c=4][d=1.2]',
+    expected: { a: { foo: [1, 2, 3] }, b: { x: { y: { z: 'abc' } } }, c: 4, d: 1.2, route: [ {name: [1, 2, 3], b: 'dont\'parse[1,2,3]' }, 'foo', 'bar', 'baz'] }
+  }
 ];
 
 const parseRoute = (route, n = 1) =>
