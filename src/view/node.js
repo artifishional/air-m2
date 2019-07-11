@@ -31,7 +31,7 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources = [], ..
 
                 sweep.add(
                     combine([ loader(pack, resources), model && modelstream.ready() ].filter(Boolean)
-                ).at(([resources]) => {
+                ).at(([resources], src) => {
 
                     resources = resources.length ? [...resources, ...baseresources] : baseresources;
 
@@ -70,22 +70,24 @@ export default (scenesstream, { modelstream, viewbuilder, baseresources = [], ..
                     const all = [...elems, _animate];
                     all.map( obs => over.add(obs.at( ()=> {} )) );
 
-                    if(elems.length) sweep.add(combine( elems.map( obs => obs.filter(prop("action").eq("complete")) ) ).at(
-                        views => {
+                    if(elems.length) sweep.add(combine(
+                        elems.map( obs => obs.filter(prop("action").eq("complete")) )
+                    ).at(
+                        (views, src) => {
                             view.add(...views.map( ({node}) => node ));
-                            emt( {action: "complete", node: view} );
+                            emt( {action: "complete", node: view}, src );
                         }
                     ));
                     else {
-                        emt( { action: "complete", node: view } );
+                        emt( { action: "complete", node: view }, src );
                     }
                     sweep.add(() => view.clear());
-                    sweep.add(combine(all.map( obs => obs.filter(prop("action").eq("fade-in-complete")) )).at(
+                    /*sweep.add(combine(all.map( obs => obs.filter(prop("action").eq("fade-in-complete")) )).at(
                         () => emt( {action: "fade-in-complete"} )
-                    ));
-                    sweep.add(combine(all.map( obs => obs.filter(prop("action").eq("fade-out-complete")) )).at(
+                    ));*/
+                    /*sweep.add(combine(all.map( obs => obs.filter(prop("action").eq("fade-out-complete")) )).at(
                         () => emt( {action: "fade-out-complete"} )
-                    ));
+                    ));*/
                 }));
 
             }

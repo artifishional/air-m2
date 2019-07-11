@@ -40,7 +40,10 @@ export default function ({path}, resources) {
             throw "unsupported resource type";
         }
     } ),
-        stream(emt => emt({type: "none"}))
+        stream((emt, { sweep }) => {
+            const id = setImmediate(() => emt({type: "none"}));
+            sweep.add(() => clearImmediate(id));
+        })
     ], (...res) => res.reduce( (acc, next) => {
         if(next.type === "none") { }
         else if(next.type === "intl") {

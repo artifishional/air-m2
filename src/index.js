@@ -1,3 +1,6 @@
+import "pepjs"
+import "resize-observer-polyfill"
+import MobileDetect from "mobile-detect"
 export * from "air-stream"
 export * from "./advantages"
 export * from "./loader"
@@ -10,3 +13,7 @@ import * as _utils from "./utils/index"
 export const utils = _utils;
 export const uid = () => __uid++;
 let __uid = 1;
+
+export const $_IS_MOBILE = !["iPad", null].includes(
+    new MobileDetect(window.navigator.userAgent).mobile()
+);

@@ -17,10 +17,13 @@ export function frommodule(module, _key = "main") {
     return [ _key,
         ...Object.keys(module).filter(key => key === "default").map( key => {
             if (typeof module[key] === "function") {
+                if(module.hasOwnProperty("id")) {
+                    return {id: module.id, source: module[key]};
+                }
                 return {source: module[key]};
             }
         }),
-        ...Object.keys(module).filter(key => key !== "default").map( key => {
+        ...Object.keys(module).filter(key => key !== "default" && key !== "id").map( key => {
             if(typeof module[key] === "function") {
                 return [ key, { source: module[key] } ];
             }
@@ -87,3 +90,39 @@ export function searchBySignature(sign, arr, sprop = "key") {
                 Object.keys(sign).every( k => key[k] === sign[k] )
     })
 }
+
+export const equal = (a, b) => {
+    if(a === b) {
+        return true;
+    }
+    else {
+        if(Array.isArray(a)) {
+            return a.length === b.length && a.every( (a, i) => equal( a, b[i] ) );
+        }
+        else if(
+            typeof a === "object" && a !== null && b !== null && a.constructor === Object
+        ) {
+            const keysA = Object.keys(a);
+            const keysB = Object.keys(b);
+            return keysA.length === keysB.length &&
+                keysA.every( k => equal(a[k], b[k]) )
+        }
+        return false;
+    }
+};
+
+export const signature = (sign, target) => {
+
+    if(sign == target) { //important
+        return true;
+    }
+    else {
+        if(Array.isArray(sign)) {
+            return sign.every( (s, i) => signature( s, target[i] ) );
+        }
+        else if(typeof sign === "object" && sign !== null && target !== null) {
+            return Object.keys(sign).every( k => signature(sign[k], target[k]) )
+        }
+        return false;
+    }
+};
