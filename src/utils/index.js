@@ -1,4 +1,4 @@
-import { BOOLEAN } from "../def"
+import { BOOLEAN } from '../def';
 import JSON5 from 'json5';
 
 /**
@@ -42,29 +42,93 @@ export function forEachFromData(func) {
 }
 
 const EMPTY_ROUTE = { route: [] };
-const parseNumbers = (k, v) => isFinite(v) ? parseFloat(v) : v;
-export function routeNormalizer (route) {
-    if (!route) return EMPTY_ROUTE;
-    try {
-        const parts = route.split('/');
-        if (parts.some(x => x.match(/(\[.*].+$|\[.*].*\[.*])/))) throw `argv should be at the end of path element ${route}`;
+const allowedChars = `abcdefghijklmnopqrsntuvwxyzABCDEFGHIJKLMNOPQRSNTUVWXYZ0123456789$-_,."'`.split('');
 
-        const _route = parts
-          .map(x => x.replace(/\[.*]/, ''))
-          .filter(x => !'.'.includes(x))
-          .map(x => x[0] === '{' ? JSON5.parse(x.replace(/"?([$a-zA-Z0-9\-_]+)"?/g, (_, x) => `"${x}"`), parseNumbers) : x);
+// quote processing
+export const parseRoute = (route, lvl = []) => {
+  const _route = [];
+  let _params = {};
+  const type = lvl.length ? lvl[lvl.length - 1] : 'path';
 
+  let res;
+  let idx = 0;
+  let collector = '';
+  while (idx < route.length) {
+    const char = route[idx];
+    if (allowedChars.includes((char))) {
+      collector += char;
+    } else {
+      switch (char) {
+        case '=':
+          if (type === '[') {
+            collector += ':';
+          }
+          break;
+        case '/':
+          if (type === 'path') {
+            if (collector.length) {
+              _route.push(collector);
+            }
+            collector = '';
+          } else {
+            collector += char;
+          }
+          break;
+        case '{':
+          res = parseRoute(route.slice(idx + 1), [...lvl, '{']);
+          if (type !== 'path') {
+            collector += `{${res.collector}}`;
+          } else {
+            _route.push(JSON5.parse(`{${res.collector}}`));
+          }
+          idx += res.offset;
+          break;
+        case '}':
+          if (type === '{') {
+            return { offset: idx, collector };
+          }
+          break;
+        case '[':
+          if (type === 'path') {
+            res = parseRoute(route.slice(idx + 1), [...lvl, '[']);
+            _params = { ..._params, ...JSON5.parse(`{${res.collector}}`) };
+            idx += res.offset;
+          } else if (type === '{') {
+            collector += '[';
+          }
+          break;
+        case ']':
+          if (type === '{') {
+            idx++;
+            collector += ']';
+            return { offset: idx, collector, type };
+          } else if (type === '[') {
+            return { offset: idx, collector, type };
+          }
+          break;
+        default:
+          collector += char;
+      }
 
-        const params = parts.reduce((acc, x) => {
-            let match = x.match(/\[(.*)]$/);
-            return { ...acc, ...(match ? JSON5.parse(`{${match[1].replace(/=([^"',\s\]{}]+)/g, (_, x) => isFinite(x) ? `=${x}` : `="${x}"`).replace(/=/g, ':')}}`) : {}) };
-        }, {});
-
-        return { route: _route, ...params };
-    } catch (e) {
-        throw new Error(e);
     }
+    idx++;
+  }
+
+  if (collector.length) {
+    _route.push(collector);
+  }
+
+  if (!lvl.length) {
+    return { route: _route.filter(x => x !== '.'), ..._params };
+  }
+};
+
+export function routeNormalizer (route) {
+  if (!route) return EMPTY_ROUTE;
+  if (~route.indexOf('route=')) throw new Error('"route" param not allowed');
+  return parseRoute(route);
 }
+
 
 //todo req. to separate the operation on the paths in an entity
 export function routeToString( { route, ...args } ) {
