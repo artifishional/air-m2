@@ -623,12 +623,10 @@ export default class HTMLView extends LiveSchema {
 				name: name.replace(/^on(:)?/, ""),
 				hn: new Function("event", "options", "request", "key", "signature", "req", value )
 			}) );
-		
-		let stream = node.getAttribute("stream");
-		stream = stream && routeNormalizer(stream.toString()) || { route: [] };
-		stream.route = stream.route.map( seg => seg === "$key" ? key : seg );
-		Object.keys( stream ).map( prop => stream[prop] === "$key" && (stream[prop] = key) );
-		stream = routeToString(stream);
+
+		const stream = (node.getAttribute("stream") || "")
+			.replace("$key", JSON.stringify(key))
+			.replace(/(\/|^)"([^\/]+)"(\/|$)/g, '$1$2$3');
 
 		const label = node.getAttribute("label") || "";
 

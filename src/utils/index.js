@@ -1,5 +1,5 @@
-import { BOOLEAN } from "../def"
-
+import { BOOLEAN } from '../def';
+import JSON5 from 'json5';
 
 /**
  *
@@ -41,36 +41,103 @@ export function forEachFromData(func) {
     })
 }
 
-export function argvroute( route ) {
-    return JSON.parse(((
-        route
-        .split("/")
-        .filter(x => !".".includes(x))
-        .slice(-1)[0] || "")
-        .match( /\[.*\]/ ) || ["{}"])[0]
-        .replace(/\[(.*)\]/, (_, x) => `{${x}}` )
-        .replace("=", ":")
-        .replace(/\"{0,1}([$0-9\-_a-zA-Z]{1,77})\"{0,1}/g, (_, x) => `"${x}"`)
-    );
-}
-
 const EMPTY_ROUTE = { route: [] };
+const allowedChars = `abcdefghijklmnopqrsntuvwxyzABCDEFGHIJKLMNOPQRSNTUVWXYZ0123456789$-_,.`.split('');
+export const parseRoute = (route, lvl = []) => {
+  const _route = [];
+  let _params = {};
+  const type = lvl.length ? lvl[lvl.length - 1] : 'path';
+  let res;
+  let idx = 0;
+  let collector = '';
 
-export function routeNormalizer(route) {
-    if(!route) return EMPTY_ROUTE;
-    try {
-        return {
-            route: route.split("/")
-            //an empty string includes
-                .map(x => x.replace(/\[.*]/, ""))
-                .filter(x => !".".includes(x))
-                .map(x => x[0] === "{" ? JSON.parse(x.replace(/"?([$a-zA-Z0-9\-_]+)"?/g, (_, x)=> `"${x}"`)) : x),
-            ...argvroute( route ),
+  while (idx < route.length) {
+    const char = route[idx];
+
+    if (['\'', '"'].includes(type)) {
+      if (['\'', '"'].includes(char) && route[idx - 1] !== '\\') {
+        return { offset: idx + 1, collector };
+      } else {
+        collector += char;
+      }
+    } else {
+      if (allowedChars.includes(char)) {
+        collector += char;
+      } else {
+        switch (char) {
+          case `'`:
+          case `"`:
+            res = parseRoute(route.slice(idx + 1), [...lvl, char]);
+            collector += `${char}${res.collector}${char}`;
+            idx += res.offset;
+            break;
+          case '=':
+            if (type === '[') {
+              collector += ':';
+            }
+            break;
+          case '/':
+            if (type === 'path') {
+              if (collector.length) {
+                _route.push(collector);
+              }
+              collector = '';
+            } else {
+              collector += char;
+            }
+            break;
+          case '{':
+            res = parseRoute(route.slice(idx + 1), [...lvl, '{']);
+            if (type !== 'path') {
+              collector += `{${res.collector}}`;
+            } else {
+              _route.push(JSON5.parse(`{${res.collector}}`));
+            }
+            idx += res.offset;
+            break;
+          case '}':
+            if (type === '{') {
+              return { offset: idx, collector };
+            }
+            break;
+          case '[':
+            if (type === 'path') {
+              res = parseRoute(route.slice(idx + 1), [...lvl, '[']);
+              _params = { ..._params, ...JSON5.parse(`{${res.collector}}`) };
+              idx += res.offset;
+            } else if (type === '{') {
+              collector += '[';
+            }
+            break;
+          case ']':
+            if (type === '{') {
+              collector += ']';
+            } else
+              if (type === '[') {
+              return { offset: idx, collector, type };
+            }
+            break;
+          default:
+            collector += char;
         }
+      }
     }
-    catch(e) {
-        throw `can't parse this route: ${route}`
-    }
+    idx++;
+  }
+
+  if (collector.length) {
+    _route.push(collector);
+  }
+
+  if (!lvl.length) {
+    return { route: _route.filter(x => x !== '.'), ..._params };
+  }
+};
+
+export function routeNormalizer (route) {
+  if (!route) return EMPTY_ROUTE;
+  if (~route.indexOf('route=')) throw new Error('"route" param not allowed');
+  return parseRoute(route);
 }
 
 //todo req. to separate the operation on the paths in an entity
