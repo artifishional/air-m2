@@ -400,9 +400,9 @@ export default class HTMLView extends LiveSchema {
 				if(targets.length) {
 					
 					if(this.prop.styles.length) {
-						targets.map(({node}) =>
-							node.setAttribute(`data-scope-acid-${this.acid}`, "")
-						);
+						this.prop.styles.forEach(({ acid }) => {
+							targets.map(({ node }) => node.setAttribute(`data-scope-acid-${acid}`, ''));
+						});
 					}
 					
 					rlayers.push( ...currentCommonViewLayers.map( ({ layer, schema }) => {

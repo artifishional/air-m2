@@ -40,6 +40,7 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 		}
 
 		style.textContent = style.textContent.replace(/:scope/g, `[data-scope-acid-${acid}]`);
+		style.acid = acid;
 
 		let isActive = true;
 
