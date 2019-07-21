@@ -43,13 +43,13 @@ export default class LiveSchema extends Schema {
      * the parser should create layers with packages
      */
 
-    load( emt, { sweep } ) {
+    load( resolver ) {
         const nextToLoad = this.layers.find( ( { isready } ) => !isready );
         if( nextToLoad ) {
-            const loader = combine( nextToLoad.prop.use.map( ({ type = "url", ...use }) =>
+            const loader = Promise.all( nextToLoad.prop.use.map( ({ type = "url", ...use }) =>
                 type === "url" ? Loader.default.obtain( use ) : this.get( use.path )
             ));
-            sweep.add(loader.at(( packs ) => {
+            loader.then(( packs ) => {
                 packs.map( (pkj, index) => {
                     const { type = "url" } = nextToLoad.prop.use[index];
                     if(type === "url") {
@@ -60,11 +60,11 @@ export default class LiveSchema extends Schema {
                     }
                 } );
                 nextToLoad.isready = true;
-                this.load( emt, { sweep } );
-            }));
+                this.load( resolver );
+            });
         }
         else {
-            emt( this );
+            resolver( this );
         }
     }
 
@@ -84,7 +84,7 @@ export default class LiveSchema extends Schema {
     }
 
     get stream() {
-        return this._stream || (this._stream = stream( this.load, this ));
+        return this._stream || (this._stream = new Promise( resolver => this.load(resolver) ));
     }
 
     _get({route: [key, ...route]}, from = {src: this, route: [key, ...route] }) {
@@ -119,17 +119,15 @@ export default class LiveSchema extends Schema {
                 }
             }
             else {
-                return stream((emt, { over }) =>
-                    over.add(this.stream.at(() => {
-                        const node = this.pickToState(key);
-                        if (node) {
-                            over.add(node._get({route}, from).at(emt));
-                        }
-                        else {
-                            throw `module "${key}" not found from ${from}`;
-                        }
-                    }))
-                );
+                return this.stream.then(() => {
+                    const node = this.pickToState(key);
+                    if (node) {
+                        return node._get({route}, from);
+                    }
+                    else {
+                        throw `module "${key}" not found from ${from}`;
+                    }
+                })
             }
         }
         else {
@@ -156,10 +154,10 @@ export default class LiveSchema extends Schema {
     }
 
     _obtain({route, ...args}) {
-        return stream( (emt, { over, sweep }) =>
-            sweep.add(this._get( {route} ).at((evt, src) => {
-                over.add(evt.entity(args).on(emt));
-            }))
+        return stream( (emt, { over }) =>
+            this._get( {route} ).then( vertex => {
+                over.add(vertex.entity(args).on(emt));
+            })
         );
     }
 

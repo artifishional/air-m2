@@ -260,36 +260,24 @@ export default class HTMLView extends LiveSchema {
 						return [_acid, { layer: layer.get(resultStreamPath), vars }];
 					})
 			);
-			sweep.add( combine(
-				[...clayers].map( ([, { layer } ]) => layer ),
-				(...layers) => new Map([ ...clayers].map( ([ acid, { vars: { route, ...vars } } ], i) => [
+			Promise.all( [...clayers].map( ([, { layer } ]) => layer ) )
+				.then( layers => new Map([ ...clayers].map( ([ acid, { vars: { route, ...vars } } ], i) => [
 					acid, { layer: layers[i], vars }
-				] ))
-			).at( ( layers ) => {
-				
-				/*
-				if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
-					over.add(this.createTeeEntity( { $: { layers }, ...args } ).on(emt));
-				}
-				else {
-					over.add(this.createNextLayers( { $: { layers }, ...args } ).on(emt));
-				}
-				*/
-				
-				if(this.layers.some( ({ prop: { kit } }) => kit )) {
-					over.add(this.createKitLayer( { $: { layers, parentViewLayers }, ...args } ).on(emt));
-				}
-				else {
-					//todo need refactor
-					if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
-						over.add(this.createTeeEntity( { $: { layers, parentViewLayers }, ...args } ).on(emt));
+				] )))
+				.then( layers => {
+					if(this.layers.some( ({ prop: { kit } }) => kit )) {
+						over.add(this.createKitLayer( { $: { layers, parentViewLayers }, ...args } ).on(emt));
 					}
 					else {
-						over.add(this.createNextLayers( { $: { layers, parentViewLayers }, ...args } ).on(emt));
+						//todo need refactor
+						if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
+							over.add(this.createTeeEntity( { $: { layers, parentViewLayers }, ...args } ).on(emt));
+						}
+						else {
+							over.add(this.createNextLayers( { $: { layers, parentViewLayers }, ...args } ).on(emt));
+						}
 					}
-				}
-				
-			} ) );
+				} );
 		} );
 	}
 

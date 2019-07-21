@@ -27,19 +27,26 @@ export default class Loader {
             let module = null;
             if (schtype === "html") {
                 module = html({path: `${this.rpath}${path}`, revision})
-                    .map( html => ({ data: html.content, pack: { path: _path + "/" } }) )
+                    .then( html => ({ data: html.content, pack: { path: _path + "/" } }) )
             }
             else {
-                module = stream( emt => {
+                module =
                     /*todo es6 dynamic
                     eval(`import("./${this.rpath}${path}")`).then(module => {
                         emt({data: module});
                     } );
                     */
+
+
+
+                    include({path: `${this.rpath}${path}`, revision}).then(({module}) => {
+                        return { data: module, pack: { path: _path + "/" } };
+                    } );
+
+                    /*
                     include({path: `${this.rpath}${path}`, revision}).then(({module}) => {
                         emt( { data: module, pack: { path: _path + "/" } } );
-                    } );
-                } );
+                    } );*/
             }
             this.modules.push({module, path});
             return module;
