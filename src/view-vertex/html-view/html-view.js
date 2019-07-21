@@ -563,7 +563,7 @@ export default class HTMLView extends LiveSchema {
 		});
 	}
 
-	createChildrenEntity( { $: { layers, parentViewLayers }, ...args } ) {
+	createChildrenEntity( args, { layers, parentViewLayers } ) {
 		return combine( this.item
 			.filter( ({ prop: { template } }) => !template )
 			.map(x => x._obtain( [], args, { layers, parentViewLayers } ))
