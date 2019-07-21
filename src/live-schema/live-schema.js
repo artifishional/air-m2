@@ -1,7 +1,8 @@
 import { stream, combine } from "air-stream"
 import { Schema } from "air-schema"
-import { routeNormalizer, signature, equal } from "../utils"
+import {routeNormalizer, signature, equal, forEachFromData} from "../utils"
 import { Loader } from "../loader"
+import {EMPTY_OBJECT} from "../def";
 
 export default class LiveSchema extends Schema {
 
@@ -71,58 +72,63 @@ export default class LiveSchema extends Schema {
     /**
      *
      * @param route
-     * @returns {*}
-     * @example {route: "./../../state/{key = 55}"}/
-     * @param args
+     * @param signature signature props
+     * @param $ common props
+     * @returns stream.<LiveSchema>
      */
-    obtain(route = "", args) {
-        return this._obtain({...routeNormalizer(route), ...args});
+    obtain(route = "", signature, $) {
+        const normilizedRoute = routeNormalizer(route);
+        if(normilizedRoute[1] !== EMPTY_OBJECT) {
+            signature = { ...normilizedRoute[1], ...signature };
+        }
+        return this._obtain(normilizedRoute[0], signature, $);
     }
 
     get(route = "") {
-        return this._get(routeNormalizer(route));
+        const normilizedRoute = routeNormalizer(route);
+        return this._get(normilizedRoute[0]);
     }
 
     get stream() {
         return this._stream || (this._stream = new Promise( resolver => this.load(resolver) ));
     }
 
-    _get({route: [key, ...route]}, from = {src: this, route: [key, ...route] }) {
+    _get([key, ...route], from = {src: this, route: [key, ...route] }) {
         if (key) {
             if(key[0] === "@") {
-                if(this.key === key.substr(1)) return this._get({route}, from);
+                if(this.key === key.substr(1)) return this._get(route, from);
                 const exist = this.findByKey(key.substr(1));
-                if(exist) return exist._get({route}, from);
+                if(exist) return exist._get(route, from);
                 if(!this.parent) throw `module "@${key}" not found from ${from}`;
-                return this.parent._get({route: [key, ...route]}, from);
+                return this.parent._get([key, ...route], from);
             }
             else if(key[0] === "#") {
-                if(this.id === key) return this._get({route}, from);
+                if(this.id === key) return this._get(route, from);
                 const exist = this.findId(key.substr(1));
-                if(exist) return exist._get({route}, from);
+                if(exist) return exist._get(route, from);
                 if(!this.parent) throw `module "#${key}" not found from ${from}`;
-                return this.parent._get({route: [key, ...route]}, from);
+                return this.parent._get([key, ...route], from);
             }
             else if(key[0] === "(") {
-                if(this.key === key) return this._get({route}, from);
+                if(this.key === key) return this._get(route, from);
                 const exist = this.findSignature(key);
-                if(exist) return exist._get({route}, from);
+                if(exist) return exist._get(route, from);
                 if(!this.parent) throw `module "#${key}" not found from ${from}`;
-                return this.parent._get({route: [key, ...route]}, from);
+                return this.parent._get([key, ...route], from);
             }
             if (key === "..") {
                 if(this.prop.glassy) {
-	                return this.parent._get({route: [ key, ...route ]}, from);
+	                return this.parent._get([ key, ...route ], from);
                 }
                 else {
-	                return this.parent._get({route}, from);
+	                return this.parent._get(route, from);
                 }
             }
             else {
                 return this.stream.then(() => {
                     const node = this.pickToState(key);
                     if (node) {
-                        return node._get({route}, from);
+                        return node._get(route, from);
                     }
                     else {
                         throw `module "${key}" not found from ${from}`;
@@ -137,26 +143,26 @@ export default class LiveSchema extends Schema {
 	
 	createEntity() { throw "io" }
 
-    findEntity(args) {
-        return this.entities.find( ({ signature }) => equal( signature, args ) );
+    findEntity(signature) {
+        return this.entities.find( ({ signature: x }) => equal( x, signature ) );
     }
 
-    entity( { $ = {}, ...args } ) {
-        let exist = this.findEntity(args);
+    entity( signature, $ ) {
+        let exist = this.findEntity( signature );
         if(!exist) {
             exist = {
-                entity: this.createEntity( { $, ...args } ),
-                signature: args,
+                entity: this.createEntity( signature, $ ),
+                signature,
             };
             this.entities.push( exist );
         }
         return exist.entity;
     }
 
-    _obtain({route, ...args}) {
+    _obtain(route, signature = EMPTY_OBJECT, $) {
         return stream( (emt, { over }) =>
-            this._get( {route} ).then( vertex => {
-                over.add(vertex.entity(args).on(emt));
+            this._get( route ).then( vertex => {
+                over.add(vertex.entity(signature, $).on(emt));
             })
         );
     }

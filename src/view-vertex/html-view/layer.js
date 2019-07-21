@@ -68,11 +68,11 @@ export class Layer extends BaseLayer {
 	sweep( sweep, emt ) {
 		if(this.checkModelNecessity( )) {
 			sweep.add( this.handler = combine([
-				this.schema.model.layer._obtain({ route: [], ...this.schema.model.vars } ),
-				this.schema.model.layer._obtain({ route: ["#intl"] }),
+				this.schema.model.layer._obtain( [], this.schema.model.vars ),
+				this.schema.model.layer._obtain( ["#intl"] ),
 			]).at( ([data, intl]) => {
 
-				this.targets.map( target => target.transition(intl) )
+				this.targets.map( target => target.transition(intl) );
 
 				!this.state.stage && this.complete(emt);
 

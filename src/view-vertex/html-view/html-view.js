@@ -42,10 +42,9 @@ class Cached {
 }
 
 export default class HTMLView extends LiveSchema {
-	
-	constructor( args, src, { acid, createEntity = null } = {} ) {
+
+	constructor( args, src, { acid } = {} ) {
 		super( args, src, { acid } );
-		createEntity && (this.createEntity = createEntity);
 		this.prop.preload = this.prop.preload !== undefined ? this.prop.preload : true;
 		this.prop.stream = this.prop.stream || "";
 		this.prop.handlers = this.prop.handlers || [];
@@ -137,16 +136,16 @@ export default class HTMLView extends LiveSchema {
 
 					//todo need refactor
 					if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
-						return this.createTeeEntity( { $: { layers: _layers, parentViewLayers },
-							signature: {...sign, $: parentContainerSignature },
-							...args
-						} );
+						return this.createTeeEntity(
+							{ signature: {...sign, $: parentContainerSignature }, ...args },
+							{ layers: _layers, parentViewLayers }
+						);
 					}
 					else {
-						return this.createNextLayers( { $: { layers: _layers, parentViewLayers },
-							signature: {...sign, $: parentContainerSignature },
-							...args
-						} );
+						return this.createNextLayers(
+							{ signature: {...sign, $: parentContainerSignature }, ...args },
+							{ layers: _layers, parentViewLayers }
+						);
 					}
 					
 				}
@@ -206,11 +205,11 @@ export default class HTMLView extends LiveSchema {
 
 	}
 
-	createEntity( { $: {
+	createEntity( args, {
 		modelschema,
 		parentViewLayers,
-		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) }, ...args
-	} ) {
+		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] )
+	}) {
 		if(!this.prop.useOwnerProps) {
 			parentViewLayers = [];
 		}
@@ -231,13 +230,13 @@ export default class HTMLView extends LiveSchema {
 							//stream inheritance
 							if(pstream === "" && !stream.substr(1)) {
 								resultStreamPath = stream;
-								layer = layers.get(acid).layer;
-								vars = layers.get(acid).vars;
+								({ layer, vars } = layers.get(acid));
+								//vars = layers.get(acid).vars;
 							}
 							else {
 								resultStreamPath = pstream + stream.substr(1);
 								layer = (layers.get(acid) || layers.get(-1)).layer;
-								vars = routeNormalizer(pstream + stream.substr(1));
+								vars = routeNormalizer(pstream + stream.substr(1))[1];
 							}
 						}
 						else if(stream === "") {
@@ -250,7 +249,7 @@ export default class HTMLView extends LiveSchema {
 						else {
 							resultStreamPath = stream;
 							layer = (layers.get(acid) || [...layers][0][1] ).layer;
-							vars = routeNormalizer(stream);
+							vars = routeNormalizer(stream)[1];
 						}
 						layer = streamplug.reduce( (acc, source) => {
 							const res = new ModelVertex(["$$", { glassy: true, source }]);
@@ -261,7 +260,7 @@ export default class HTMLView extends LiveSchema {
 					})
 			);
 			Promise.all( [...clayers].map( ([, { layer } ]) => layer ) )
-				.then( layers => new Map([ ...clayers].map( ([ acid, { vars: { route, ...vars } } ], i) => [
+				.then( layers => new Map([ ...clayers].map( ([ acid, { vars } ], i) => [
 					acid, { layer: layers[i], vars }
 				] )))
 				.then( layers => {
@@ -271,10 +270,10 @@ export default class HTMLView extends LiveSchema {
 					else {
 						//todo need refactor
 						if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
-							over.add(this.createTeeEntity( { $: { layers, parentViewLayers }, ...args } ).on(emt));
+							over.add(this.createTeeEntity( args,  { layers, parentViewLayers } ).on(emt));
 						}
 						else {
-							over.add(this.createNextLayers( { $: { layers, parentViewLayers }, ...args } ).on(emt));
+							over.add(this.createNextLayers( args, { layers, parentViewLayers } ).on(emt));
 						}
 					}
 				} );
@@ -288,7 +287,7 @@ export default class HTMLView extends LiveSchema {
 		return new Layer( this, owner, { targets, resources }, args );
 	}
 
-	createNextLayers( { $: { layers, parentViewLayers = [] }, ...args } ) {
+	createNextLayers( args, { layers, parentViewLayers = [] } ) {
 		return stream( (emt, { sweep, over }) => {
 
 			const container = new PlaceHolderContainer(this, { type: "layers" });
@@ -320,7 +319,7 @@ export default class HTMLView extends LiveSchema {
 			
 			sweep.add( combine( [
 				...this.layers.map( (layer) => layer.createNodeEntity(  ) ),
-				this.createChildrenEntity( { $: { layers, parentViewLayers }, ...args } ),
+				this.createChildrenEntity( args, { layers, parentViewLayers } ),
 			] ).at( (comps) => {
 
 
@@ -444,7 +443,7 @@ export default class HTMLView extends LiveSchema {
 		return this.layers.every( ({ acid, prop: { tee } }) => signatureEquals( tee, layers.get(acid) ) );
 	}
 
-	createTeeEntity( { $: { layers, parentViewLayers }, ...args } ) {
+	createTeeEntity( args, { layers, parentViewLayers } ) {
 
 		const teeLayers = this.layers
 			.filter( ({ prop: { tee } }) => tee )
@@ -473,7 +472,7 @@ export default class HTMLView extends LiveSchema {
 			//todo temporary solution
 			
 			if(!this.prop.preload) {
-				sweep.add( loaderHook = this.obtain( "@loader", { $: { layers } } )
+				sweep.add( loaderHook = this.obtain( "@loader", {}, { layers } )
 					.at( ([ { stage, container: inner, target } ]) => {
 						if(state.stage === 0 && stage > 0) {
 							loaderContainer = inner;
@@ -487,7 +486,7 @@ export default class HTMLView extends LiveSchema {
 			}
 
 			let _inner = null;
-			const view = this.createNextLayers( { $: { layers, parentViewLayers }, ...args } );
+			const view = this.createNextLayers( args, { layers, parentViewLayers } );
 			sweep.add( modelschema.at( (data) => {
 				const connect = () => {
 					sweep.add( childHook = view
@@ -567,7 +566,7 @@ export default class HTMLView extends LiveSchema {
 	createChildrenEntity( { $: { layers, parentViewLayers }, ...args } ) {
 		return combine( this.item
 			.filter( ({ prop: { template } }) => !template )
-			.map(x => x.obtain( "", { $: { layers, parentViewLayers }, ...args } ))
+			.map(x => x._obtain( [], args, { layers, parentViewLayers } ))
 		);
 	}
 	

@@ -83,13 +83,13 @@ export default class ModelVertex extends LiveSchema {
 		res.append(...item.map( module => this.parse( module, res) ));
 		return res;
 	}
-	
-	createEntity( args ) {
+
+	createEntity( signature ) {
 		return this.prop.source({
-			obtain: (route, args) => this.obtain(route, { ...args }),
+			obtain: (route, args) => this.obtain(route, signature),
 			schema: this,
 			stream,
-			...args
+			...signature
 		});
     }
 

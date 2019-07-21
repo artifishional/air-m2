@@ -1,4 +1,4 @@
-import { BOOLEAN } from '../def';
+import { EMPTY_OBJECT, BOOLEAN } from '../def';
 import JSON5 from 'json5';
 
 /**
@@ -41,11 +41,11 @@ export function forEachFromData(func) {
     })
 }
 
-const EMPTY_ROUTE = { route: [] };
+const EMPTY_ROUTE = [ [], EMPTY_OBJECT ];
 const allowedChars = `abcdefghijklmnopqrsntuvwxyzABCDEFGHIJKLMNOPQRSNTUVWXYZ0123456789$-_,.`.split('');
 export const parseRoute = (route, lvl = []) => {
   const _route = [];
-  let _params = {};
+  let _params = EMPTY_OBJECT;
   const type = lvl.length ? lvl[lvl.length - 1] : 'path';
   let res;
   let idx = 0;
@@ -130,7 +130,7 @@ export const parseRoute = (route, lvl = []) => {
   }
 
   if (!lvl.length) {
-    return { route: _route.filter(x => x !== '.'), ..._params };
+    return [ _route.filter(x => x !== '.'), _params ];
   }
 };
 
