@@ -160,6 +160,11 @@ export default class LiveSchema extends Schema {
     }
 
     _obtain(route, signature = EMPTY_OBJECT, $) {
+        if(signature.hasOwnProperty("$")) {
+            console.warn(`Current call form is obsolete`);
+            $ = { ...$, ...signature.$ };
+            delete signature.$;
+        }
         return stream( (emt, { over }) =>
             this._get( route ).then( vertex => {
                 over.add(vertex.entity(signature, $).on(emt));
