@@ -11,7 +11,7 @@
   "dependencies": {
     "air-anime": "^0.1.0",
     "air-schema": "https://github.com/artifishional/air-schema.git#v2-ref",
-    "air-stream": "^0.7.0",
+    "air-stream": "^0.8.0",
     "css-tree": "^1.0.0-alpha.29",
     "fontfaceobserver": "^2.1.0",
     "howler": "^2.0.15",
