@@ -1,22 +1,43 @@
 {
   "name": "air-m2",
-  "version": "0.5.49",
+  "version": "0.5.29",
   "description": "",
   "main": "/src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --verbose --noStackTrace",
     "patch": "npm version patch && npm publish && git push origin",
     "minor": "npm version minor && npm publish && git push origin"
   },
   "dependencies": {
-    "resize-observer-polyfill": "^1.5.1",
-    "mobile-detect": "^1.4.3",
-    "air-gsap": "^0.2.4",
-    "air-stream": "^0.7.0",
-    "fontfaceobserver": "^2.0.13",
+    "air-anime": "^0.1.0",
+    "air-schema": "https://github.com/artifishional/air-schema.git#v2-ref",
+    "air-stream": "^0.8.0",
+    "css-tree": "^1.0.0-alpha.29",
+    "fontfaceobserver": "^2.1.0",
     "howler": "^2.0.15",
+    "image-preloader": "^1.1.1",
     "json5": "^2.0.1",
-    "pepjs": "^0.4.3"
+    "mobile-detect": "^1.4.3",
+    "pepjs": "^0.5.2",
+    "resize-observer-polyfill": "^1.5.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.0.0",
+    "@babel/plugin-proposal-class-properties": "^7.0.0",
+    "@babel/plugin-proposal-decorators": "^7.0.0",
+    "@babel/plugin-proposal-export-namespace-from": "^7.0.0",
+    "@babel/plugin-proposal-function-sent": "^7.0.0",
+    "@babel/plugin-proposal-json-strings": "^7.0.0",
+    "@babel/plugin-proposal-numeric-separator": "^7.0.0",
+    "@babel/plugin-proposal-throw-expressions": "^7.0.0",
+    "@babel/plugin-syntax-dynamic-import": "^7.0.0",
+    "@babel/plugin-syntax-import-meta": "^7.0.0",
+    "@babel/plugin-transform-modules-commonjs": "^7.5.0",
+    "@babel/preset-env": "^7.0.0",
+    "@babel/register": "^7.0.0",
+    "babel-jest": "^24.8.0",
+    "babel-loader": "^8.0.0",
+    "jest": "^24.8.0"
   },
   "repository": {
     "type": "git",

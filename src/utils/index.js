@@ -1,3 +1,6 @@
+import { EMPTY_OBJECT, BOOLEAN } from '../def';
+import JSON5 from 'json5';
+
 /**
  *
  * @param path
@@ -17,13 +20,10 @@ export function frommodule(module, _key = "main") {
     return [ _key,
         ...Object.keys(module).filter(key => key === "default").map( key => {
             if (typeof module[key] === "function") {
-                if(module.hasOwnProperty("id")) {
-                    return {id: module.id, source: module[key]};
-                }
                 return {source: module[key]};
             }
         }),
-        ...Object.keys(module).filter(key => key !== "default" && key !== "id").map( key => {
+        ...Object.keys(module).filter(key => key !== "default").map( key => {
             if(typeof module[key] === "function") {
                 return [ key, { source: module[key] } ];
             }
@@ -41,33 +41,111 @@ export function forEachFromData(func) {
     })
 }
 
-export function argvroute( route ) {
-    return JSON.parse(((
-        route
-        .split("/")
-        .filter(x => !".".includes(x))
-        .slice(-1)[0] || "")
-        .match( /\[.*\]/ ) || ["{}"])[0]
-        .replace(/\[(.*)\]/, (_, x) => `{${x}}` )
-        .replace("=", ":")
-        .replace(/\"{0,1}([a-zA-Z]{1,77})\"{0,1}/g, (_, x) => `"${x}"`)
-    );
+const EMPTY_ROUTE = [ [], EMPTY_OBJECT ];
+const allowedChars = `abcdefghijklmnopqrsntuvwxyzABCDEFGHIJKLMNOPQRSNTUVWXYZ0123456789$-_,.`.split('');
+export const parseRoute = (route, lvl = []) => {
+  const _route = [];
+  let _params = EMPTY_OBJECT;
+  const type = lvl.length ? lvl[lvl.length - 1] : 'path';
+  let res;
+  let idx = 0;
+  let collector = '';
+
+  while (idx < route.length) {
+    const char = route[idx];
+
+    if (['\'', '"'].includes(type)) {
+      if (['\'', '"'].includes(char) && route[idx - 1] !== '\\') {
+        return { offset: idx + 1, collector };
+      } else {
+        collector += char;
+      }
+    } else {
+      if (allowedChars.includes(char)) {
+        collector += char;
+      } else {
+        switch (char) {
+          case `'`:
+          case `"`:
+            res = parseRoute(route.slice(idx + 1), [...lvl, char]);
+            collector += `${char}${res.collector}${char}`;
+            idx += res.offset;
+            break;
+          case '=':
+            if (type === '[') {
+              collector += ':';
+            }
+            break;
+          case '/':
+            if (type === 'path') {
+              if (collector.length) {
+                _route.push(collector);
+              }
+              collector = '';
+            } else {
+              collector += char;
+            }
+            break;
+          case '{':
+            res = parseRoute(route.slice(idx + 1), [...lvl, '{']);
+            if (type !== 'path') {
+              collector += `{${res.collector}}`;
+            } else {
+              _route.push(JSON5.parse(`{${res.collector}}`));
+            }
+            idx += res.offset;
+            break;
+          case '}':
+            if (type === '{') {
+              return { offset: idx, collector };
+            }
+            break;
+          case '[':
+            if (type === 'path') {
+              res = parseRoute(route.slice(idx + 1), [...lvl, '[']);
+              _params = { ..._params, ...JSON5.parse(`{${res.collector}}`) };
+              idx += res.offset;
+            } else if (type === '{') {
+              collector += '[';
+            }
+            break;
+          case ']':
+            if (type === '{') {
+              collector += ']';
+            } else
+              if (type === '[') {
+              return { offset: idx, collector, type };
+            }
+            break;
+          default:
+            collector += char;
+        }
+      }
+    }
+    idx++;
+  }
+
+  if (collector.length) {
+    _route.push(collector);
+  }
+
+  if (!lvl.length) {
+    return [ _route.filter(x => x !== '.'), _params ];
+  }
+};
+
+export function routeNormalizer (route) {
+  if (!route) return EMPTY_ROUTE;
+  if (~route.indexOf('route=')) throw new Error('"route" param not allowed');
+  return parseRoute(route);
 }
 
-export function routeNormalizer(route) {
-    try {
-        return {
-            route: route.split("/")
-            //an empty string includes
-                .map(x => x.replace(/\[.*\]/, ""))
-                .filter(x => !".".includes(x))
-                .map(x => x[0] === "{" ? JSON.parse(x.replace(/[a-zA-Z]\w{1,}/g, x=> `"${x}"`)) : x),
-            ...argvroute( route ),
-        }
-    }
-    catch(e) {
-        throw `can't parse this route: ${route}`
-    }
+//todo req. to separate the operation on the paths in an entity
+export function routeToString( { route, ...args } ) {
+    const argsKeys = Object.keys(args);
+    return route.map(seg => typeof seg === "object" ? JSON.stringify(seg) : seg).join("/") + (
+        argsKeys.length ?
+        `[${argsKeys.map( key => `${key}=${JSON.stringify(args[key])}` ).join(",")}]` : "")
 }
 
 /**
@@ -91,7 +169,7 @@ export function searchBySignature(sign, arr, sprop = "key") {
     })
 }
 
-export const equal = (a, b) => {
+export function equal(a, b) {
     if(a === b) {
         return true;
     }
@@ -109,9 +187,13 @@ export const equal = (a, b) => {
         }
         return false;
     }
-};
+}
 
-export const signature = (sign, target) => {
+export function signature(sign, target) {
+
+    if(sign === BOOLEAN) {
+        return !!target;
+    }
 
     if(sign == target) { //important
         return true;
@@ -120,9 +202,46 @@ export const signature = (sign, target) => {
         if(Array.isArray(sign)) {
             return sign.every( (s, i) => signature( s, target[i] ) );
         }
-        else if(typeof sign === "object" && sign !== null && target !== null) {
+        else if(typeof sign === "object" && sign !== null && target) {
             return Object.keys(sign).every( k => signature(sign[k], target[k]) )
         }
         return false;
     }
-};
+}
+
+export function getfrompath(argv, path) {
+    let res;
+	if(path) {
+		res = new Function(`argv`, `return argv.${path}`)(argv);
+	}
+	else {
+		res = argv;
+	}
+	if(res === undefined) {
+	    throw "unable to get data";
+    }
+	return res;
+}
+
+export function settopath(argv, path, value) {
+    const chapters = path.split(/\.|\[|\]\./);
+	const res = chapters.slice(0, -1).reduce( (acc, key) => acc[key] || (acc[key] = {}), argv);
+    return res[chapters.slice(-1)[0]] = value;
+}
+
+export function calcsignature(state, prop) {
+	if(prop.length) {
+	    return prop.reduce((acc, key) => {
+		    if(/\[|\]|\./.test(key)) {
+	            settopath( acc, key, getfrompath(state, key) );
+            }
+	        else {
+		        acc[key] = state[key];
+            }
+		    return acc;
+	    }, {});
+    }
+	return state;
+}
+
+export const copy = target => JSON.parse(JSON.stringify(target));

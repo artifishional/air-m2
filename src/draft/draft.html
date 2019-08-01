@@ -1,0 +1,254 @@
+<unit stream = "./[key]" key = "[{kind: 'numbers', numbers: [7, 8, 10, 11]}]"><!--stream-map = ""-->
+    <g transform="translate(183.500000, 245.500000)">
+        <rect x = "-12" y = "-12" width = "31" height = "31"></rect>
+        <g class = "hide">
+            <setup prop = "{ used: argv.sum }"></setup><!-- keyframes = "[]"  -->
+            <use x = "-12" y = "-12" width = "29" height = "29">
+                <setup prop = "{ 'xlink:href': argv }"></setup>
+            </use>
+            <text class="chip-value" transform="translate(2, 6)" text-anchor="middle" >
+                <tspan class = "chip-text">
+                    <setup prop = "{ /*argv:*/sum: argv.sum }">{ argv.sum }</setup>
+                </tspan>
+            </text>
+        </g>
+    </g>
+</unit>
+
+<unit use = "./required-unit"></unit>
+
+"./[key]"
+"./[key = key, someone = 10]"
+
+//current form
+
+<tee>
+
+    <unit key = 1></unit>
+    <unit key = 2></unit>
+    <unit key = 3></unit>
+
+</tee>
+
+//next draft with included tee manager ( every view has its own loader ( if not pre-loaded form ) )
+
+
+<unit resources = '[
+    { type: "style", url: "res/css/cover.css" },
+    { type: "formatters", url: "res/formatters.json" },
+]'>
+
+    <plug key = player use = url(./player) template stream = #player/></plug>
+
+    <unit tee stream = ./session/games/current/mw>
+
+        //with preload (preload form doesn't need a loader unit)
+        <unit preload tee key = 1></unit>
+        <unit preload tee key = 2></unit>
+        <unit preload tee key = 3></unit>
+
+        <unit key = loader use = ./master/loader></unit>
+        <unit key = '{name: "alpha1"}' stream = ../../ >
+            <unit use = url(./session/games/current/mw)></unit>
+        </unit>
+
+    </unit>
+
+</unit>
+
+//full
+<setup keyframes='[[ "*", { duration: 300 }, [ 1, { css: {  } } ] ]]'>
+
+    //only default action last key-frame
+    <setup keyframes='{ css: {} }'></setup>
+
+</setup>
+
+
+<!--define non standart plugin-->
+<plugin use = ""/>
+
+<!--define standart plugin-->
+<unit use = ""></unit>
+
+
+<unit key = accordion>
+    <unit copy key = node>
+        <unit key = body></unit>
+    </unit>
+</unit>
+
+
+<!-- define abstract tooltip component -->
+<unit template key = my-tooltip>
+
+    <script>
+
+        import { controller } from "m2"
+
+        export default (/*{ key, eid }*/) =>
+            controller()
+                .reducer( [{ on: false }], ([{ on }], { request }) => {
+                    if(request ===  "over") {
+                        on = true;
+                    }
+                    else if( request === "leave" ) {
+                        on = false;
+                    }
+                    return [{ on }, { request }];
+                } );
+
+    </script>
+
+    <unit
+        key = body
+        onpointerenter = request(["over"])
+        onpointerleave = request(["leave"])
+    >
+    </unit>
+    <unit key = tooltip tee = {on:true}></unit>
+
+    <!-- if stream not empty then it's work in current place -->
+    <!-- entity id when component is reusable (template) -->
+
+</unit>
+
+
+
+<unit template key = customized-tooltip-component>
+    <div>
+        <unit key = main use = ./my-tooltip>
+            <unit key = tooltip>
+                <keyframe action = fade-in prop = {delay:3,duration:0.3}>
+                    <!--    <keyframe action = fade-in prop = {delay:3,duration:(x)}>  "x" from argv-->
+                    <!--    <keyframe action = fade-in prop = {delay:3,duration:(y)}>  "y" from argv-->
+                    <key offset = 1 prop = {css:{opacity:1}} />
+                    <!--  default offset settings - [1] - 100%, [2] - 0%-100% [>2] k = index*100%/count -->
+                </keyframe>
+                <keyframe action = fade-out prop = {delay:3,duration:0.1}>
+                    <key offset = 1 prop = {css:{opacity:0}} />
+                </keyframe>
+                <div style = "opacity:0">
+                    <unit key=body></unit>
+                </div>
+            </unit>
+        </unit>
+    </div>
+</unit>
+
+<!-- define languages -->
+
+<unit stream = #intl template key = lang use = ../(lang)>
+
+    <unit nopreload key = ^$key tee = {lang:"en"} use = lngs/{lang:"en"}/$key />
+    <unit nopreload key = ^$key tee = {lang:"kz"} use = lngs/{lang:"kz"}/$key />
+    <unit nopreload key = ^$key tee = {lang:"ru"} use = lngs/{lang:"ru"}/$key />
+
+    <unit key = toolbar-hint-off>
+        <unit tee = {lang:"en"}>
+
+            <unit use = lngs/{lang:"en"}/$key />
+
+            <unit stream = ^>{(x)}</unit>
+        </unit>
+        <unit tee = {lang:"kz"}><unit stream = ^>{(x)}</unit></unit>
+        <unit tee = {lang:"ru"}><unit stream = ^>{(x)}</unit></unit>
+    </unit>
+
+</unit>
+
+
+<unit stream = #intl template key = lang use = ../(lang) />
+
+<unit key = lang stream = #intl>
+    <unit tee = {lang:"en"}>
+        <unit key = toolbar-hint-on>{(x)}</unit>
+        <unit key = toolbar-hint-off>{(x)}</unit>
+    </unit>
+</unit>
+
+
+    <unit use = lang/toolbar-hint-on></unit>
+
+
+<!-- How should the settings get inside the "div.btn-tooltip" container?  -->
+
+<!-- use component -->
+
+<unit use = ./customized-tooltip-component>
+    <unit key = main>
+        <unit key = body>
+            <button type = button>
+                <unit tee = {on:true}>
+                    <svg viewBox="0 0 40 40">
+                        <path d="M24,9 L24,11 L28.999,11 L28.999,15.999 L30.999,15.999 L30.999,9 L24,9 Z M9,9 L9,15.999 L10.999,15.999 L10.999,11 L16,11 L16,9 L9,9 Z M28.999,23.999 L28.999,29 L24,29 L24,31 L30.999,31 L30.999,23.999 L28.999,23.999 Z M9,23.999 L9,31 L16,31 L16,29 L10.999,29 L10.999,23.999 L9,23.999 Z" id="path-111"></path>
+                    </svg>
+                </unit>
+                <unit tee = {on:false}>
+                    <svg viewBox="0 0 40 40">
+                        <path d="M24,9 L24,15.999 L30.999,15.999 L30.999,13.999 L26,13.999 L26,9 L24,9 Z M14,9 L14,13.999 L9,13.999 L9,15.999 L16,15.999 L16,9 L14,9 Z M24,23.999 L24,31 L26,31 L26,25.999 L30.999,25.999 L30.999,23.999 L24,23.999 Z M9,23.999 L9,25.999 L14,25.999 L14,31 L16,31 L16,23.999 L9,23.999 Z" id="path-111-2"></path>
+                    </svg>
+                </unit>
+            </button>
+        </unit>
+        <unit key = tooltip>
+            <unit key = body>
+                <div class = tooltip-wrap>
+                    <unit tee = {on:true} use = lang/toolbar-hint-on />
+                    <unit tee = {on:false} use = lang/toolbar-hint-off />
+                </div>
+            </unit>
+        </unit>
+    </unit>
+</unit>
+
+<!-- result -->
+
+<div class = tooltip>
+    <div style = "opacity:0">
+        <div class="btn-tooltip-wrap">
+            <unit tee = {on:true}>hint-on</unit>
+            <unit tee = {on:false}>hint-off</unit>
+        </div>
+    </div>
+    <button type = button>
+        <svg viewBox="0 0 40 40">
+            <path d="M24,9 L24,11 L28.999,11 L28.999,15.999 L30.999,15.999 L30.999,9 L24,9 Z M9,9 L9,15.999 L10.999,15.999 L10.999,11 L16,11 L16,9 L9,9 Z M28.999,23.999 L28.999,29 L24,29 L24,31 L30.999,31 L30.999,23.999 L28.999,23.999 Z M9,23.999 L9,31 L16,31 L16,29 L10.999,29 L10.999,23.999 L9,23.999 Z" id="path-111"></path>
+        </svg>
+        <svg viewBox="0 0 40 40">
+            <path d="M24,9 L24,15.999 L30.999,15.999 L30.999,13.999 L26,13.999 L26,9 L24,9 Z M14,9 L14,13.999 L9,13.999 L9,15.999 L16,15.999 L16,9 L14,9 Z M24,23.999 L24,31 L26,31 L26,25.999 L30.999,25.999 L30.999,23.999 L24,23.999 Z M9,23.999 L9,25.999 L14,25.999 L14,31 L16,31 L16,23.999 L9,23.999 Z" id="path-111-2"></path>
+        </svg>
+    </button>
+</div>
+
+<!-- html standard tags are invisible -->
+
+
+<!-- with animation -->
+
+<unit use = animate>
+
+    <keyframe action = fade-in prop = {delay:(to.delay),duration:(to.duration)}>
+        <!--    <keyframe action = fade-in prop = {delay:3,duration:(x)}>  "x" from argv-->
+        <!--    <keyframe action = fade-in prop = {delay:3,duration:(y)}>  "y" from argv-->
+        <key offset = 1 prop = {x:(x),css:{opacity:1}} />
+        <!--  default offset settings - [1] - 100%, [2] - 0%-100% [>2] k = index*100%/count -->
+    </keyframe>
+
+    {(obj.some)}px
+
+</unit>
+
+//next draft - slotted target
+
+<target>
+
+    <div></div>
+
+    <keyframe>
+
+
+    </keyframe>
+
+</target>
+

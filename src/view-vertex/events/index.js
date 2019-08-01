@@ -15,4 +15,8 @@ export default [
     "onchange",
     "oninput",
     "ontouchend",
+    "onmouseenter",
+    "onmouseleave",
+    "onmouseover",
+    "onmouseout",
 ];
