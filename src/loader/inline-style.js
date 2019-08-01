@@ -100,24 +100,22 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 
 		const promises = dataForLoading.map(({type, resource, target}) => {
 			if (type === 'image') {
-				let url = "m2units/" + path + resource.replace(/"/g, "");
+				const url = new URL(
+					"m2units/" + path + resource.replace(/"/g, ""),
+					window.location.origin + window.location.pathname
+				);
 				if (revision) {
-					if (url.indexOf('?') > -1) {
-						url = `${url}&rev=${revision}`
-					} else {
-						url = `${url}?rev=${revision}`
-					}
+					url.searchParams.append("revision", revision);
 				}
-				const promise =  new Promise((resolve) => {
-					fetch(url)
-						.then(r => r.blob())
-						.then(FileReader)
-						.then(({target: {result: base64}}) => {
-							target.value = base64;
-							resolve('done');
-						})
-				});
-				return promise;
+				return fetch(url, {
+					mode: 'cors',
+					method: 'GET'
+				})
+					.then(r => r.blob())
+					.then(FileReader)
+					.then(({target: {result: base64}}) => {
+						target.value = base64;
+					})
 			}
 		});
 
