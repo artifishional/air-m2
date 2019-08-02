@@ -47,6 +47,7 @@ export default class HTMLView extends LiveSchema {
 		super( args, src, { acid } );
 		this.prop.preload = this.prop.preload !== undefined ? this.prop.preload : true;
 		this.prop.stream = this.prop.stream || "";
+		this.prop.resources = this.prop.resources || [];
 		this.prop.handlers = this.prop.handlers || [];
 		this.prop.tee = this.prop.tee || null;
 		this.prop.plug = this.prop.plug || [];
@@ -768,6 +769,10 @@ export default class HTMLView extends LiveSchema {
 		else if(name === "styles") {
 			return [ ...this.prop.styles, ...value.filter( style => !this.prop.styles.includes(style) ) ];
 		}
+		else if(name === "resources") {
+			return [ ...this.prop.resources, ...value ]
+				.reduce((acc, next) => acc.includes(next) ? acc : [ ...acc, next ], []);
+		}
 		/*else if(name === "template") {
 			return this.prop.template || value;
 		}*/
@@ -993,6 +998,11 @@ function parseChildren(next, { resources, path, key }, src) {
 		return [ parser ];
 	}
 	else if (next.tagName === "IMG") {
+		
+		if(next.getAttribute("src") === "./res/images/rules/rules1.png") {
+			debugger;
+		}
+		
 		const _slot = img( );
 		next.replaceWith( _slot );
 		resources.push(
