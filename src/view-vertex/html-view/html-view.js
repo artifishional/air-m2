@@ -998,11 +998,6 @@ function parseChildren(next, { resources, path, key }, src) {
 		return [ parser ];
 	}
 	else if (next.tagName === "IMG") {
-		
-		if(next.getAttribute("src") === "./res/images/rules/rules1.png") {
-			debugger;
-		}
-		
 		const _slot = img( );
 		next.replaceWith( _slot );
 		resources.push(
