@@ -780,6 +780,7 @@ export default class HTMLView extends LiveSchema {
 			return [ ...this.prop.tee, ...value];
 		}*/
 		else if([
+			"label",
 			"streamplug",
 			"plug",
 			"kit",

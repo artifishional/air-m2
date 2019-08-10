@@ -23,14 +23,17 @@ export default class PlaceHolderContainer {
     }
 
     createSystemBoundNode( point, species ) {
-        const label = this.owner.prop.key !== undefined ?
-            typeof this.owner.prop.key === "object" ?
-                JSON.stringify(this.owner.prop.key) :
-                this.owner.prop.key :
-            "";
-        return document.createComment(
-            `${point} ${species} ${this.owner.acid} ${this.owner.prop.label} ${label} ${point}`.toUpperCase()
-        );
+	    /*<@debug>*/
+	    const label = this.owner.prop.key !== undefined ?
+		    typeof this.owner.prop.key === "object" ?
+			    JSON.stringify(this.owner.prop.key) :
+			    this.owner.prop.key :
+		    "";
+	    return document.createComment(
+		    `${point} ${species} ${this.owner.acid} ${this.owner.prop.label} ${label} ${point}`.toUpperCase()
+	    );
+	    /*</@debug>*/
+        return document.createComment("");
     }
 
     remove() {
