@@ -90,6 +90,9 @@ export default class LiveSchema extends Schema {
     }
 
     get stream() {
+        if(this.leadlayer !== this) {
+            return this.leadlayer.stream;
+        }
         return this._stream || (this._stream = new Promise( resolver => this.load(resolver) ));
     }
 

@@ -433,7 +433,7 @@ export default class HTMLView extends LiveSchema {
 				container.append(this.prop.node.cloneNode(true));
 				const imgs = resources.filter(({type}) => type === "img");
 				[...container.target.querySelectorAll(`slot[img]`)]
-					.map((target, i) => target.replaceWith(imgs[i].image));
+					.map((target, i) => target.replaceWith(imgs[i].image.cloneNode(true)));
 				emt.kf();
 				emt( { resources, container } );
 			}));
@@ -1002,7 +1002,7 @@ function parseChildren(next, { resources, path, key }, src) {
 		const _slot = img( );
 		next.replaceWith( _slot );
 		resources.push(
-			resource(src.prop.pack, { type: "img", url: next.getAttribute("src") })
+			resource(src.prop.pack, { origin: next, type: "img", url: next.getAttribute("src") })
 		);
 		return [];
 	}
