@@ -7,14 +7,14 @@ import Internalization from "./intl";
 import ObservableInlineStyle from "./inline-style";
 import { REVISION as revision } from '../globals'
 
-export default function({ path }, { type, rel, url, ...args }) {
+export default function({ path }, { origin, type, rel, url, ...args }) {
   if (type === "inline-style") {
     return ObservableInlineStyle({ path, revision, ...args });
   } else if (type === "texture") {
     throw "unsupported in current version";
     //return new ObservableTexture({url: `./m2units/${path}${url}` })
   } else if (type === "img") {
-    return ObservableImage({ url: `./m2units/${path}${url}`, revision });
+    return ObservableImage({ origin, url: `./m2units/${path}${url}`, revision });
   } else if (type === "font") {
     return new ObservableFont({ url: `./m2units/${path}${url}`, revision, ...args });
   } else if (type === "style") {
