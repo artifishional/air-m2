@@ -19,6 +19,7 @@ import { Layer, BaseLayer } from "./layer"
 import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
 import { ModelVertex } from "../../model-vertex"
+import { extname } from 'path'
 
 let UNIQUE_VIEW_KEY = 0;
 
@@ -826,8 +827,11 @@ function pathParser(str) {
 				return null;
 			}
 			else {
-				let [ , path = null ] = ly.match( /^url\((.*)\)$/ ) || [];
-				if(path) {
+				const { groups: { path, dir, filename } } = ly.match(/^url\((?<path>(?<dir>.*)(\/)(?!\/)(?<filename>[\w]+\.+[\w]+)|.*)\)$/) || { groups: {} };
+				if (filename) {
+					return { path: dir, type: "url", filename, schtype: extname(filename).substr(1) }
+				}
+				else if (path) {
 					return { path, type: "url", schtype: "html" };
 				}
 				else {

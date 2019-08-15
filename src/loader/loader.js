@@ -1,6 +1,7 @@
 import { stream } from "air-stream"
 import include from "./script_like_promise"
 import html from "./html"
+import svg from "./svg"
 import { REVISION as revision } from '../globals'
 
 const schtypes = {
@@ -16,9 +17,10 @@ export default class Loader {
         this.modules = [];
     }
 
-    obtain( { path: _path, schtype = "js" } ) {
+    obtain( { path: _path, filename = null, schtype = "js" } ) {
         if(!_path) throw "'path' param is required";
-        const path = _path + schtypes[schtype];
+
+        const path = filename ? `${_path}/${filename}` : `${_path}${schtypes[schtype]}`;
         const exist = this.modules.find( ({ path: _path }) => path === _path );
         if(exist) {
             return exist.module;
@@ -28,6 +30,10 @@ export default class Loader {
             if (schtype === "html") {
                 module = html({path: `${this.rpath}${path}`, revision})
                     .then( html => ({ data: html.content, pack: { path: _path + "/" } }) )
+            }
+            else if (schtype === "svg") {
+                module = svg({path: `${this.rpath}${path}`, revision})
+                  .then( html => ({ data: html.content, pack: { path: _path + "/" } }) )
             }
             else {
                 module =
