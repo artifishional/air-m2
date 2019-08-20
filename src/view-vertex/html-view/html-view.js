@@ -382,6 +382,9 @@ export default class HTMLView extends LiveSchema {
 						container.append( ...children.map( ( [{ target }] ) => target ) );
 					}
 				}
+
+				//todo hack clear unused slots ( when cross template mix to exmpl )
+				slots.map( ({ slot }) => slot.remove() );
 				
 				const targets = [ ...container.targets("actives", [] ) ];
 				
