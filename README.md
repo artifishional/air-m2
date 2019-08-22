@@ -406,3 +406,5 @@ the simplest path has the form:
 - ``` "./cat-a[kind=10]" ``` - passing arguments
 - ``` "./#component-id" ``` - search by id
 - ``` "./@component-key" ``` - search by key
+
+Note: when using search by id or key it begins from parent layer and move upward until root layer. So, sometimes you MUST specify exact path to model
