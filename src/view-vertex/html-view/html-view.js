@@ -21,7 +21,7 @@ import ActiveNodeTarget from "./active-node-target"
 import { ModelVertex } from "../../model-vertex"
 
 let UNIQUE_VIEW_KEY = 0;
-
+let UNIQUE_IMAGE_KEY = 0;
 
 class Cached {
 
@@ -436,7 +436,11 @@ export default class HTMLView extends LiveSchema {
 				container.append(this.prop.node.cloneNode(true));
 				const imgs = resources.filter(({type}) => type === "img");
 				[...container.target.querySelectorAll(`slot[img]`)]
-					.map((target, i) => target.replaceWith(imgs[i].image.cloneNode(true)));
+					.map((target, i) => {
+						const key = +target.getAttribute("img");
+						const { image } = imgs.find( img => img.key === key );
+						target.replaceWith(image.cloneNode(true))
+					});
 				emt.kf();
 				emt( { resources, container } );
 			}));
@@ -958,9 +962,9 @@ function slot( { key, acid } ) {
 	return res;
 }
 
-function img() {
+function img(key) {
 	const res = document.createElement("slot");
-	res.setAttribute("img", "");
+	res.setAttribute("img", key);
 	return res;
 }
 
@@ -1002,10 +1006,11 @@ function parseChildren(next, { resources, path, key }, src) {
 		return [ parser ];
 	}
 	else if (next.tagName === "IMG") {
-		const _slot = img( );
+		const key = UNIQUE_IMAGE_KEY ++;
+		const _slot = img( key );
 		next.replaceWith( _slot );
 		resources.push(
-			resource(src.prop.pack, { origin: next, type: "img", url: next.getAttribute("src") })
+			resource(src.prop.pack, { key, origin: next, type: "img", url: next.getAttribute("src") })
 		);
 		return [];
 	}
