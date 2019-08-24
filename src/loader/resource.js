@@ -14,7 +14,7 @@ export default function({ path }, { origin, type, rel, url, ...args }) {
     throw "unsupported in current version";
     //return new ObservableTexture({url: `./m2units/${path}${url}` })
   } else if (type === "img") {
-    return ObservableImage({ origin, url: `./m2units/${path}${url}`, revision });
+    return ObservableImage({ origin, url: `./m2units/${path}${url}`, revision, ...args });
   } else if (type === "font") {
     return new ObservableFont({ url: `./m2units/${path}${url}`, revision, ...args });
   } else if (type === "style") {
