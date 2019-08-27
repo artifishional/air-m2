@@ -1,8 +1,9 @@
 import { stream, combine } from "air-stream"
 import { Schema } from "air-schema"
-import {routeNormalizer, signature, equal, forEachFromData} from "../utils"
+import {routeNormalizer, signature, equal} from "../utils"
 import { Loader } from "../loader"
 import {EMPTY_OBJECT} from "../def";
+import { ObservableCollection } from '../observable-collection';
 
 export default class LiveSchema extends Schema {
 
@@ -16,6 +17,16 @@ export default class LiveSchema extends Schema {
         this.isready = !use.length;
         this.entities = [];
         this._stream = null;
+        this.sentry = stream( this._sentry, this );
+    }
+
+    _sentry(emt, { sweep }) {
+        const handler = () => {
+            emt([ this.entities ]);
+        }
+        handler();
+        const obs = ObservableCollection.observe( this, "entities", handler );
+        sweep.add( () => obs.unobserve(handler) );
     }
 
     mergeProperties( name, value ) {
@@ -144,7 +155,7 @@ export default class LiveSchema extends Schema {
         }
     }
 	
-	createEntity() { throw "io" }
+	  createEntity() { throw "io" }
 
     findEntity(signature) {
         return this.entities.find( ({ signature: x }) => equal( x, signature ) );
