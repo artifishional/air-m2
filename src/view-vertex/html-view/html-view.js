@@ -1,6 +1,6 @@
 import { BOOLEAN } from "../../def"
 import { VIEW_PLUGINS } from "../../globals"
-import { stream, combine, keyF, sync } from "air-stream"
+import { stream, combine, keyF, sync, Observable } from 'air-stream';
 import StylesController from "./styles-controller"
 import {
 	equal,
@@ -109,20 +109,38 @@ export default class HTMLView extends LiveSchema {
 			
 			const cache = new Cached( {
 				constructor: (data) => {
-					
-					const signature = calcsignature(data, this.prop.kit.prop);
-					
-					const modelvertex = new ModelVertex(["$$", {
-						glassy: true,
-						source: () => modelstream.map(([state]) => {
-							const childs = getfrompath(state, this.prop.kit.getter);
-							const res = childs.find( child => signatureEquals(signature, child) );
-							return res !== undefined ? [res] : null;
-						})
-							.filter(Boolean)
-							.distinct(equal)
-					}]);
-					
+
+					let signature = null;
+					let modelvertex = null;
+
+					if(data instanceof Observable) {
+
+						signature = data;
+
+						modelvertex = new ModelVertex(["$$", {
+							glassy: true,
+							source: () => data
+						}]);
+
+					}
+
+					else {
+
+						signature = calcsignature(data, this.prop.kit.prop);
+
+						modelvertex = new ModelVertex(["$$", {
+							glassy: true,
+							source: () => modelstream.map(([state]) => {
+								const childs = getfrompath(state, this.prop.kit.getter);
+								const res = childs.find( child => signatureEquals(signature, child) );
+								return res !== undefined ? [res] : null;
+							})
+								.filter(Boolean)
+								.distinct(equal)
+						}]);
+
+					}
+
 					let sign;
 					if(typeof signature !== "object") {
 						sign = { default: signature };
@@ -172,26 +190,60 @@ export default class HTMLView extends LiveSchema {
 				const deleted = [ ...store];
 
 				childs.map( child => {
-					const signature = calcsignature(child, this.prop.kit.prop);
-					const exist = store.find( ({ signature: $ }) => signatureEquals(signature, $ ) );
-					if(!exist) {
-						const box = new PlaceHolderContainer(this, { type: "item" });
-						domTreePlacment.after(box.target);
-						domTreePlacment = box.end;
-						cache.createIfNotExist( child, signature )
-							.at( ([ { stage, container } ]) => {
-								container.remove();
-								if(stage === 1) {
-									box.append( container.target );
-								}
-							});
-						store.push( { signature, box } );
+/* todo */
+					if(child instanceof Observable) {
+
+						const signature = child;
+						const exist = store.find( ({ signature: $ }) => signature === $ );
+
+						debugger;
+
+						if(!exist) {
+							const box = new PlaceHolderContainer(this, { type: "item" });
+							domTreePlacment.after(box.target);
+							domTreePlacment = box.end;
+							cache.createIfNotExist( child, signature )
+								.at( ([ { stage, container } ]) => {
+									container.remove();
+									if(stage === 1) {
+										box.append( container.target );
+									}
+								});
+							store.push( { signature, box } );
+						}
+						else {
+							removeElementFromArray(deleted, exist);
+							domTreePlacment.after(exist.box.target);
+							domTreePlacment = exist.box.end;
+						}
+
 					}
+/* todo dublicate */
+
 					else {
-						removeElementFromArray(deleted, exist);
-						domTreePlacment.after(exist.box.target);
-						domTreePlacment = exist.box.end;
+						const signature = calcsignature(child, this.prop.kit.prop);
+						const exist = store.find( ({ signature: $ }) => signatureEquals(signature, $ ) );
+						if(!exist) {
+							const box = new PlaceHolderContainer(this, { type: "item" });
+							domTreePlacment.after(box.target);
+							domTreePlacment = box.end;
+							cache.createIfNotExist( child, signature )
+								.at( ([ { stage, container } ]) => {
+									container.remove();
+									if(stage === 1) {
+										box.append( container.target );
+									}
+								});
+							store.push( { signature, box } );
+						}
+						else {
+							removeElementFromArray(deleted, exist);
+							domTreePlacment.after(exist.box.target);
+							domTreePlacment = exist.box.end;
+						}
 					}
+
+
 				} );
 				
 				deleted.map( item => {
