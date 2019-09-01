@@ -1,6 +1,6 @@
 import { BOOLEAN } from "../../def"
 import { VIEW_PLUGINS } from "../../globals"
-import { stream, combine, keyF, sync, Observable } from 'air-stream';
+import { stream, stream2, keyF, sync, Observable } from 'air-stream';
 import StylesController from "./styles-controller"
 import {
 	equal,
@@ -19,6 +19,8 @@ import { Layer, BaseLayer } from "./layer"
 import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
 import { ModelVertex } from "../../model-vertex"
+
+const { combine } = stream2;
 
 let UNIQUE_VIEW_KEY = 0;
 let UNIQUE_IMAGE_KEY = 0;
@@ -195,9 +197,6 @@ export default class HTMLView extends LiveSchema {
 
 						const signature = child;
 						const exist = store.find( ({ signature: $ }) => signature === $ );
-
-						debugger;
-
 						if(!exist) {
 							const box = new PlaceHolderContainer(this, { type: "item" });
 							domTreePlacment.after(box.target);
@@ -373,7 +372,7 @@ export default class HTMLView extends LiveSchema {
 			sweep.add( combine( [
 				...this.layers.map( (layer) => layer.createNodeEntity(  ) ),
 				this.createChildrenEntity( args, { layers, parentViewLayers } ),
-			] ).at( (comps) => {
+			] ).on( (comps) => {
 
 
 				const children = comps.pop();

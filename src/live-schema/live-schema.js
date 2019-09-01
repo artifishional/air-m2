@@ -1,4 +1,4 @@
-import { stream, combine } from "air-stream"
+import {Stream2, stream2 as stream} from "air-stream"
 import { Schema } from "air-schema"
 import {routeNormalizer, signature, equal} from "../utils"
 import { Loader } from "../loader"
@@ -17,16 +17,18 @@ export default class LiveSchema extends Schema {
         this.isready = !use.length;
         this.entities = [];
         this._stream = null;
-        this.sentry = stream( this._sentry, this );
-    }
-
-    _sentry(emt, { sweep }) {
-        const handler = () => {
-            emt([ this.entities ]);
-        }
-        handler();
-        const obs = ObservableCollection.observe( this, "entities", handler );
-        sweep.add( () => obs.unobserve(handler) );
+        this.sentry =
+            new Stream2( [], (e, controller) => {
+                const handler = () => {
+                    e([ [...this.entities] ]);
+                }
+	            handler();
+                const obs = ObservableCollection.observe( this, "entities", handler );
+                controller.ondisconnect( () => obs.unobserve(handler) );
+            } )
+            .reduceF( [ [ ...this.entities ] ], ( _, entities ) => {
+                return entities;
+            } );
     }
 
     mergeProperties( name, value ) {
@@ -155,7 +157,7 @@ export default class LiveSchema extends Schema {
         }
     }
 	
-	  createEntity() { throw "io" }
+    createEntity() { throw "io" }
 
     findEntity(signature) {
         return this.entities.find( ({ signature: x }) => equal( x, signature ) );
@@ -179,9 +181,9 @@ export default class LiveSchema extends Schema {
             $ = { ...$, ...signature.$ };
             delete signature.$;
         }
-        return stream( (emt, { over }) =>
+        return stream( [], (e, controller) =>
             this._get( route ).then( vertex => {
-                over.add(vertex.entity(signature, $).on(emt));
+	            controller.onfullproxy(vertex.entity(signature, $).on(e));
             })
         );
     }
