@@ -21,10 +21,10 @@ export default class LiveSchema extends Schema {
             new Stream2( [], (e, controller) => {
                 const handler = () => {
                     e([ [...this.entities] ]);
-                }
+                };
 	            handler();
                 const obs = ObservableCollection.observe( this, "entities", handler );
-                controller.ondisconnect( () => obs.unobserve(handler) );
+                controller.todisconnect( () => obs.unobserve(handler) );
             } )
             .reduceF( [ [ ...this.entities ] ], ( _, entities ) => {
                 return entities;
@@ -183,7 +183,7 @@ export default class LiveSchema extends Schema {
         }
         return stream( [], (e, controller) =>
             this._get( route ).then( vertex => {
-	            controller.onfullproxy(vertex.entity(signature, $).on(e));
+	            controller.to(vertex.entity(signature, $).on(e));
             })
         );
     }

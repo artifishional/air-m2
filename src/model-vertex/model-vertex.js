@@ -1,7 +1,6 @@
 import { LiveSchema } from "../live-schema"
 import { ObservableCollection } from "../observable-collection"
-import { stream } from "air-stream"
-import { equal } from "../utils"
+import { stream2 as stream } from "air-stream"
 
 function frommodule(module, _key = "main") {
 	return [ _key,
@@ -28,7 +27,7 @@ const observers = new Map();
 
 export default class ModelVertex extends LiveSchema {
 
-	constructor([ key, { source = () => stream( emt => `empty point ${key}` ), ...prop }, ...item], src) {
+	constructor([ key, { source = () => stream( null, e => e(`empty point ${key}`) ), ...prop }, ...item], src) {
 		super([ key, { source, ...prop }, ...item], src);
 	}
 	

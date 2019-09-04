@@ -1,11 +1,10 @@
 import { BOOLEAN } from "../../def"
 import { VIEW_PLUGINS } from "../../globals"
-import { stream, stream2, keyF, sync, Observable } from 'air-stream';
+import {stream, stream2, keyF, sync, Stream2} from 'air-stream';
 import StylesController from "./styles-controller"
 import {
 	equal,
 	routeNormalizer,
-	routeToString,
 	signature as signatureEquals,
 	getfrompath,
 	calcsignature,
@@ -94,11 +93,11 @@ export default class HTMLView extends LiveSchema {
 			return arr.splice(indexOf, 1)[0];
 		}
 		
-		return stream( ( emt, { sweep, over }) => {
+		return stream2( null, ( e, controller) => {
 			
 			const container = new PlaceHolderContainer( this, { type: "kit" } );
 			
-			emt( [ {
+			e( [ {
 				stage: 1,
 				container,
 				target: container.target,
@@ -115,7 +114,7 @@ export default class HTMLView extends LiveSchema {
 					let signature = null;
 					let modelvertex = null;
 
-					if(data instanceof Observable) {
+					if(data instanceof Stream2) {
 
 						signature = data;
 
@@ -172,11 +171,11 @@ export default class HTMLView extends LiveSchema {
 				}
 			} );
 			
-			over.add(() => cache.clear());
+			controller.todisconnect(() => cache.clear());
 
 			const store = [];
 			
-			sweep.add(modelstream.on( ([ state ]) => {
+			controller.todisconnect(modelstream.on( ([ state ]) => {
 				
 				let childs;
 				
@@ -193,7 +192,7 @@ export default class HTMLView extends LiveSchema {
 
 				childs.map( child => {
 /* todo */
-					if(child instanceof Observable) {
+					if(child instanceof Stream2) {
 
 						const signature = child;
 						const exist = store.find( ({ signature: $ }) => signature === $ );
@@ -265,7 +264,7 @@ export default class HTMLView extends LiveSchema {
 		if(!this.prop.useOwnerProps) {
 			parentViewLayers = [];
 		}
-		return stream( (emt, { sweep, over }) => {
+		return stream2(null, (emt, controller) => {
 			const clayers = new Map(
 				this.layers.map(
 					({ acid: _acid, src: { acid }, prop: { streamplug, stream } }, i, arr) => {
@@ -317,19 +316,19 @@ export default class HTMLView extends LiveSchema {
 				] )))
 				.then( layers => {
 					if(this.layers.some( ({ prop: { kit } }) => kit )) {
-						over.add(this.createKitLayer( { $: { layers, parentViewLayers }, ...args } ).on(emt));
+						controller.to(this.createKitLayer( { $: { layers, parentViewLayers }, ...args } ).on(emt));
 					}
 					else {
 						//todo need refactor
 						if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
-							over.add(this.createTeeEntity( args,  { layers, parentViewLayers } ).on(emt));
+							controller.to(this.createTeeEntity( args,  { layers, parentViewLayers } ).on(emt));
 						}
 						else {
-							over.add(this.createNextLayers( args, { layers, parentViewLayers } ).on(emt));
+							controller.to(this.createNextLayers( args, { layers, parentViewLayers } ).on(emt));
 						}
 					}
 				} );
-		} );
+		} ).store();
 	}
 
 	createLayer(owner, { poppet = false, targets, resources }, args ) {
@@ -340,7 +339,7 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	createNextLayers( args, { layers, parentViewLayers = [] } ) {
-		return stream( (emt, { sweep, over }) => {
+		return stream2( null, (e, controller) => {
 
 			const container = new PlaceHolderContainer(this, { type: "layers" });
 			
@@ -369,7 +368,7 @@ export default class HTMLView extends LiveSchema {
 				.filter( Boolean )
 			);
 			
-			sweep.add( combine( [
+			controller.todisconnect( combine( [
 				...this.layers.map( (layer) => layer.createNodeEntity(  ) ),
 				this.createChildrenEntity( args, { layers, parentViewLayers } ),
 			] ).on( (comps) => {
@@ -463,11 +462,11 @@ export default class HTMLView extends LiveSchema {
 					).stream);
 				}
 
-				over.add(sync(
+				controller.to(stream2.sync(
 					rlayers,
 					([{ stage: a }], [{ stage: b }]) => a === b,
 					( ...layers ) => [ { ...state, stage: layers[0][0].stage } ]
-				).on( emt ));
+				).on( e ));
 
 
 			}) );
@@ -475,8 +474,8 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	createNodeEntity() {
-		return stream( (emt, { sweep }) => {
-			sweep.add(combine( [
+		return stream2( null, (e, controller) => {
+			controller.todisconnect(combine( [
 				...this.prop.resources,
 				...this.prop.styles.map( (style, priority) => {
 					priority = +(style.getAttribute("priority") || priority);
@@ -492,8 +491,7 @@ export default class HTMLView extends LiveSchema {
 						const { image } = imgs.find( img => img.key === key );
 						target.replaceWith(image.cloneNode(true))
 					});
-				emt.kf();
-				emt( { resources, container } );
+				e( { resources, container } );
 			}));
 		});
 	}
@@ -515,7 +513,7 @@ export default class HTMLView extends LiveSchema {
 			(...layers) => layers.map( ly => Array.isArray(ly) ? ly[0] : ly )
 		);
 
-		return stream( (emt, { sweep }) => {
+		return stream2( null, (e, controller) => {
 			let state = {
 				acids: this.layers.map( ({ acid }) => acid ),
 				acid: this.acid, key: this.key, stage: 0, active: false, target: null
@@ -531,14 +529,13 @@ export default class HTMLView extends LiveSchema {
 			//todo temporary solution
 			
 			if(!this.prop.preload) {
-				sweep.add( loaderHook = this.obtain( "@loader", {}, { layers } )
+				controller.todisconnect( loaderHook = this.obtain( "@loader", {}, { layers } )
 					.on( ([ { stage, container: inner, target } ]) => {
 						if(state.stage === 0 && stage > 0) {
 							loaderContainer = inner;
 							state = { ...state, load: true, stage: 1, };
 							container.append( target );
-							emt.kf();
-							emt( [ state ] );
+							e( [ state ] );
 						}
 					} )
 				);
@@ -546,39 +543,38 @@ export default class HTMLView extends LiveSchema {
 
 			let _inner = null;
 			const view = this.createNextLayers( args, { layers, parentViewLayers } );
-			sweep.add( modelschema.on( (data) => {
+			
+			const connector = view.connectable();
+			
+			controller.todisconnect( modelschema.on( (data) => {
 				const connect = () => {
-					sweep.add( childHook = view
-						.connectable( (data) => {
-							if(data !== keyF) {
-								if(state.load) {
-									state = { ...state, load: false };
-									loaderContainer.restore();
+					controller.todisconnect( childHook = connector.on( (data) => {
+							if(state.load) {
+								state = { ...state, load: false };
+								loaderContainer.restore();
+							}
+							const [ { stage, container: inner } ] = data;
+							_inner = inner;
+							if(state.stage === 0) {
+								state = { ...state, stage: 1 };
+								e( [ state ] );
+							}
+							if( stage === 1 ) {
+								if(state.active) {
+									childHook({action: "fade-in"});
+									container.begin.after( _inner.target );
 								}
-								const [ { stage, container: inner } ] = data;
-								_inner = inner;
-								if(state.stage === 0) {
-									state = { ...state, stage: 1 };
-									emt.kf();
-									emt( [ state ] );
-								}
-								if( stage === 1 ) {
-									if(state.active) {
-										childHook({action: "fade-in"});
-										container.begin.after( _inner.target );
-									}
-									else {
-										_inner && _inner.restore();
-										if(!this.prop.preload) {
-											childHook && sweep.force( childHook );
-											childHook = null;
-										}
+								else {
+									_inner && _inner.restore();
+									if(!this.prop.preload) {
+										childHook && controller.force( childHook );
+										childHook = null;
 									}
 								}
 							}
 						} )
 					);
-					childHook.connect();
+					connector.connect();
 				};
 
 				const active = this.teeSignatureCheck(
@@ -588,8 +584,7 @@ export default class HTMLView extends LiveSchema {
 				if(!active && !this.prop.preload) {
 					loaderContainer && loaderContainer.remove();
 					state = { ...state, stage: 1 };
-					emt.kf();
-					emt( [ state ] );
+					e( [ state ] );
 				}
 
 				if(state.stage === 0) {

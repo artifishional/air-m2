@@ -1,6 +1,5 @@
-import { stream } from "air-stream"
 import animate from "air-anime"
-import { combine } from "air-m2"
+import { stream2 } from "air-m2"
 
 export class BaseLayer {
 
@@ -9,21 +8,19 @@ export class BaseLayer {
 	}
 
 	constructor( layer, { targets } ) {
-
 		this.layer = layer;
 		this.targets = targets;
 		this.state = { stage: 0 };
 
 		this.animateStream = this.createAnimateStream( { ...layer.prop, targets } );
 
-		this.stream = stream( (emt, { sweep, hook }) => {
-
-			hook.add( ({action}) => {
+		this.stream = stream2( null, (e, controller) => {
+			
+			controller.tocommand( ({action}) => {
 				if(action === "fade-in") {
 					this.animateHandler({ data: [ {}, { action: "fade-in" } ] });
 					this.state = { ...this.state, stage: 2 };
-					emt.kf();
-					emt( [ this.state ] );
+					e( [ this.state ] );
 				}
 				else if(action === "fade-out") {
 					this.animateHandler({ data: [ {}, { action: "fade-out" } ] });
@@ -33,48 +30,47 @@ export class BaseLayer {
 			this.loaderTimeoutID = setTimeout( () =>
 				console.warn(`too long loading layer`, this.layer), 5000
 			);*/
-			sweep.add(this.animateHandler = this.animateStream.at( ({ action }) => {
+			controller.todisconnect(this.animateHandler = this.animateStream.on( ({ action }) => {
 				if(action === "fade-out-complete") {
 					this.state = { ...this.state, stage: 1 };
-					emt.kf();
-					emt( [ this.state ] );
+					e( [ this.state ] );
 				}
 			} ));
 
-			this.sweep( sweep, emt );
-
-			sweep.add( () => this.clear() );
-		} );
+			this.controller( controller, e );
+			
+			controller.todisconnect( () => this.clear() );
+		} )
+			.store();
 
 	}
-
-	sweep(sweep, emt) {
-		this.complete(emt);
+	
+	controller(controller, e) {
+		this.complete(e);
 	}
 
 	clear() { }
 
-	complete(emt) {
+	complete(e) {
 		//clearTimeout(this.loaderTimeoutID);
 		this.state = { ...this.state, stage: 1 };
-		emt.kf();
-		emt([this.state, {action: "complete", data: null}]);
+		e([this.state, {action: "complete", data: null}]);
 	}
 
 }
 
 export class Layer extends BaseLayer {
-
-	sweep( sweep, emt ) {
+	
+	controller( controller, e ) {
 		if(this.checkModelNecessity( )) {
-			sweep.add( this.handler = combine([
+			controller.todisconnect( this.handler = stream2.combine([
 				this.schema.model.layer._obtain( [], this.schema.model.vars ),
 				this.schema.model.layer._obtain( ["#intl"] ),
-			]).at( ([data, intl]) => {
+			]).on( ([data, intl]) => {
 
 				this.targets.map( target => target.transition(intl) );
 
-				!this.state.stage && this.complete(emt);
+				!this.state.stage && this.complete(e);
 
 				let state, action = "default";
 				if(Array.isArray(data) && data.length < 3) {
@@ -89,7 +85,7 @@ export class Layer extends BaseLayer {
 			} ) );
 		}
 		else {
-			this.complete(emt);
+			this.complete(e);
 		}
 	}
 
