@@ -470,7 +470,8 @@ export default class HTMLView extends LiveSchema {
 
 
 			}) );
-		} );
+		} )
+			.store();
 	}
 
 	createNodeEntity() {
@@ -546,8 +547,18 @@ export default class HTMLView extends LiveSchema {
 			
 			const connector = view.connectable();
 			
+			controller.todisconnect( () => {
+				connected = false;
+			} );
+			
+			let connected = false;
+			
 			controller.todisconnect( modelschema.on( (data) => {
 				const connect = () => {
+					if(connected) {
+						return ;
+					}
+					connected = true;
 					controller.todisconnect( childHook = connector.on( (data) => {
 							if(state.load) {
 								state = { ...state, load: false };
