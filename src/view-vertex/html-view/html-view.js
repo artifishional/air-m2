@@ -176,7 +176,7 @@ export default class HTMLView extends LiveSchema {
 
 			const store = [];
 			
-			sweep.add(modelstream.at( ([ state ]) => {
+			sweep.add(modelstream.on( ([ state ]) => {
 				
 				let childs;
 				
@@ -202,7 +202,7 @@ export default class HTMLView extends LiveSchema {
 							domTreePlacment.after(box.target);
 							domTreePlacment = box.end;
 							cache.createIfNotExist( child, signature )
-								.at( ([ { stage, container } ]) => {
+								.on( ([ { stage, container } ]) => {
 									container.remove();
 									if(stage === 1) {
 										box.append( container.target );
@@ -227,7 +227,7 @@ export default class HTMLView extends LiveSchema {
 							domTreePlacment.after(box.target);
 							domTreePlacment = box.end;
 							cache.createIfNotExist( child, signature )
-								.at( ([ { stage, container } ]) => {
+								.on( ([ { stage, container } ]) => {
 									container.remove();
 									if(stage === 1) {
 										box.append( container.target );
@@ -482,7 +482,7 @@ export default class HTMLView extends LiveSchema {
 					priority = +(style.getAttribute("priority") || priority);
 					return StylesController.get(style, this.acid, priority, this.prop.pack)
 				})
-			] ).at( ( resources ) => {
+			] ).on( ( resources ) => {
 				const container = new PlaceHolderContainer( this, { type: "node" } );
 				container.append(this.prop.node.cloneNode(true));
 				const imgs = resources.filter(({type}) => type === "img");
@@ -532,7 +532,7 @@ export default class HTMLView extends LiveSchema {
 			
 			if(!this.prop.preload) {
 				sweep.add( loaderHook = this.obtain( "@loader", {}, { layers } )
-					.at( ([ { stage, container: inner, target } ]) => {
+					.on( ([ { stage, container: inner, target } ]) => {
 						if(state.stage === 0 && stage > 0) {
 							loaderContainer = inner;
 							state = { ...state, load: true, stage: 1, };
@@ -546,7 +546,7 @@ export default class HTMLView extends LiveSchema {
 
 			let _inner = null;
 			const view = this.createNextLayers( args, { layers, parentViewLayers } );
-			sweep.add( modelschema.at( (data) => {
+			sweep.add( modelschema.on( (data) => {
 				const connect = () => {
 					sweep.add( childHook = view
 						.connectable( (data) => {

@@ -1,7 +1,10 @@
-import stream from "./xhr"
+import { stream2 as stream } from "./xhr"
 
-export default ({url, revision}) => stream({path: url, revision, content: { type: "application/json" }})
-    .map( xhr => {
-        const json = JSON.parse(xhr.responseText);
-        return { type: "intl", content: json };
-    } );
+export default ({ url }) => {
+  return stream.from(fetch(url, {
+    mode: 'cors',
+    method: 'GET',
+    headers: {'Content-Type': 'application/json'}
+  })
+    .then( raw => ({ type: "intl", content: JSON.stringify(raw) }) ));
+}
