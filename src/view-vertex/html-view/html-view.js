@@ -553,40 +553,41 @@ export default class HTMLView extends LiveSchema {
 			
 			let connected = false;
 			
+			const connect = () => {
+				if(connected) {
+					return ;
+				}
+				connected = true;
+				controller.todisconnect( childHook = connector.on( (data) => {
+						if(state.load) {
+							state = { ...state, load: false };
+							loaderContainer.restore();
+						}
+						const [ { stage, container: inner } ] = data;
+						_inner = inner;
+						if(state.stage === 0) {
+							state = { ...state, stage: 1 };
+							e( [ state ] );
+						}
+						if( stage === 1 ) {
+							if(state.active) {
+								childHook({action: "fade-in"});
+								container.begin.after( _inner.target );
+							}
+							else {
+								_inner && _inner.restore();
+								if(!this.prop.preload) {
+									childHook && controller.force( childHook );
+									childHook = null;
+								}
+							}
+						}
+					} )
+				);
+				connector.connect();
+			};
+			
 			controller.todisconnect( modelschema.on( (data) => {
-				const connect = () => {
-					if(connected) {
-						return ;
-					}
-					connected = true;
-					controller.todisconnect( childHook = connector.on( (data) => {
-							if(state.load) {
-								state = { ...state, load: false };
-								loaderContainer.restore();
-							}
-							const [ { stage, container: inner } ] = data;
-							_inner = inner;
-							if(state.stage === 0) {
-								state = { ...state, stage: 1 };
-								e( [ state ] );
-							}
-							if( stage === 1 ) {
-								if(state.active) {
-									childHook({action: "fade-in"});
-									container.begin.after( _inner.target );
-								}
-								else {
-									_inner && _inner.restore();
-									if(!this.prop.preload) {
-										childHook && controller.force( childHook );
-										childHook = null;
-									}
-								}
-							}
-						} )
-					);
-					connector.connect();
-				};
 
 				const active = this.teeSignatureCheck(
 					new Map([ ...teeStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) )
