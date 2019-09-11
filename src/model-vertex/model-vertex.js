@@ -88,8 +88,7 @@ export default class ModelVertex extends LiveSchema {
 			signature,
 			obtain: (route, signature) => this.obtain(route, signature),
 			schema: this,
-			stream,
-			...signature
+			stream
 		});
 	}
 
