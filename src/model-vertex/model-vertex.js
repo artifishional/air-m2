@@ -85,11 +85,12 @@ export default class ModelVertex extends LiveSchema {
 
 	createEntity( signature ) {
 		return this.prop.source({
+			signature,
 			obtain: (route, signature) => this.obtain(route, signature),
 			schema: this,
 			stream,
 			...signature
 		});
-    }
+	}
 
 }
