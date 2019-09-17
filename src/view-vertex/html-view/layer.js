@@ -4,7 +4,7 @@ import { stream2 } from "air-m2"
 export class BaseLayer {
 
 	createAnimateStream( { keyframes, targets } ) {
-		return animate( targets, keyframes, this.layer.prop.key );
+		return animate( targets, keyframes, this.layer );
 	}
 
 	constructor( layer, { targets } ) {
