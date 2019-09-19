@@ -478,7 +478,7 @@ export default class HTMLView extends LiveSchema {
 			state.container = container;
 
 			//todo temporary solution
-			
+			let connected = false;
 			if(!this.prop.preload) {
 				sweep.add( loaderHook = this.obtain( "@loader", {}, { layers } )
 					.at( ([ { stage, container: inner, target } ]) => {
@@ -492,43 +492,47 @@ export default class HTMLView extends LiveSchema {
 					} )
 				);
 			}
+			const connect = () => {
+				if(connected) {
+					return ;
+				}
+				connected = true;
+				sweep.add( childHook = view
+					.connectable( (data) => {
+						if(data !== keyF) {
+							if(state.load) {
+								state = { ...state, load: false };
+								loaderContainer.restore();
+							}
+							const [ { stage, container: inner } ] = data;
+							_inner = inner;
+							if(state.stage === 0) {
+								state = { ...state, stage: 1 };
+								emt.kf();
+								emt( [ state ] );
+							}
+							if( stage === 1 ) {
+								if(state.active) {
+									childHook({action: "fade-in"});
+									container.begin.after( _inner.target );
+								}
+								else {
+									_inner && _inner.restore();
+									if(!this.prop.preload) {
+										childHook && sweep.force( childHook );
+										childHook = null;
+									}
+								}
+							}
+						}
+					} )
+				);
+				childHook.connect();
+			};
 
 			let _inner = null;
 			const view = this.createNextLayers( args, { layers, parentViewLayers } );
 			sweep.add( modelschema.at( (data) => {
-				const connect = () => {
-					sweep.add( childHook = view
-						.connectable( (data) => {
-							if(data !== keyF) {
-								if(state.load) {
-									state = { ...state, load: false };
-									loaderContainer.restore();
-								}
-								const [ { stage, container: inner } ] = data;
-								_inner = inner;
-								if(state.stage === 0) {
-									state = { ...state, stage: 1 };
-									emt.kf();
-									emt( [ state ] );
-								}
-								if( stage === 1 ) {
-									if(state.active) {
-										childHook({action: "fade-in"});
-										container.begin.after( _inner.target );
-									}
-									else {
-										_inner && _inner.restore();
-										if(!this.prop.preload) {
-											childHook && sweep.force( childHook );
-											childHook = null;
-										}
-									}
-								}
-							}
-						} )
-					);
-					childHook.connect();
-				};
 
 				const active = this.teeSignatureCheck(
 					new Map([ ...teeStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) )
