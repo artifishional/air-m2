@@ -4,17 +4,19 @@ import { combine } from "air-m2"
 
 export class BaseLayer {
 
-	createAnimateStream( { keyframes, targets } ) {
+	createAnimateStream( keyframes, targets ) {
 		return animate( targets, keyframes, this.layer );
 	}
 
 	constructor( layer, { targets } ) {
 
+		this.keyframes = layer.prop.keyframes;
+		this.fadeoutexist = this.keyframes.some(([ name ]) => name === "fade-out");
 		this.layer = layer;
 		this.targets = targets;
 		this.state = { stage: 0 };
 
-		this.animateStream = this.createAnimateStream( { ...layer.prop, targets } );
+		this.animateStream = this.createAnimateStream( this.keyframes, targets );
 
 		this.stream = stream( (emt, { sweep, hook }) => {
 
@@ -26,7 +28,14 @@ export class BaseLayer {
 					emt( [ this.state ] );
 				}
 				else if(action === "fade-out") {
-					this.animateHandler({ data: [ {}, { action: "fade-out" } ] });
+					if(this.fadeoutexist) {
+						this.animateHandler({ data: [ {}, { action: "fade-out" } ] });
+					}
+					else {
+						this.state = { ...this.state, stage: 1 };
+						emt.kf();
+						emt( [ this.state ] );
+					}
 				}
 			} );
 /*
