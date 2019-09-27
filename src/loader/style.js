@@ -1,10 +1,10 @@
-import {stream} from "air-stream"
-
-export default ({url, revision, ...args}) => stream((emt, {sweep}) => {
+export default ({url, revision, ...args}) => new Promise(resolve => {
     const style = document.createElement("link");
     style.setAttribute("rel", "stylesheet");
     style.setAttribute("href", revision ? `${url}?rev=${revision}` : url);
     document.head.append(style);
-    style.onload = () => emt({url, type: "style", style, ...args});
-    sweep.add(() => style.remove());
-});
+    style.onload = () => {
+        style.remove();
+        resolve({url, type: "style", style, ...args});
+    };
+})

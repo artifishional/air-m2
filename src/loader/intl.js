@@ -1,13 +1,11 @@
-import { stream } from 'air-stream';
-
-export default ({url: path, revision}) => stream(emt => {
+export default ({url: path, revision}) => {
   let url = revision ? `${path}?rev=${revision}` : path;
-  fetch(url, {
+  return fetch(url, {
     mode: 'cors',
     method: 'GET',
   })
     .then(r => r.json())
     .then((content) => {
-      emt({ type: "intl", content });
+      return { type: "intl", content };
     })
-});
+};

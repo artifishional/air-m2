@@ -1,8 +1,6 @@
-import { stream } from 'air-stream';
-
-export default ({url: path, revision}) => stream(emt => {
+export default ({url: path, revision}) => {
   const url = revision ? `${path}?rev=${revision}` : path;
-  fetch(url, {
+  return fetch(url, {
     mode: 'cors',
     method: 'GET'
   })
@@ -28,6 +26,6 @@ export default ({url: path, revision}) => stream(emt => {
 
       }, [ "languages" ]);
 
-      emt({ type: "language", content });
+      return { type: "language", content };
     })
-});
+};

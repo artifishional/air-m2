@@ -4,17 +4,6 @@ import FontFaceObserver from "fontfaceobserver";
 
 const FONT_LOADING_TIMEOUT = 30000;
 
-function FileReader(blob) {
-	return new Promise( (resolver) => {
-		const reader = new globalThis.FileReader();
-		blob.arrayBuffer().then(buffer => {
-			// todo: implement load strategy mechanism instead creating new blob instance
-			reader.readAsDataURL(new Blob([buffer], {type: blob.type}));
-			reader.onloadend = resolver;
-		});
-	} );
-}
-
 function createPrioritySystemStyle(priority) {
 	while(PRIORITY.length < priority+1) {
 		const style = document.createElement("style");
@@ -31,7 +20,7 @@ function inject(style, priority) {
 
 const PRIORITY = [];
 
-export default ({ acid, priority, style, path, revision, ...args }) => {
+export default ({ resourceLoader, acid, priority, style, path, revision, ...args }) => {
 
 	return stream(async (emt, {sweep}) => {
 
@@ -103,21 +92,8 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 
 		const promises = dataForLoading.map(({type, resource, target}) => {
 			if (type === 'image') {
-				const url = new URL(
-					path + resource.replace(/"/g, ""),
-				);
-				if (revision) {
-					url.searchParams.append("revision", revision);
-				}
-				return fetch(url, {
-					mode: 'cors',
-					method: 'GET'
-				})
-					.then(r => r.blob())
-					.then(FileReader)
-					.then(({target: {result: base64}}) => {
-						target.value = base64;
-					})
+				resource({path}, {url: resource.replace(/"/g, ""), type: 'img', toDataURL: true, revision})
+					.then(({image}) => target.value = image);
 			}
 		});
 
