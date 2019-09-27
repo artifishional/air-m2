@@ -1,69 +1,33 @@
-import { VIEW_PLUGINS } from "../globals"
-
-class ModuleLoadEvent extends Event {
-
-    constructor({ module, script }) {
-        super("m2SourceModuleLoad");
-        this.module = module;
-        this.script = script;
+export default function ({path, revision, port}) {
+    const url = new URL(path, window.location.origin);
+    if (revision) {
+        url.searchParams.append("revision", revision);
     }
-
-}
-
-Object.defineProperty(window, "__m2unit__", {
-    set(module) {
-        const script = document.currentScript;
-        if(VIEW_PLUGINS.has(script)) {
-            VIEW_PLUGINS.set( script, module );
-        }
-        window.dispatchEvent(new ModuleLoadEvent({ module, script }));
+    if (port) {
+        url.port = port;
     }
-});
-
-export default function ({path, revision}) {
+    path = url.href;
     if(/.\.js$/g.test(path)) {
-        return new Promise((resolve, reject) => {
-            const script = document.createElement("script");
-            script.src = revision ? `${path}?rev=${revision}` : path;
-            let hn = null;
-            //script.addEventListener("load", resolve);
-            window.addEventListener("m2SourceModuleLoad", hn = (event) => {
-                if(event.script === script) {
-                    script.remove();
-                    window.removeEventListener("m2SourceModuleLoad", hn);
-                    resolve( event );
-                }
-            });
-            script.addEventListener("error", reject);
-            document.head.appendChild(script);
+        return new Promise(async (resolve, reject) => {
+            const scriptContent = await (await fetch(revision ? `${path}?rev=${revision}` : path)).text();
+            window.eval(scriptContent);
+            resolve({module: window.__m2unit__});
         });
     }
     else if(/.\.json$/g.test(path)) {
-        return new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open("GET", revision ? `${path}?rev=${revision}` : path, true);
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');
-            xhr.onload = () => {
-                resolve( {module: {default: JSON.parse(xhr.responseText)}} );
-            };
-            xhr.send();
+        return new Promise(async (resolve, reject) => {
+            const content = await (await fetch(revision ? `${path}?rev=${revision}` : path)).json();
+            resolve({module: {default: content}});
         });
     }
     else if (/.\.html$/g.test(path)) {
-        return new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open("GET", revision ? `${path}?rev=${revision}` : path, true);
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xhr.setRequestHeader('Content-type', 'text/html; charset=utf-8');
-            xhr.onload = () => {
-                const doc = new DOMParser().parseFromString(xhr.responseText, "text/html");
-                const err = doc.querySelector("parsererror");
-                if(err) throw `${path} parser error: ${err.innerText}`;
-                const res = transform(doc.querySelector("body").children[0]);
-                resolve( {module: {default: res}} );
-            };
-            xhr.send();
+        return new Promise(async (resolve, reject) => {
+            const htmlContent = await (await fetch(revision ? `${path}?rev=${revision}` : path)).text();
+            const doc = new DOMParser().parseFromString(htmlContent, "text/html");
+            const err = doc.querySelector("parsererror");
+            if(err) throw `${path} parser error: ${err.innerText}`;
+            const res = transform(doc.querySelector("body").children[0]);
+            resolve( {module: {default: res}} );
         });
     }
 }

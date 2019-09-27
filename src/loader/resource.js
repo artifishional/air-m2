@@ -5,24 +5,26 @@ import ObservableStyle from "./style";
 import Languages from "./languages";
 import Internalization from "./intl";
 import ObservableInlineStyle from "./inline-style";
-import { REVISION as revision } from '../globals'
+import { REVISION as revision, PORT as port } from '../globals'
 
 export default function({ path }, { origin, type, rel, url, ...args }) {
+  const {protocol, hostname} = window.location;
+  const urlOrigin = port ? `${protocol}//${hostname}:${port}` : window.location.origin;
   if (type === "inline-style") {
-    return ObservableInlineStyle({ path, revision, ...args });
+    return ObservableInlineStyle({ path: `${urlOrigin}/m2units/${path}`, revision, ...args });
   } else if (type === "texture") {
     throw "unsupported in current version";
-    //return new ObservableTexture({url: `./m2units/${path}${url}` })
+    //return new ObservableTexture({url: `m2units/${path}${url}` })
   } else if (type === "img") {
-    return ObservableImage({ origin, url: `./m2units/${path}${url}`, revision, ...args });
+    return ObservableImage({ origin, url: new URL(`${urlOrigin}/m2units/${path}${url}`).href, revision, ...args });
   } else if (type === "font") {
-    return new ObservableFont({ url: `./m2units/${path}${url}`, revision, ...args });
+    return new ObservableFont({ url: new URL(`${urlOrigin}/m2units/${path}${url}`).href, revision, ...args });
   } else if (type === "style") {
-    return ObservableStyle({ url: `./m2units/${path}${url}`, revision, ...args });
+    return ObservableStyle({ url: new URL(`${urlOrigin}/m2units/${path}${url}`).href, revision, ...args });
   } else if (type === "formatters") {
-    return Internalization({ url: `./m2units/${path}${url}`, revision, ...args });
+    return Internalization({ url: new URL(`${urlOrigin}/m2units/${path}${url}`).href, revision, ...args });
   } else if (type === "languages") {
-    return Languages({ url: `./m2units/${path}${url}`, revision, ...args });
+    return Languages({ url: new URL(`${urlOrigin}/m2units/${path}${url}`).href, revision, ...args });
   } else if (type === "sound") {
     const _path = path.split("/").filter(Boolean);
     const _rel = rel.split("/").filter(Boolean);
@@ -30,7 +32,7 @@ export default function({ path }, { origin, type, rel, url, ...args }) {
       _rel.splice(0, 1);
       _path.splice(-1, 1);
     }
-    return new Sound({ url: `./m2units/${_path.join("/")}/res/sounds/${_rel.join("/")}`, name, ...args });
+    return new Sound({ url: new URL(`${urlOrigin}/m2units/${_path.join("/")}/res/sounds/${_rel.join("/")}`).href, name, ...args });
   } else {
     throw "unsupported resource type";
   }

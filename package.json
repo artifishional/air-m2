@@ -37,7 +37,8 @@
     "@babel/register": "^7.0.0",
     "babel-jest": "^24.8.0",
     "babel-loader": "^8.0.0",
-    "jest": "^24.8.0"
+    "jest": "^24.8.0",
+    "webpack": "^4.40.2"
   },
   "repository": {
     "type": "git",

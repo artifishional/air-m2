@@ -1,7 +1,13 @@
-import stream from "./xhr"
+import { stream } from 'air-stream';
 
-export default ({url, revision}) => stream({path: url, revision, content: { type: "application/json" }})
-    .map( xhr => {
-        const json = JSON.parse(xhr.responseText);
-        return { type: "intl", content: json };
-    } );
+export default ({url: path, revision}) => stream(emt => {
+  let url = revision ? `${path}?rev=${revision}` : path;
+  fetch(url, {
+    mode: 'cors',
+    method: 'GET',
+  })
+    .then(r => r.json())
+    .then((content) => {
+      emt({ type: "intl", content });
+    })
+});

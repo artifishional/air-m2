@@ -4,6 +4,8 @@ import {routeNormalizer, signature, equal, forEachFromData} from "../utils"
 import { Loader } from "../loader"
 import {EMPTY_OBJECT} from "../def";
 
+const {document} = window;
+
 export default class LiveSchema extends Schema {
 
     constructor(

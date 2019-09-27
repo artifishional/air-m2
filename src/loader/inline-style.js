@@ -7,8 +7,11 @@ const FONT_LOADING_TIMEOUT = 30000;
 function FileReader(blob) {
 	return new Promise( (resolver) => {
 		const reader = new globalThis.FileReader();
-		reader.readAsDataURL(blob);
-		reader.onloadend = resolver;
+		blob.arrayBuffer().then(buffer => {
+			// todo: implement load strategy mechanism instead creating new blob instance
+			reader.readAsDataURL(new Blob([buffer], {type: blob.type}));
+			reader.onloadend = resolver;
+		});
 	} );
 }
 
@@ -75,7 +78,7 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 						.toArray()
 						.filter(({type}) => type === 'Url')
 						.map(({value}) => {
-							let url = "./m2units/" + path + value.value.replace(/"/g, "");
+							let url = path + value.value.replace(/"/g, "");
 							if (revision) {
 								if (url.indexOf('?') > -1) {
 									url = `${url}&rev=${revision}`
@@ -101,8 +104,7 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 		const promises = dataForLoading.map(({type, resource, target}) => {
 			if (type === 'image') {
 				const url = new URL(
-					"m2units/" + path + resource.replace(/"/g, ""),
-					window.location.origin + window.location.pathname
+					path + resource.replace(/"/g, ""),
 				);
 				if (revision) {
 					url.searchParams.append("revision", revision);

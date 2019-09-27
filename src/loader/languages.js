@@ -1,27 +1,33 @@
-import stream from "./xhr"
+import { stream } from 'air-stream';
 
-export default ({url, revision}) => stream({path: url, revision, content: { type: "application/xml" }})
-    .map( xhr => {
+export default ({url: path, revision}) => stream(emt => {
+  const url = revision ? `${path}?rev=${revision}` : path;
+  fetch(url, {
+    mode: 'cors',
+    method: 'GET'
+  })
+    .then(r => r.text())
+    .then((content) => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(content, "application/xml");
 
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(xhr.responseText, "application/xml");
+      content = [ ...doc.querySelector("languages").children].reduce((acc, next) => {
 
-        const content = [ ...doc.querySelector("languages").children].reduce((acc, next) => {
+        const lang = next.tagName;
 
-            const lang = next.tagName;
+        [ ...next.children ].map( string => {
+          const name = string.getAttribute("name");
+          let exist = acc.find( ([ x ]) => x === name );
+          if(!exist) {
+            acc.push( exist = [ name, {} ] );
+          }
+          exist[1][lang] = string.textContent;
+        } );
 
-            [ ...next.children ].map( string => {
-                const name = string.getAttribute("name");
-                let exist = acc.find( ([ x ]) => x === name );
-                if(!exist) {
-                    acc.push( exist = [ name, {} ] );
-                }
-                exist[1][lang] = string.textContent;
-            } );
+        return acc;
 
-            return acc;
+      }, [ "languages" ]);
 
-        }, [ "languages" ]);
-
-        return { type: "language", content };
-    } );
+      emt({ type: "language", content });
+    })
+});

@@ -674,30 +674,18 @@ export default class HTMLView extends LiveSchema {
 			.filter(byTagName("script"))
 			.filter(byAttr("data-source-type", "stream-source"))
 			.map( plug => {
-				const src = document.createElement("script");
-				VIEW_PLUGINS.set(src, null);
-				src.textContent = plug.textContent;
-				document.head.append( src );
-				const res = VIEW_PLUGINS.get(src).default;
-				VIEW_PLUGINS.delete(src);
+				window.eval(plug.textContent);
 				plug.remove();
-				src.remove();
-				return res;
+				return window.__m2unit__.default;
 			} );
 		
 		const plug = [...node.children]
 			.filter(byTagName("script"))
 			.filter(byAttr("data-source-type", "view-source"))
 			.map( plug => {
-				const src = document.createElement("script");
-				VIEW_PLUGINS.set(src, null);
-				src.textContent = plug.textContent;
-				document.head.append( src );
-				const res = VIEW_PLUGINS.get(src).default;
-				VIEW_PLUGINS.delete(src);
+				window.eval(plug.textContent);
 				plug.remove();
-				src.remove();
-				return res;
+				return window.__m2unit__.default;
 			} );
    
 		const keyframes = [];
