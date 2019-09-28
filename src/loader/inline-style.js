@@ -1,8 +1,5 @@
 import { stream } from "air-stream";
 import csstree from "css-tree";
-import FontFaceObserver from "fontfaceobserver";
-
-const FONT_LOADING_TIMEOUT = 30000;
 
 function createPrioritySystemStyle(priority) {
 	while(PRIORITY.length < priority+1) {
@@ -20,9 +17,9 @@ function inject(style, priority) {
 
 const PRIORITY = [];
 
-export default ({ resourceLoader, acid, priority, style, path, revision, ...args }) => {
+export default ({ loadResource, acid, priority, style, path, revision, ...args }) => {
 
-	return stream(async (emt, {sweep}) => {
+	return new Promise(async (resolve) => {
 
 		if(!PRIORITY[0]) {
 			const zero = document.createElement("style");
@@ -58,8 +55,9 @@ export default ({ resourceLoader, acid, priority, style, path, revision, ...args
 					if (values) {
 						fonts.push({
 							type: 'font',
-							resource: values,
-							target: null
+							resource: values[0],
+							target: null,
+							urls: [],
 						})
 					}
 				} else if (node.type === "Declaration" && node.property === 'src') {
@@ -67,15 +65,8 @@ export default ({ resourceLoader, acid, priority, style, path, revision, ...args
 						.toArray()
 						.filter(({type}) => type === 'Url')
 						.map(({value}) => {
-							let url = path + value.value.replace(/"/g, "");
-							if (revision) {
-								if (url.indexOf('?') > -1) {
-									url = `${url}&rev=${revision}`
-								} else {
-									url = `${url}?rev=${revision}`
-								}
-							}
-							value.value = url;
+							const url = value.value.replace(/"/g, "");
+							fonts.slice(-1)[0].urls.push(url);
 						})
 				}
 			} else if ((this.rule || this.atrule && this.atrule.name === 'media') && node.type === 'Url') {
@@ -92,7 +83,7 @@ export default ({ resourceLoader, acid, priority, style, path, revision, ...args
 
 		const promises = dataForLoading.map(({type, resource, target}) => {
 			if (type === 'image') {
-				resource({path}, {url: resource.replace(/"/g, ""), type: 'img', toDataURL: true, revision})
+				loadResource({path}, {url: resource.replace(/"/g, ""), type: 'img', toDataURL: true, revision})
 					.then(({image}) => target.value = image);
 			}
 		});
@@ -113,10 +104,10 @@ export default ({ resourceLoader, acid, priority, style, path, revision, ...args
 				document.head.appendChild(fontFaceStyle);
 			}
 			Promise.all(
-				fonts.reduce((acc, {resource}) => {
-					const fontPromises = resource.map((res) => {
-						return new FontFaceObserver(res).load(null, FONT_LOADING_TIMEOUT);
-					});
+				fonts.reduce((acc, {resource: fontFamily, urls}) => {
+					const fontPromises = urls.map(fontUrl =>
+						loadResource({path}, {url: fontUrl, type: 'font', family: fontFamily})
+					);
 					return [
 						...acc,
 						...fontPromises
@@ -125,15 +116,13 @@ export default ({ resourceLoader, acid, priority, style, path, revision, ...args
 			).then(() => {
 				if (isActive) {
 					inject(commonStyle, priority);
-					emt({type: "inline-style", style: commonStyle, ...args});
+					resolve({type: "inline-style", style: commonStyle, ...args});
+					// todo: не знаю пока куда впилить этот кусок
+					// isActive = false;
+					// commonStyle.remove();
+					// fontStyle && fontStyle.remove();
 				}
 			})
-		});
-
-		sweep.add(() => {
-			isActive = false;
-			commonStyle.remove();
-			fontStyle && fontStyle.remove();
 		});
 	});
 }

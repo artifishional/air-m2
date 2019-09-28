@@ -1,6 +1,6 @@
 import { BOOLEAN } from "../../def"
 import { VIEW_PLUGINS } from "../../globals"
-import { stream, combine, keyF, sync } from "air-stream"
+import { stream, combine, keyF, sync, fromPromise } from "air-stream"
 import StylesController from "./styles-controller"
 import {
 	equal,
@@ -637,7 +637,7 @@ export default class HTMLView extends LiveSchema {
         const resources =
             [ ...(src.acid !== -1 && src.prop.resources || []), ...JSON5
                 .parse(node.getAttribute("resources") || "[]")
-                .map( x => resource(pack, x) )
+                .map( x => fromPromise(resource(pack, x)) )
             ];
 
 		const styles = [...node.children].filter(byTagName("STYLE"));
@@ -650,7 +650,7 @@ export default class HTMLView extends LiveSchema {
 		//resources.push(...styles.map( style => resource(pack, { type: "inline-style", style }) ));
 
 		const sounds = [...node.children].filter(byTagName("SOUND"));
-		resources.push(...sounds.map( sound => resource(pack, { type: "sound", name: sound.getAttribute("name") || "", rel: sound.getAttribute("rel") || ""}) ));
+		resources.push(...sounds.map( sound => fromPromise(resource(pack, { type: "sound", name: sound.getAttribute("name") || "", rel: sound.getAttribute("rel") || ""}) )));
 
 		const tee = cuttee(node, key);
 		const kit = cutkit(node, key);
@@ -711,7 +711,7 @@ export default class HTMLView extends LiveSchema {
 			path,           //absolute path
 			node,           //xml target node
 			key,            //inherited or inner key
-			stream,         //link to model stream todo obsolete io
+			stream: stream,         //link to model stream todo obsolete io
 			resources,      //related resources
 		};
 		
@@ -1002,7 +1002,7 @@ function parseChildren(next, { resources, path, key }, src) {
 		const _slot = img( key );
 		next.replaceWith( _slot );
 		resources.push(
-			resource(src.prop.pack, { key, origin: next, type: "img", url: next.getAttribute("src") })
+			fromPromise(resource(src.prop.pack, { key, origin: next, type: "img", url: next.getAttribute("src") }))
 		);
 		return [];
 	}
