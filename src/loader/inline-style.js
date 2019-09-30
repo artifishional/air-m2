@@ -32,14 +32,10 @@ export default ({ loadResource, acid, priority, style, path, revision, ...args }
 
 		let isActive = true;
 
-		let fontFaceStyle = null;
 		const commonStyle = document.createElement("style");
 		commonStyle.textContent = "";
 
-		let rawFontCSSContent = "";
 		let rawCommonCSSContent = "";
-
-		let fontStyle = null;
 
 		const ast = csstree.parse(style.textContent);
 
@@ -55,18 +51,23 @@ export default ({ loadResource, acid, priority, style, path, revision, ...args }
 					if (values) {
 						fonts.push({
 							type: 'font',
-							resource: values[0],
+							family: values[0],
 							target: null,
-							urls: [],
+							formats: [],
 						})
 					}
 				} else if (node.type === "Declaration" && node.property === 'src') {
 					node.value && node.value.children && node.value.children
 						.toArray()
-						.filter(({type}) => type === 'Url')
-						.map(({value}) => {
-							const url = value.value.replace(/"/g, "");
-							fonts.slice(-1)[0].urls.push(url);
+						.filter(({type, name}) => type === 'Url' || (type === 'Function' && name === 'format'))
+						.map((node) => {
+							if (node.type === 'Url') {
+								const url = node.value.value.replace(/"/g, "");
+								fonts.slice(-1)[0].formats.push({url, name: null});
+							} else if (node.type === 'Function') {
+								const format = node.children.toArray()[0].value.replace(/"/g, "");
+								fonts.slice(-1)[0].formats.slice(-1)[0].name = format;
+							}
 						})
 				}
 			} else if ((this.rule || this.atrule && this.atrule.name === 'media') && node.type === 'Url') {
@@ -83,7 +84,7 @@ export default ({ loadResource, acid, priority, style, path, revision, ...args }
 
 		const promises = dataForLoading.map(({type, resource, target}) => {
 			if (type === 'image') {
-				loadResource({path}, {url: resource.replace(/"/g, ""), type: 'img', toDataURL: true, revision})
+				return loadResource({path}, {url: resource.replace(/"/g, ""), type: 'img', dataURL: true, revision})
 					.then(({image}) => target.value = image);
 			}
 		});
@@ -91,29 +92,12 @@ export default ({ loadResource, acid, priority, style, path, revision, ...args }
 		Promise.all(promises).then(() => {
 			for (const node of ast.children.toArray()) {
 				const {type, name} = node;
-				if (type === "Atrule" && name === "font-face") {
-					rawFontCSSContent += csstree.generate(node);
-				} else {
+				if (type !== "Atrule" || name !== "font-face") {
 					rawCommonCSSContent += csstree.generate(node);
 				}
 			}
 			commonStyle.textContent = rawCommonCSSContent;
-			if (rawFontCSSContent) {
-				fontFaceStyle = document.createElement("style");
-				fontFaceStyle.textContent = rawFontCSSContent;
-				document.head.appendChild(fontFaceStyle);
-			}
-			Promise.all(
-				fonts.reduce((acc, {resource: fontFamily, urls}) => {
-					const fontPromises = urls.map(fontUrl =>
-						loadResource({path}, {url: fontUrl, type: 'font', family: fontFamily})
-					);
-					return [
-						...acc,
-						...fontPromises
-					]
-				}, [])
-			).then(() => {
+			loadResource({path}, {fonts, type: 'font'}).then(() => {
 				if (isActive) {
 					inject(commonStyle, priority);
 					resolve({type: "inline-style", style: commonStyle, ...args});

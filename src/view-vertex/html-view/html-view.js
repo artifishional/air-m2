@@ -711,7 +711,7 @@ export default class HTMLView extends LiveSchema {
 			path,           //absolute path
 			node,           //xml target node
 			key,            //inherited or inner key
-			stream: stream,         //link to model stream todo obsolete io
+			stream,         //link to model stream todo obsolete io
 			resources,      //related resources
 		};
 		

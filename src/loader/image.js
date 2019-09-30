@@ -31,7 +31,7 @@ const toDataURL = ({ origin, url, revision, ...args }) =>
     .then(r => r.blob())
     .then(FileReader)
     .then(({target: {result: base64}}) => {
-      resolve( {url, type: "img", image: base64, ...args} );
+      return {url, type: "img", image: base64, ...args};
     });
 
 export default ({ dataURL = false, ...args }) => dataURL ? toDataURL({...args}) : toImageObject({...args});

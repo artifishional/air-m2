@@ -7,8 +7,7 @@ import Internalization from "./intl";
 import ObservableInlineStyle from "./inline-style";
 import { REVISION as revision, PORT as port } from '../globals';
 
-function loadResource({ path }, { origin, type, rel, url, ...args }) {
-  console.log(path, url);
+function loadResource({ path }, { origin, type, rel, url, fonts, ...args }) {
   const {protocol, hostname} = window.location;
   const urlOrigin = port ? `${protocol}//${hostname}:${port}` : window.location.origin;
   if (type === "inline-style") {
@@ -17,10 +16,10 @@ function loadResource({ path }, { origin, type, rel, url, ...args }) {
     throw "unsupported in current version";
     //return new ObservableTexture({url: `m2units/${path}${url}` })
   } else if (type === "img") {
-    console.log(path);
     return ObservableImage({ loadResource, origin, url: new URL(`${urlOrigin}/m2units/${path}${url}`).href, revision, ...args });
   } else if (type === "font") {
-    return ObservableFont({ loadResource, url: new URL(`${urlOrigin}/m2units/${path}${url}`).href, revision, ...args });
+    fonts = fonts.map(font => ({...font, formats: font.formats.map(format => ({...format, url: new URL(`${urlOrigin}/m2units/${path}${format.url}`).href}))}));
+    return ObservableFont({ loadResource, fonts, revision, ...args });
   } else if (type === "style") {
     return ObservableStyle({ loadResource, url: new URL(`${urlOrigin}/m2units/${path}${url}`).href, revision, ...args });
   } else if (type === "formatters") {
