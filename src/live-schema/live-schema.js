@@ -9,12 +9,13 @@ const {document} = window;
 export default class LiveSchema extends Schema {
 
     constructor(
-        [ key, { id = "", use = [], pack = { path: "./" }, ...prop }, ...item],
+        [ key, { id = "", use = [], pack = { path: "./" }, loader = new Loader(), ...prop }, ...item],
         src = { acid: -1 },
         { acid } = {}
     ) {
-        super( [ key, { id, ...prop, use, pack, }, ...item ], {}, { acid } );
+        super( [ key, { id, ...prop, use, pack, loader, }, ...item ], {}, { acid } );
         this.src = this.parent = src;
+        this.loader = loader;
         this.isready = !use.length;
         this.entities = [];
         this._stream = null;
@@ -50,7 +51,7 @@ export default class LiveSchema extends Schema {
         const nextToLoad = this.layers.find( ( { isready } ) => !isready );
         if( nextToLoad ) {
             const loader = Promise.all( nextToLoad.prop.use.map( ({ type = "url", ...use }) =>
-                type === "url" ? Loader.default.obtain( use ) : this.get( use.path )
+                  type === "url" ? this.loader.obtain(use) : this.get(use.path)
             ));
             loader.then(( packs ) => {
                 packs.map( (pkj, index) => {

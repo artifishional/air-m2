@@ -13,7 +13,6 @@ import {
 import events from "../events"
 import JSON5 from "json5"
 import { LiveSchema } from "../../live-schema"
-import resource from "../../loader/resource"
 import { NODE_TYPES } from "./def"
 import { Layer, BaseLayer } from "./layer"
 import PlaceHolderContainer from "./place-holder-container"
@@ -429,7 +428,7 @@ export default class HTMLView extends LiveSchema {
 				...this.prop.resources,
 				...this.prop.styles.map( (style, priority) => {
 					priority = +(style.getAttribute("priority") || priority);
-					return StylesController.get(style, this.acid, priority, this.prop.pack)
+					return StylesController.get(style, this.acid, priority, this.prop.pack, this.loader)
 				})
 			] ).at( ( resources ) => {
 				const container = new PlaceHolderContainer( this, { type: "node" } );
@@ -583,15 +582,15 @@ export default class HTMLView extends LiveSchema {
 	}
 	
 	parse(node, src, { pack } ) {
-		return this.constructor.parse( node, src, { pack } );
+		return this.constructor.parse( node, src, { pack }, this.loader );
 	}
 	
-	static parse( node, src, { pack, type = "unit" } ) {
-
+	static parse( node, src, { pack, type = "unit" }, loader ) {
+		const resource = loader.loadResource;
 		let uvk = `${++UNIQUE_VIEW_KEY}`;
 		
 		if(!(node instanceof Element)) {
-			return new HTMLView( ["", {}], src, { createEntity: node } );
+			return new HTMLView( ["", {loader}], src, { createEntity: node } );
 		}
 		
 		//TODO: (improvement required)
@@ -716,7 +715,7 @@ export default class HTMLView extends LiveSchema {
 		};
 		
 		const res = src.acid !== -1 && src.lift( [ uvk, prop ], src ) ||
-			new HTMLView( [ uvk, prop ], src );
+			new HTMLView( [ uvk, {...prop, loader} ], src );
 		
 		//[...node.childNodes].map( next => setup( next, res.prop ));
 
@@ -983,8 +982,9 @@ function byAttr(attrName, attrValue) {
 //the workaround is tied to the querySelectorAll,
 // since it is used to extract replacement slots
 function parseChildren(next, { resources, path, key }, src) {
+	const resource = src.loader.loadResource;
 	if(is( next, "unit" )) {
-		const parser = HTMLView.parse(next, src, { pack: src.prop.pack });
+		const parser = HTMLView.parse(next, src, { pack: src.prop.pack }, src.loader);
 		const _slot = slot( parser );
 		parser.prop.template ? next.remove() : next.replaceWith( _slot );
 		return [ parser ];
@@ -992,7 +992,7 @@ function parseChildren(next, { resources, path, key }, src) {
 	else if(is( next, "plug" )) {
 		const parser = HTMLView.parse(next, src, {
 			key, path, type: "custom", pack: src.prop.pack
-		});
+		}, src.loader);
 		const _slot = slot( parser );
 		parser.prop.template ? next.remove() : next.replaceWith( _slot );
 		return [ parser ];

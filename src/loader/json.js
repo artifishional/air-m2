@@ -1,6 +1,4 @@
-import { stream } from 'air-stream';
-
-export default ({path, revision}) => stream(emt => {
+export default ({path, revision}) => new Promise(resolve => {
   const url = revision ? `${path}?rev=${revision}` : path;
   fetch(url, {
     mode: 'cors',
@@ -8,6 +6,6 @@ export default ({path, revision}) => stream(emt => {
   })
     .then(r => r.json())
     .then((content) => {
-      emt({ content });
+      resolve({ content });
     })
 });
