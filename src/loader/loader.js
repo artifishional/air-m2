@@ -1,6 +1,3 @@
-import include from "./script_like_promise"
-import html from "./html"
-import loadResource from "./resource";
 import { REVISION as revision, PORT as port } from '../globals'
 
 const schtypes = {
@@ -14,10 +11,9 @@ export default class Loader {
     constructor({path = "m2units/"} = {}) {
         this.rpath = path;
         this.modules = [];
-        this.loadResource = loadResource;
     }
 
-    obtain( { path: _path, schtype = "js" } ) {
+    obtain( { path: _path, schtype = "js" }, resourceloader ) {
         if(!_path) throw "'path' param is required";
         const path = _path + schtypes[schtype];
         const exist = this.modules.find( ({ path: _path }) => path === _path );
@@ -27,8 +23,8 @@ export default class Loader {
         else {
             let module = null;
             if (schtype === "html") {
-                module = html({loadResource, path: `${this.rpath}${path}`, revision, port})
-                    .then( html => ({ data: html.content, pack: { path: _path + "/" } }) )
+                module = resourceloader({path: `${this.rpath}${path}`, revision, port, type: 'html'}, {})
+                  .then( html => ({ data: html.content, pack: { path: _path + "/" } }) );
             }
             else {
                 module =
@@ -38,8 +34,7 @@ export default class Loader {
                     } );
                     */
 
-
-                    include({loadResource, path: `${this.rpath}${path}`, revision, port}).then(({module}) => {
+                    resourceloader({path: `${this.rpath}${path}`, revision, port, type: 'script'}, {}).then(({module}) => {
                         return { data: module, pack: { path: _path + "/" } };
                     } );
 
@@ -56,3 +51,5 @@ export default class Loader {
     //static default = new Loader();
 
 }
+
+Loader.default = new Loader();

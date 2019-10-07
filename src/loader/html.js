@@ -1,4 +1,4 @@
-export default ({path, revision, port}) => {
+export default (resourceloader, {path, revision, port}) => {
     const url = new URL(path, window.location.origin + window.location.pathname);
     if (revision) {
         url.searchParams.append("revision", revision);
@@ -6,12 +6,7 @@ export default ({path, revision, port}) => {
     if (port) {
       url.port = port;
     }
-    return fetch(url, {
-        mode: 'cors',
-        method: 'GET',
-        headers: {'Content-Type': 'text/html'}
-    })
-        .then( response => response.text() )
+    return resourceloader({path, revision, port, type: 'content'})
         .then( raw => {
             const doc = new DOMParser().parseFromString(raw, "text/html");
             const err = doc.querySelector("parsererror");

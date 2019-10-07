@@ -1,11 +1,5 @@
-export default (loadResource, {url: path, revision}) => {
-  const url = revision ? `${path}?rev=${revision}` : path;
-  return loadResource(url, {
-    type: "fetch",
-    mode: 'cors',
-    method: 'GET'
-  })
-    .then(r => r.text())
+export default (resourceloader, {url: path, revision}) => {
+  return resourceloader({path, revision, port, type: 'content'})
     .then((content) => {
       const parser = new DOMParser();
       const doc = parser.parseFromString(content, "application/xml");

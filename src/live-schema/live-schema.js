@@ -3,21 +3,20 @@ import { Schema } from "air-schema"
 import {routeNormalizer, signature, equal, forEachFromData} from "../utils"
 import { Loader } from "../loader"
 import {EMPTY_OBJECT} from "../def";
-import { resourceloader } from "./resource"
+import resourceloader from "../loader/resourceloader";
 
 const {document} = window;
 
 export default class LiveSchema extends Schema {
 
     constructor(
-        [ key, { id = "", use = [], pack = { path: "./" }, loader = new Loader(), ...prop }, ...item],
+        [ key, { id = "", use = [], pack = { path: "./" }, ...prop }, ...item],
         src = {  },
         { acid } = {}
     ) {
         src.acid = src.acid || -1;
-        super( [ key, { id, ...prop, use, pack, loader, }, ...item ], {}, { acid } );
+        super( [ key, { id, ...prop, use, pack, }, ...item ], {}, { acid } );
         this.src = this.parent = src;
-        this.loader = loader;
         this.isready = !use.length;
         this.entities = [];
         this._stream = null;
@@ -53,7 +52,7 @@ export default class LiveSchema extends Schema {
         const nextToLoad = this.layers.find( ( { isready } ) => !isready );
         if( nextToLoad ) {
             const loader = Promise.all( nextToLoad.prop.use.map( ({ type = "url", ...use }) =>
-                  type === "url" ? this.loader.obtain(use, this.resourceloader) : this.get(use.path)
+                  type === "url" ? Loader.default.obtain(use, resourceloader) : this.get(use.path)
             ));
             loader.then(( packs ) => {
                 packs.map( (pkj, index) => {

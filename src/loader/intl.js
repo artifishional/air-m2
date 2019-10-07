@@ -1,10 +1,5 @@
-export default ({url: path, revision}) => {
-  let url = revision ? `${path}?rev=${revision}` : path;
-  return fetch(url, {
-    mode: 'cors',
-    method: 'GET',
-  })
-    .then(r => r.json())
+export default (resourceloader, {url: path, revision}) => {
+  return resourceloader({path, revision, port, type: 'content'})
     .then((content) => {
       return { type: "intl", content };
     })

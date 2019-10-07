@@ -1,4 +1,3 @@
-import { stream } from "air-stream";
 import csstree from "css-tree";
 
 function createPrioritySystemStyle(priority) {
@@ -17,7 +16,7 @@ function inject(style, priority) {
 
 const PRIORITY = [];
 
-export default ({ loadResource, acid, priority, style, path, revision, ...args }) => {
+export default ({ resourceloader, acid, priority, style, path, revision, ...args }) => {
 
 	return new Promise(async (resolve) => {
 
@@ -84,7 +83,7 @@ export default ({ loadResource, acid, priority, style, path, revision, ...args }
 
 		const promises = dataForLoading.map(({type, resource, target}) => {
 			if (type === 'image') {
-				return loadResource({path}, {url: resource.replace(/"/g, ""), type: 'img', dataURL: true, revision})
+				return resourceloader({path}, {url: resource.replace(/"/g, ""), type: 'img', dataURL: true, revision})
 					.then(({image}) => target.value = image);
 			}
 		});
@@ -97,7 +96,7 @@ export default ({ loadResource, acid, priority, style, path, revision, ...args }
 				}
 			}
 			commonStyle.textContent = rawCommonCSSContent;
-			loadResource({path}, {fonts, type: 'font'}).then(() => {
+			resourceloader({path}, {fonts, type: 'font'}).then(() => {
 				if (isActive) {
 					inject(commonStyle, priority);
 					resolve({type: "inline-style", style: commonStyle, ...args});

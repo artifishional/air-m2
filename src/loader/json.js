@@ -1,11 +1,6 @@
-export default ({path, revision}) => new Promise(resolve => {
-  const url = revision ? `${path}?rev=${revision}` : path;
-  fetch(url, {
-    mode: 'cors',
-    method: 'GET',
-  })
-    .then(r => r.json())
-    .then((content) => {
-      resolve({ content });
+export default (resourceloader, {path, revision}) => new Promise(resolve => {
+  return resourceloader({path, revision, port, type: 'content'})
+    .then(raw => {
+      resolve({ content: JSON.parse(raw) });
     })
 });
