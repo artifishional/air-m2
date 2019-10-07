@@ -1,5 +1,13 @@
 import csstree from "css-tree";
 
+function FileReader(blob) {
+	return new Promise( (resolver) => {
+		const reader = new globalThis.FileReader();
+		reader.readAsDataURL(blob);
+		reader.onloadend = resolver;
+	} );
+}
+
 function createPrioritySystemStyle(priority) {
 	while(PRIORITY.length < priority+1) {
 		const style = document.createElement("style");
@@ -16,9 +24,9 @@ function inject(style, priority) {
 
 const PRIORITY = [];
 
-export default (resourceloader, {path}, {url, acid, priority, style, revision, ...args }) => {
+export default (resourceloader, {path}, { acid, priority, style, revision, ...args }) => {
 
-	return new Promise(async (resolve) => {
+	return new Promise(resolve => {
 
 		if(!PRIORITY[0]) {
 			const zero = document.createElement("style");
@@ -31,10 +39,14 @@ export default (resourceloader, {path}, {url, acid, priority, style, revision, .
 
 		let isActive = true;
 
+		let fontFaceStyle = null;
 		const commonStyle = document.createElement("style");
 		commonStyle.textContent = "";
 
+		let rawFontCSSContent = "";
 		let rawCommonCSSContent = "";
+
+		let fontStyle = null;
 
 		const ast = csstree.parse(style.textContent);
 
@@ -50,23 +62,24 @@ export default (resourceloader, {path}, {url, acid, priority, style, revision, .
 					if (values) {
 						fonts.push({
 							type: 'font',
-							family: values[0],
-							target: null,
-							formats: [],
+							resource: values,
+							target: null
 						})
 					}
 				} else if (node.type === "Declaration" && node.property === 'src') {
 					node.value && node.value.children && node.value.children
 						.toArray()
-						.filter(({type, name}) => type === 'Url' || (type === 'Function' && name === 'format'))
-						.map((node) => {
-							if (node.type === 'Url') {
-								const url = node.value.value.replace(/"/g, "");
-								fonts.slice(-1)[0].formats.push({url, name: null});
-							} else if (node.type === 'Function') {
-								const format = node.children.toArray()[0].value.replace(/"/g, "");
-								fonts.slice(-1)[0].formats.slice(-1)[0].name = format;
+						.filter(({type}) => type === 'Url')
+						.map(({value}) => {
+							let url = "./m2units/" + path + value.value.replace(/"/g, "");
+							if (revision) {
+								if (url.indexOf('?') > -1) {
+									url = `${url}&rev=${revision}`
+								} else {
+									url = `${url}?rev=${revision}`
+								}
 							}
+							value.value = url;
 						})
 				}
 			} else if ((this.rule || this.atrule && this.atrule.name === 'media') && node.type === 'Url') {
@@ -83,29 +96,50 @@ export default (resourceloader, {path}, {url, acid, priority, style, revision, .
 
 		const promises = dataForLoading.map(({type, resource, target}) => {
 			if (type === 'image') {
-				return resourceloader({path}, {url: resource.replace(/"/g, ""), type: 'img', dataURL: true, revision})
-					.then(({image}) => target.value = image);
+				return resourceloader({path}, {url: resource.replace(/"/g, ""), type: 'img', dataURL: true})
+					.then(({image}) => {
+							target.value = image;
+						});
 			}
 		});
 
 		Promise.all(promises).then(() => {
 			for (const node of ast.children.toArray()) {
 				const {type, name} = node;
-				if (type !== "Atrule" || name !== "font-face") {
+				if (type === "Atrule" && name === "font-face") {
+					rawFontCSSContent += csstree.generate(node);
+				} else {
 					rawCommonCSSContent += csstree.generate(node);
 				}
 			}
 			commonStyle.textContent = rawCommonCSSContent;
-			resourceloader({path}, {fonts, type: 'font'}).then(() => {
+			if (rawFontCSSContent) {
+				fontFaceStyle = document.createElement("style");
+				fontFaceStyle.textContent = rawFontCSSContent;
+				document.head.appendChild(fontFaceStyle);
+			}
+			Promise.all(
+				fonts.reduce((acc, {resource}) => {
+					const fontPromises = resource.map((res) => {
+						return resourceloader({path}, {family: res, type: 'font'});
+					});
+					return [
+						...acc,
+						...fontPromises
+					]
+				}, [])
+			).then(() => {
 				if (isActive) {
 					inject(commonStyle, priority);
 					resolve({type: "inline-style", style: commonStyle, ...args});
-					// todo: не знаю пока куда впилить этот кусок
-					// isActive = false;
-					// commonStyle.remove();
-					// fontStyle && fontStyle.remove();
 				}
 			})
 		});
+
+		// sweep.add(() => {
+		// 	isActive = false;
+		// 	commonStyle.remove();
+		// 	fontStyle && fontStyle.remove();
+		// });
 	});
 }

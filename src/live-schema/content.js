@@ -1,12 +1,9 @@
-export default ({path}, {url, revision, port}) => {
-  url = `m2units/${path}${url}`;
+export default ({path}, {url, urlOrigin, revision}) => {
+  url = new URL(`${urlOrigin}/m2units/${path}${url}`);
   if (revision) {
     url.searchParams.append("revision", revision);
   }
-  if (port) {
-    url.port = port;
-  }
-  return fetch(url, {
+  return fetch(url.href, {
     mode: 'cors',
     method: 'GET',
     headers: {'Content-Type': 'text'}

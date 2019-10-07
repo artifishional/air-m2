@@ -45,6 +45,9 @@ export default class HTMLView extends LiveSchema {
 
 	constructor( args, src, { acid } = {} ) {
 		super( args, src, { acid } );
+
+		this.resourceloader = src.resourceloader;
+
 		this.prop.preload = this.prop.preload !== undefined ? this.prop.preload : true;
 		this.prop.stream = this.prop.stream || "";
 		this.prop.resources = this.prop.resources || [];
@@ -429,7 +432,7 @@ export default class HTMLView extends LiveSchema {
 				...this.prop.resources,
 				...this.prop.styles.map( (style, priority) => {
 					priority = +(style.getAttribute("priority") || priority);
-					return StylesController.get(style, this.acid, priority, this.prop.pack)
+					return StylesController.get(style, this.acid, priority, this.prop.pack, this.resourceloader)
 				})
 			] ).at( ( resources ) => {
 				const container = new PlaceHolderContainer( this, { type: "node" } );

@@ -6,10 +6,10 @@ export default new class {
 		this.cache = new WeakMap();
 	}
 	
-	get( style, acid, priority, pack, loader ) {
+	get( style, acid, priority, pack, resourceloader ) {
 		if(!this.cache.has( style )) {
 			this.cache.set( style, {
-				resource: loader.loadResource(style.pack, { type: "inline-style", style, acid, priority })
+				resource: resourceloader(style.pack, { type: "inline-style", style, acid, priority })
 			} );
 		}
 		return fromPromise(this.cache.get(style).resource);

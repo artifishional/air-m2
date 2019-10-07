@@ -1,6 +1,6 @@
 import { Howl } from "howler";
 
-export default ( {path}, { url, revision, ...args } ) => new Promise(resolve => {
+export default ( {path}, { url, revision, rel, urlOrigin, ...args } ) => new Promise(resolve => {
     const _path = path.split("/").filter(Boolean);
     const _rel = rel.split("/").filter(Boolean);
     while (_rel[0] === "..") {

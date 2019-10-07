@@ -1,6 +1,6 @@
-export default (resourceloader, {path}, {url, revision}) => {
-  return resourceloader({path}, {url, revision, port, type: 'content'})
-    .then((content) => {
+export default (resourceloader, {path}, {url}) => {
+  return resourceloader({path}, {url, type: 'json'})
+    .then(({content}) => {
       return { type: "intl", content };
     })
 };
