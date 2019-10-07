@@ -18,7 +18,7 @@ import { Layer, BaseLayer } from "./layer"
 import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
 import { ModelVertex } from "../../model-vertex"
-import resourceloader from "../../loader/resourceloader"
+import resourceloader from "../../loader/resource-loader"
 
 let UNIQUE_VIEW_KEY = 0;
 let UNIQUE_IMAGE_KEY = 0;
@@ -429,7 +429,7 @@ export default class HTMLView extends LiveSchema {
 				...this.prop.resources,
 				...this.prop.styles.map( (style, priority) => {
 					priority = +(style.getAttribute("priority") || priority);
-					return StylesController.get(style, this.acid, priority, this.prop.pack, this.loader)
+					return StylesController.get(style, this.acid, priority, this.prop.pack)
 				})
 			] ).at( ( resources ) => {
 				const container = new PlaceHolderContainer( this, { type: "node" } );
@@ -583,15 +583,14 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	parse(node, src, { pack } ) {
-		return this.constructor.parse( node, src, { pack }, this.loader );
+		return this.constructor.parse( node, src, { pack } );
 	}
 
-	static parse( node, src, { pack, type = "unit" }, loader ) {
-		const resource = loader.loadResource;
+	static parse( node, src, { pack, type = "unit" } ) {
 		let uvk = `${++UNIQUE_VIEW_KEY}`;
 
 		if(!(node instanceof Element)) {
-			return new HTMLView( ["", {loader}], src, { createEntity: node } );
+			return new HTMLView( [""], src, { createEntity: node } );
 		}
 
 		//TODO: (improvement required)
@@ -990,7 +989,7 @@ function byAttr(attrName, attrValue) {
 // since it is used to extract replacement slots
 function parseChildren(next, { resources, path, key }, src) {
 	if(is( next, "unit" )) {
-		const parser = HTMLView.parse(next, src, { pack: src.prop.pack }, src.loader);
+		const parser = HTMLView.parse(next, src, { pack: src.prop.pack });
 		const _slot = slot( parser );
 		parser.prop.template ? next.remove() : next.replaceWith( _slot );
 		return [ parser ];
@@ -998,7 +997,7 @@ function parseChildren(next, { resources, path, key }, src) {
 	else if(is( next, "plug" )) {
 		const parser = HTMLView.parse(next, src, {
 			key, path, type: "custom", pack: src.prop.pack
-		}, src.loader);
+		});
 		const _slot = slot( parser );
 		parser.prop.template ? next.remove() : next.replaceWith( _slot );
 		return [ parser ];

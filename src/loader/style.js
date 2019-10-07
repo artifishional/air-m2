@@ -1,4 +1,5 @@
-export default ({url, revision, ...args}) => new Promise(resolve => {
+export default ({path}, {urlOrigin, url, revision, ...args}) => new Promise(resolve => {
+    url = new URL(`${urlOrigin}/m2units/${path}${url}`).href;
     const style = document.createElement("link");
     style.setAttribute("rel", "stylesheet");
     style.setAttribute("href", revision ? `${url}?rev=${revision}` : url);

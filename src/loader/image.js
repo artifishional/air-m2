@@ -34,4 +34,7 @@ const toDataURL = ({ origin, url, revision, ...args }) =>
       return {url, type: "img", image: base64, ...args};
     });
 
-export default ({ dataURL = false, ...args }) => dataURL ? toDataURL({...args}) : toImageObject({...args});
+export default ({path}, { url, urlOrigin, dataURL = false, ...args }) => {
+  url = new URL(`${urlOrigin}/m2units/${path}${url}`).href;
+  return dataURL ? toDataURL({url, ...args}) : toImageObject({url, ...args})
+};

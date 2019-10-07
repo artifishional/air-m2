@@ -4,7 +4,7 @@ import {Observable} from "air-stream"
 export default class ObservableFont extends Observable {
 
   //todo need cathce
-  constructor( { url, revision, family, size, ...args } ) {
+  constructor( {path}, { url, revision, family, size, ...args } ) {
     const style = document.createElement("style");
     style.textContent =
       `@font-face { 

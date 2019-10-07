@@ -1,5 +1,5 @@
-export default ({path, revision, port}) => {
-  const url = new URL(path, window.location.origin + window.location.pathname);
+export default ({path}, {url, revision, port}) => {
+  url = `m2units/${path}${url}`;
   if (revision) {
     url.searchParams.append("revision", revision);
   }

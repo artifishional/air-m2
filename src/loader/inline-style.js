@@ -16,7 +16,7 @@ function inject(style, priority) {
 
 const PRIORITY = [];
 
-export default ({ resourceloader, acid, priority, style, path, revision, ...args }) => {
+export default (resourceloader, {path}, {url, acid, priority, style, revision, ...args }) => {
 
 	return new Promise(async (resolve) => {
 

@@ -1,9 +1,9 @@
 import { REVISION as revision, PORT as port } from '../globals'
 
 const schtypes = {
-    "js": "/index.js",
-    "json": "/index.json",
-    "html": "/index.html",
+    "js": "index.js",
+    "json": "index.json",
+    "html": "index.html",
 };
 
 export default class Loader {
@@ -23,7 +23,7 @@ export default class Loader {
         else {
             let module = null;
             if (schtype === "html") {
-                module = resourceloader({path: `${this.rpath}${path}`, revision, port, type: 'html'}, {})
+                module = resourceloader({path: _path + '/'}, {url: schtypes[schtype], type: 'html'}, {})
                   .then( html => ({ data: html.content, pack: { path: _path + "/" } }) );
             }
             else {
@@ -34,7 +34,7 @@ export default class Loader {
                     } );
                     */
 
-                    resourceloader({path: `${this.rpath}${path}`, revision, port, type: 'script'}, {}).then(({module}) => {
+                    resourceloader({path: _path + '/'}, {url: schtypes[schtype], type: 'script'}, {}).then(({module}) => {
                         return { data: module, pack: { path: _path + "/" } };
                     } );
 

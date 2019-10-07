@@ -3,7 +3,7 @@ import { Schema } from "air-schema"
 import {routeNormalizer, signature, equal, forEachFromData} from "../utils"
 import { Loader } from "../loader"
 import {EMPTY_OBJECT} from "../def";
-import resourceloader from "../loader/resourceloader";
+import resourceloader from "../loader/resource-loader";
 
 const {document} = window;
 
@@ -147,7 +147,7 @@ export default class LiveSchema extends Schema {
             return this.stream;
         }
     }
-	
+
 	createEntity() { throw "io" }
 
     findEntity(signature) {
