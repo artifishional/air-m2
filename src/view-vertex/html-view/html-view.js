@@ -368,108 +368,114 @@ export default class HTMLView extends LiveSchema {
 				.filter( Boolean )
 			);
 			
-			controller.todisconnect( combine( [
+			combine( [
 				...this.layers.map( (layer) => layer.createNodeEntity(  ) ),
 				this.createChildrenEntity( args, { layers, parentViewLayers } ),
-			] ).on( (comps) => {
-
-
-				const children = comps.pop();
-				container.append(...comps.map( ({ container: { target } }) => target));
-
-
-				let rlayers = [];
-
-				rlayers.push(...this.layers
-					.map( ( layer, i ) => {
-
-						const targets = [
-							...container.targets("sounds", comps[i].resources ),
-							...comps[i].container.targets( "datas", comps[i].resources ),
-							...container.targets("actives", comps[i].resources )
-						];
-
-						if(targets.length) {
+			] ).connect( hook =>  {
+				controller.todisconnect(hook);
+				return (comps) => {
+					
+					
+					const children = comps.pop();
+					container.append(...comps.map( ({ container: { target } }) => target));
+					
+					
+					let rlayers = [];
+					
+					rlayers.push(...this.layers
+						.map( ( layer, i ) => {
+							
+							const targets = [
+								...container.targets("sounds", comps[i].resources ),
+								...comps[i].container.targets( "datas", comps[i].resources ),
+								...container.targets("actives", comps[i].resources )
+							];
+							
+							if(targets.length) {
+								return layer.createLayer(
+									{ schema: { model: layers.get(layer.acid) } },
+									{ resources: [], targets },
+									args
+								).stream;
+							}
+							
+							return null;
+							
+						})
+						.filter( Boolean )
+					);
+					
+					const slots = container.slots();
+					if(children.length) {
+						if(slots.length) {
+							children.map( ([{ target, acids }]) => {
+								const place = slots
+									.filter( ({ acid }) => acids.includes(acid) )
+									.reduce(( exist, {slot} ) => {
+										if(!exist) {
+											exist = slot;
+										}
+										else if(
+											exist.parentNode.nodeType !== NODE_TYPES.ELEMENT_NODE &&
+											slot.parentNode.nodeType === NODE_TYPES.ELEMENT_NODE
+										) {
+											exist.remove();
+											exist = slot;
+										}
+										else {
+											slot.remove();
+										}
+										return exist;
+									}, null);
+								place.replaceWith( target );
+							} );
+						}
+						else {
+							container.append( ...children.map( ( [{ target }] ) => target ) );
+						}
+					}
+					
+					//todo hack clear unused slots ( when cross template mix to exmpl )
+					slots.map( ({ slot }) => slot.remove() );
+					
+					const targets = [ ...container.targets("actives", [] ) ];
+					
+					if(targets.length) {
+						
+						if(this.prop.styles.length) {
+							targets.map(({node}) =>
+								node.setAttribute(`data-scope-acid-${this.acid}`, "")
+							);
+						}
+						
+						rlayers.push( ...currentCommonViewLayers.map( ({ layer, schema }) => {
 							return layer.createLayer(
-								{ schema: { model: layers.get(layer.acid) } },
+								{ schema },
 								{ resources: [], targets },
 								args
 							).stream;
-						}
-
-						return null;
-
-					})
-					.filter( Boolean )
-				);
-				
-				const slots = container.slots();
-				if(children.length) {
-					if(slots.length) {
-						children.map( ([{ target, acids }]) => {
-							const place = slots
-								.filter( ({ acid }) => acids.includes(acid) )
-								.reduce(( exist, {slot} ) => {
-									if(!exist) {
-										exist = slot;
-									}
-									else if(
-										exist.parentNode.nodeType !== NODE_TYPES.ELEMENT_NODE &&
-										slot.parentNode.nodeType === NODE_TYPES.ELEMENT_NODE
-									) {
-										exist.remove();
-										exist = slot;
-									}
-									else {
-										slot.remove();
-									}
-									return exist;
-								}, null);
-							place.replaceWith( target );
-						} );
+						} ) );
 					}
-					else {
-						container.append( ...children.map( ( [{ target }] ) => target ) );
-					}
-				}
-
-				//todo hack clear unused slots ( when cross template mix to exmpl )
-				slots.map( ({ slot }) => slot.remove() );
-				
-				const targets = [ ...container.targets("actives", [] ) ];
-				
-				if(targets.length) {
-					
-					if(this.prop.styles.length) {
-						targets.map(({node}) =>
-							node.setAttribute(`data-scope-acid-${this.acid}`, "")
-						);
+					if(!rlayers.length) {
+						rlayers.push(this.createLayer(
+							{ schema: null },
+							{ poppet: true, resources: [], targets: [] },
+							{}
+						).stream);
 					}
 					
-					rlayers.push( ...currentCommonViewLayers.map( ({ layer, schema }) => {
-						return layer.createLayer(
-							{ schema },
-							{ resources: [], targets },
-							args
-						).stream;
-					} ) );
-				}
-				if(!rlayers.length) {
-					rlayers.push(this.createLayer(
-						{ schema: null },
-						{ poppet: true, resources: [], targets: [] },
-						{}
-					).stream);
-				}
-
-				controller.to(stream2.sync(
-					rlayers,
-					([{ stage: a }], [{ stage: b }]) => a === b,
-					( ...layers ) => [ { ...state, stage: layers[0][0].stage } ]
-				).on( e ));
-
-
-			}) );
+					stream2.sync(
+						rlayers,
+						([{ stage: a }], [{ stage: b }]) => a === b,
+						( ...layers ) => [ { ...state, stage: layers[0][0].stage } ]
+					).connect( hook => {
+						controller.to(hook);
+						return e;
+					} );
+					
+					
+				};
+			})
 		} )
 			.store();
 	}
@@ -545,8 +551,6 @@ export default class HTMLView extends LiveSchema {
 			let _inner = null;
 			const view = this.createNextLayers( args, { layers, parentViewLayers } );
 			
-			const connector = view.connectable();
-			
 			controller.todisconnect( () => {
 				connected = false;
 			} );
@@ -558,7 +562,9 @@ export default class HTMLView extends LiveSchema {
 					return ;
 				}
 				connected = true;
-				controller.todisconnect( childHook = connector.on( (data) => {
+				view.connect( childHook => {
+					controller.todisconnect( childHook );
+					return (data) => {
 						if(state.load) {
 							state = { ...state, load: false };
 							loaderContainer.restore();
@@ -582,49 +588,51 @@ export default class HTMLView extends LiveSchema {
 								}
 							}
 						}
-					} )
-				);
-				connector.connect();
+					}
+				} );
 			};
 			
-			controller.todisconnect( modelschema.on( (data) => {
-
-				const active = this.teeSignatureCheck(
-					new Map([ ...teeStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) )
-				);
-
-				if(!active && !this.prop.preload) {
-					loaderContainer && loaderContainer.remove();
-					state = { ...state, stage: 1 };
-					e( [ state ] );
-				}
-
-				if(state.stage === 0) {
-					if(this.prop.preload) {
-						connect();
+			modelschema.connect( hook => {
+				controller.todisconnect( hook );
+				return (data) => {
+					
+					const active = this.teeSignatureCheck(
+						new Map([ ...teeStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) )
+					);
+					
+					if(!active && !this.prop.preload) {
+						loaderContainer && loaderContainer.remove();
+						state = { ...state, stage: 1 };
+						e( [ state ] );
 					}
-				}
-
-				if(active !== state.active) {
-					state = { ...state, active };
-					if(active) {
-						if(!childHook) {
+					
+					if(state.stage === 0) {
+						if(this.prop.preload) {
 							connect();
 						}
+					}
+					
+					if(active !== state.active) {
+						state = { ...state, active };
+						if(active) {
+							if(!childHook) {
+								connect();
+							}
+							else {
+								if(state.stage === 1) {
+									childHook({action: "fade-in"});
+									container.begin.after( _inner.target );
+								}
+							}
+						}
 						else {
-							if(state.stage === 1) {
-								childHook({action: "fade-in"});
-								container.begin.after( _inner.target );
+							if(childHook) {
+								childHook({action: "fade-out"});
 							}
 						}
 					}
-					else {
-						if(childHook) {
-							childHook({action: "fade-out"});
-						}
-					}
 				}
-			} ) );
+			} );
 
 		});
 	}
