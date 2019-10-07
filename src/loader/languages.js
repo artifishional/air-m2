@@ -1,6 +1,7 @@
-export default ({url: path, revision}) => {
+export default (loadResource, {url: path, revision}) => {
   const url = revision ? `${path}?rev=${revision}` : path;
-  return fetch(url, {
+  return loadResource(url, {
+    type: "fetch",
     mode: 'cors',
     method: 'GET'
   })

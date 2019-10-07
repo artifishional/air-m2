@@ -18,6 +18,7 @@ import { Layer, BaseLayer } from "./layer"
 import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
 import { ModelVertex } from "../../model-vertex"
+import resourceloader from "../../loader/resource"
 
 let UNIQUE_VIEW_KEY = 0;
 let UNIQUE_IMAGE_KEY = 0;
@@ -580,19 +581,19 @@ export default class HTMLView extends LiveSchema {
 			.map(x => x._obtain( [], args, { layers, parentViewLayers } ))
 		);
 	}
-	
+
 	parse(node, src, { pack } ) {
 		return this.constructor.parse( node, src, { pack }, this.loader );
 	}
-	
+
 	static parse( node, src, { pack, type = "unit" }, loader ) {
 		const resource = loader.loadResource;
 		let uvk = `${++UNIQUE_VIEW_KEY}`;
-		
+
 		if(!(node instanceof Element)) {
 			return new HTMLView( ["", {loader}], src, { createEntity: node } );
 		}
-		
+
 		//TODO: (improvement required)
 		// currently clones the entire contents and then
 		// removes it from the parent element to solve the shared units problem
@@ -604,7 +605,7 @@ export default class HTMLView extends LiveSchema {
 		const { path = "./", key: pkey = uvk } = (src || {}).prop || {};
 
 		let key = node.getAttribute("key");
-		
+
 		if(key !== null) {
 			if(/[`"'{}\]\[]/.test(key)) {
 				key = JSON5.parse(key);
@@ -614,7 +615,7 @@ export default class HTMLView extends LiveSchema {
 		else {
 			key = pkey;
 		}
-		
+
 		const handlers = [ ...node.attributes ]
 			.filter( ({ name }) => events.includes(name) || name.indexOf("on:") === 0 )
 			.map( ({ name, value }) => ({
@@ -633,34 +634,38 @@ export default class HTMLView extends LiveSchema {
 
 		const use = pathParser( node.getAttribute("use") || "" );
 
-        const resources =
-            [ ...(src.acid !== -1 && src.prop.resources || []), ...JSON5
-                .parse(node.getAttribute("resources") || "[]")
-                .map( x => fromPromise(resource(pack, x)) )
-            ];
+		const resources =
+			[ ...(src.acid !== -1 && src.prop.resources || []), ...JSON5
+				.parse(node.getAttribute("resources") || "[]")
+				.map( x => fromPromise(src.resourceloader(pack, x)) )
+			];
 
 		const styles = [...node.children].filter(byTagName("STYLE"));
-		
+
 		styles.map( style => {
 			//todo hack
 			style.pack = pack;
 			style.remove();
 		} );
-		//resources.push(...styles.map( style => resource(pack, { type: "inline-style", style }) ));
+		//resources.push(...styles.map( style => src.resourceloader(pack, { type: "inline-style", style }) ));
 
 		const sounds = [...node.children].filter(byTagName("SOUND"));
-		resources.push(...sounds.map( sound => fromPromise(resource(pack, { type: "sound", name: sound.getAttribute("name") || "", rel: sound.getAttribute("rel") || ""}) )));
+		resources.push(...sounds.map( sound =>
+      fromPromise(src.resourceloader(pack, {
+				type: "sound", name: sound.getAttribute("name") || "", rel: sound.getAttribute("rel") || ""
+			}) ))
+		);
 
 		const tee = cuttee(node, key);
 		const kit = cutkit(node, key);
-        const preload =
+		const preload =
 			!["", "true"].includes(node.getAttribute("nopreload")) &&
 			!["", "true"].includes(node.getAttribute("lazy"));
-        
-        const useOwnerProps = node.parentNode.tagName.toUpperCase() === "UNIT";
+
+		const useOwnerProps = node.parentNode.tagName.toUpperCase() === "UNIT";
 		node.remove();
-        
-        const controlled = [ ...node.childNodes ].some( node => {
+
+		const controlled = [ ...node.childNodes ].some( node => {
 			if(node.nodeType === 1 && !["UNIT", "PLUG", "STYLE"].includes(node.tagName.toUpperCase())) {
 				return true;
 			}
@@ -668,7 +673,7 @@ export default class HTMLView extends LiveSchema {
 				return true;
 			}
 		} );
-		
+
 		const streamplug = [...node.children]
 			.filter(byTagName("script"))
 			.filter(byAttr("data-source-type", "stream-source"))
@@ -677,7 +682,7 @@ export default class HTMLView extends LiveSchema {
 				plug.remove();
 				return window.__m2unit__.default;
 			} );
-		
+
 		const plug = [...node.children]
 			.filter(byTagName("script"))
 			.filter(byAttr("data-source-type", "view-source"))
@@ -686,7 +691,7 @@ export default class HTMLView extends LiveSchema {
 				plug.remove();
 				return window.__m2unit__.default;
 			} );
-   
+
 		const keyframes = [];
 
 		const prop = {
@@ -697,9 +702,9 @@ export default class HTMLView extends LiveSchema {
 			controlled,     //has one or more active childrens (text or node)
 			useOwnerProps,  //must consider parent props
 			kit,            //kit's container
-            tee,            //switch mode
-            preload,        //must be fully loaded before readiness
-            pack,           //current package
+			tee,            //switch mode
+			preload,        //must be fully loaded before readiness
+			pack,           //current package
 			keyframes,      //animation ( data ) settings
 			use,            //reused templates path
 			template,       //template node
@@ -713,10 +718,10 @@ export default class HTMLView extends LiveSchema {
 			stream,         //link to model stream todo obsolete io
 			resources,      //related resources
 		};
-		
+
 		const res = src.acid !== -1 && src.lift( [ uvk, prop ], src ) ||
-			new HTMLView( [ uvk, {...prop, loader} ], src );
-		
+			new HTMLView( [ uvk, prop ], src );
+
 		//[...node.childNodes].map( next => setup( next, res.prop ));
 
 		res.append(...[...node.children].reduce((acc, next) =>
@@ -727,20 +732,20 @@ export default class HTMLView extends LiveSchema {
 
 		res.prop.node = document.createDocumentFragment();
 		res.prop.node.append( ...node.childNodes );
-		
+
 		/*[...styles].map( style => {
 			style.textContent = style.textContent.replace(/:scope/g, `[data-scope-acid-${res.acid}]`);
 		} );*/
-		
+
 		/*styles.length && [...res.prop.node.children]
 			.map( node => {
 				node.setAttribute(`data-scope-acid-${res.acid}`, "");
 			} );*/
-		
+
 		return res;
-		
+
 	}
-	
+
 	mergeProperties( name, value ) {
 		if(name === "stream") {
 			return this.prop.stream;
@@ -797,8 +802,10 @@ export default class HTMLView extends LiveSchema {
 			return super.mergeProperties( name, value );
 		}
 	}
-	
+
 }
+
+HTMLView.resourceloader = resourceloader;
 
 function pathSplitter(str = "") {
 	str = str + ",";
@@ -982,7 +989,6 @@ function byAttr(attrName, attrValue) {
 //the workaround is tied to the querySelectorAll,
 // since it is used to extract replacement slots
 function parseChildren(next, { resources, path, key }, src) {
-	const resource = src.loader.loadResource;
 	if(is( next, "unit" )) {
 		const parser = HTMLView.parse(next, src, { pack: src.prop.pack }, src.loader);
 		const _slot = slot( parser );
@@ -1001,8 +1007,11 @@ function parseChildren(next, { resources, path, key }, src) {
 		const key = UNIQUE_IMAGE_KEY ++;
 		const _slot = img( key );
 		next.replaceWith( _slot );
-		resources.push(
-			fromPromise(resource(src.prop.pack, { key, origin: next, type: "img", url: next.getAttribute("src") }))
+    resources.push(
+      fromPromise(src.resourceloader(
+			  src.prop.pack, { key, origin: next, type: "img", url: next.getAttribute("src") }
+			  )
+      )
 		);
 		return [];
 	}

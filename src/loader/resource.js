@@ -6,6 +6,7 @@ import Languages from "./languages";
 import Internalization from "./intl";
 import ObservableInlineStyle from "./inline-style";
 import { REVISION as revision, PORT as port } from '../globals';
+import resourceloader from '../live-schema/resource';
 
 function loadResource({ path }, { origin, type, rel, url, fonts, ...args }) {
   const {protocol, hostname} = window.location;
@@ -35,7 +36,7 @@ function loadResource({ path }, { origin, type, rel, url, fonts, ...args }) {
     }
     return Sound({ loadResource, url: new URL(`${urlOrigin}/m2units/${_path.join("/")}/res/sounds/${_rel.join("/")}`).href, name, ...args });
   } else {
-    throw "unsupported resource type";
+    return resourceloader({ path }, { origin, type, rel, url, fonts, ...args });
   }
 }
 
