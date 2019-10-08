@@ -182,9 +182,12 @@ export default class LiveSchema extends Schema {
             delete signature.$;
         }
         return stream( [], (e, controller) =>
-            this._get( route ).then( vertex => {
-	            controller.to(vertex.entity(signature, $).on(e));
-            })
+          this._get( route ).then( vertex => {
+              vertex.entity(signature, $).connect(hook => {
+                  controller.to(hook);
+                  return e;
+              });
+          })
         );
     }
 
