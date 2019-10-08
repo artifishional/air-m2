@@ -23,7 +23,7 @@ export default class Loader {
         else {
             let module = null;
             if (schtype === "html") {
-                module = resourceloader({path: _path + '/'}, {url: schtypes[schtype], type: 'html'})
+                module = resourceloader(resourceloader, {path: _path + '/'}, {url: schtypes[schtype], type: 'html'})
                   .then( html => ({ data: html.content, pack: { path: _path + "/" } }) );
             }
             else {
@@ -34,7 +34,7 @@ export default class Loader {
                     } );
                     */
 
-                    resourceloader({path: _path + '/'}, {url: schtypes[schtype], type: 'script'}).then(({module}) => {
+                    resourceloader(resourceloader, {path: _path + '/'}, {url: schtypes[schtype], type: 'script'}).then(({module}) => {
                         return { data: module, pack: { path: _path + "/" } };
                     } );
 

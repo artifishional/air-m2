@@ -124,7 +124,7 @@ export default class HTMLView extends LiveSchema {
 						})
 							.filter(Boolean)
 							.distinct(equal)
-					}]);
+					}], {resourceloader: this.resourceloader});
 					
 					let sign;
 					if(typeof signature !== "object") {
@@ -256,7 +256,7 @@ export default class HTMLView extends LiveSchema {
 							vars = routeNormalizer(stream)[1];
 						}
 						layer = streamplug.reduce( (acc, source) => {
-							const res = new ModelVertex(["$$", { glassy: true, source }]);
+							const res = new ModelVertex(["$$", { glassy: true, source }], {resourceloader: this.resourceloader});
 							res.parent = acc;
 							return res;
 						}, layer);
@@ -639,7 +639,7 @@ export default class HTMLView extends LiveSchema {
 		const resources =
 			[ ...(src.acid !== -1 && src.prop.resources || []), ...JSON5
 				.parse(node.getAttribute("resources") || "[]")
-				.map( x => fromPromise(src.resourceloader(pack, x)) )
+				.map( x => fromPromise(src.resourceloader(src.resourceloader, pack, x)) )
 			];
 
 		const styles = [...node.children].filter(byTagName("STYLE"));
@@ -649,11 +649,11 @@ export default class HTMLView extends LiveSchema {
 			style.pack = pack;
 			style.remove();
 		} );
-		//resources.push(...styles.map( style => src.resourceloader(pack, { type: "inline-style", style }) ));
+		//resources.push(...styles.map( style => src.resourceloader(src.resourceloader, pack, { type: "inline-style", style }) ));
 
 		const sounds = [...node.children].filter(byTagName("SOUND"));
 		resources.push(...sounds.map( sound =>
-      fromPromise(src.resourceloader(pack, {
+      fromPromise(src.resourceloader(src.resourceloader, pack, {
 				type: "sound", name: sound.getAttribute("name") || "", rel: sound.getAttribute("rel") || ""
 			}) ))
 		);
@@ -1010,7 +1010,7 @@ function parseChildren(next, { resources, path, key }, src) {
 		const _slot = img( key );
 		next.replaceWith( _slot );
     resources.push(
-      fromPromise(src.resourceloader(
+      fromPromise(src.resourceloader(src.resourceloader, 
 			  src.prop.pack, { key, origin: next, type: "img", url: next.getAttribute("src") }
 			  )
       )

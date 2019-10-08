@@ -2,7 +2,7 @@ import scriptLoader from './script_like_promise';
 import contentLoader from './content';
 import {PORT as port} from "air-m2/src/globals";
 
-export default function resourceloader({path}, {type, ...args}) {
+export default function (resourceloader, {path}, {type, ...args}) {
   const {protocol, hostname} = window.location;
   const urlOrigin = port ? `${protocol}//${hostname}:${port}` : window.location.origin;
   if (type === "script") {

@@ -10,7 +10,7 @@ import jsonLoader from "./json";
 import { REVISION as revision, PORT as port } from '../globals';
 import baseResourceloader from '../live-schema/resource-loader';
 
-export default function resourceloader({ path }, { type, ...args }) {
+export default function (resourceloader, { path }, { type, ...args }) {
   const {protocol, hostname} = window.location;
   const urlOrigin = port ? `${protocol}//${hostname}:${port}` : window.location.origin;
   if (type === "json") {
@@ -35,6 +35,6 @@ export default function resourceloader({ path }, { type, ...args }) {
   } else if (type === "html") {
     return htmlLoader(resourceloader, {path}, { type, urlOrigin, revision, ...args });
   } else {
-    return baseResourceloader({path}, { type, revision, ...args });
+    return baseResourceloader(resourceloader, {path}, { type, revision, ...args });
   }
 }

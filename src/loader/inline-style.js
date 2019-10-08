@@ -96,7 +96,7 @@ export default (resourceloader, {path}, { acid, priority, style, revision, ...ar
 
 		const promises = dataForLoading.map(({type, resource, target}) => {
 			if (type === 'image') {
-				return resourceloader({path}, {url: resource.replace(/"/g, ""), type: 'img', dataURL: true})
+				return resourceloader(resourceloader, {path}, {url: resource.replace(/"/g, ""), type: 'img', dataURL: true})
 					.then(({image}) => {
 							target.value = image;
 						});
@@ -121,7 +121,7 @@ export default (resourceloader, {path}, { acid, priority, style, revision, ...ar
 			Promise.all(
 				fonts.reduce((acc, {resource}) => {
 					const fontPromises = resource.map((res) => {
-						return resourceloader({path}, {family: res, type: 'font'});
+						return resourceloader(resourceloader, {path}, {family: res, type: 'font'});
 					});
 					return [
 						...acc,

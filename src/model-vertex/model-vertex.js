@@ -79,7 +79,7 @@ export default class ModelVertex extends LiveSchema {
 			item.unshift( prop );
 			prop = {};
         }
-		const res = new ModelVertex([ key, {...prop, loader: prop.loader || src.loader} ], src);
+		const res = new ModelVertex([ key, prop ], src);
 		res.append(...item.map( module => this.parse( module, res) ));
 		return res;
 	}

@@ -9,7 +9,7 @@ export default new class {
 	get( style, acid, priority, pack, resourceloader ) {
 		if(!this.cache.has( style )) {
 			this.cache.set( style, {
-				resource: resourceloader(style.pack, { type: "inline-style", style, acid, priority })
+				resource: resourceloader(resourceloader, style.pack, { type: "inline-style", style, acid, priority })
 			} );
 		}
 		return fromPromise(this.cache.get(style).resource);

@@ -3,7 +3,6 @@ import { Schema } from "air-schema"
 import {routeNormalizer, signature, equal, forEachFromData} from "../utils"
 import { Loader } from "../loader"
 import {EMPTY_OBJECT} from "../def";
-import resourceloader from "../loader/resource-loader";
 
 const {document} = window;
 
@@ -15,7 +14,8 @@ export default class LiveSchema extends Schema {
         { acid } = {}
     ) {
         src.acid = src.acid || -1;
-        super( [ key, { id, ...prop, use, pack, }, ...item ], {}, { acid } );
+        super( [ key, { id, ...prop, use, pack, }, ...item ], src, { acid } );
+        // todo разобраться с src
         this.src = this.parent = src;
         this.isready = !use.length;
         this.entities = [];
@@ -52,7 +52,7 @@ export default class LiveSchema extends Schema {
         const nextToLoad = this.layers.find( ( { isready } ) => !isready );
         if( nextToLoad ) {
             const loader = Promise.all( nextToLoad.prop.use.map( ({ type = "url", ...use }) =>
-                  type === "url" ? Loader.default.obtain(use, resourceloader) : this.get(use.path)
+                  type === "url" ? Loader.default.obtain(use, this.resourceloader) : this.get(use.path)
             ));
             loader.then(( packs ) => {
                 packs.map( (pkj, index) => {
@@ -180,5 +180,3 @@ export default class LiveSchema extends Schema {
     }
 
 }
-
-LiveSchema.resourceloader = resourceloader;
