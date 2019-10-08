@@ -11,35 +11,43 @@ export class BaseLayer {
 		this.layer = layer;
 		this.targets = targets;
 		this.state = { stage: 0 };
+		//this.loaderTimeoutID = null;
 
 		this.animateStream = this.createAnimateStream( { ...layer.prop, targets } );
 
 		this.stream = stream2( null, (e, controller) => {
-			
-			controller.tocommand( ({action}) => {
-				if(action === "fade-in") {
-					this.animateHandler({ data: [ {}, { action: "fade-in" } ] });
-					this.state = { ...this.state, stage: 2 };
-					e( [ this.state ] );
-				}
-				else if(action === "fade-out") {
-					this.animateHandler({ data: [ {}, { action: "fade-out" } ] });
-				}
-			} );
-/*
-			this.loaderTimeoutID = setTimeout( () =>
+			/*this.loaderTimeoutID = setTimeout( () =>
 				console.warn(`too long loading layer`, this.layer), 5000
 			);*/
-			controller.todisconnect(this.animateHandler = this.animateStream.on( ({ action }) => {
-				if(action === "fade-out-complete") {
-					this.state = { ...this.state, stage: 1 };
-					e( [ this.state ] );
-				}
-			} ));
-
-			this.controller( controller, e );
 			
-			controller.todisconnect( () => this.clear() );
+			this.animateStream.connect( hook => {
+				
+				this.animateHandler = hook;
+				controller.todisconnect(hook);
+				
+				controller.tocommand( ({action}) => {
+					if(action === "fade-in") {
+						this.animateHandler({ data: [ {}, { action: "fade-in" } ] });
+						this.state = { ...this.state, stage: 2 };
+						e( [ this.state ] );
+					}
+					else if(action === "fade-out") {
+						this.animateHandler({ data: [ {}, { action: "fade-out" } ] });
+					}
+				} );
+				
+				controller.todisconnect( () => this.clear() );
+				
+				this.controller( controller, e );
+				
+				return ({ action }) => {
+					if(action === "fade-out-complete") {
+						this.state = { ...this.state, stage: 1 };
+						e( [ this.state ] );
+					}
+				}
+			} );
+			
 		} )
 			.store();
 
@@ -94,8 +102,7 @@ export class Layer extends BaseLayer {
 		super( layer, { targets } );
 		
 		this.signature = signature;
-
-		this.loaderTimeoutID = null;
+		
         this.schema = schema;
         this.resources = resources;
 
