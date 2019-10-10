@@ -71,26 +71,24 @@ export class Layer extends BaseLayer {
 	
 	controller( controller, e ) {
 		if(this.checkModelNecessity( )) {
-			controller.todisconnect( this.handler = stream2.combine([
+			stream2.combine([
 				this.schema.model.layer._obtain( [], this.schema.model.vars ),
 				this.schema.model.layer._obtain( ["#intl"] ),
-			]).on( ([data, intl]) => {
-
-				this.targets.map( target => target.transition(intl) );
-
-				!this.state.stage && this.complete(e);
-
-				let state, action = "default";
-				if(Array.isArray(data) && data.length < 3) {
-					[state, action = "default"] = data;
+			]).connect( hook => {
+				controller.todisconnect( this.handler = hook );
+				return ([data, intl]) => {
+					this.targets.map( target => target.transition(intl) );
+					!this.state.stage && this.complete(e);
+					let state, action = "default";
+					if(Array.isArray(data) && data.length < 3) {
+						[state, action = "default"] = data;
+					}
+					else {
+						state = data;
+					}
+					this.animateHandler( { data: [ state, action ] } );
 				}
-				else {
-					state = data;
-				}
-
-				this.animateHandler( { data: [ state, action ] } );
-
-			} ) );
+			} );
 		}
 		else {
 			this.complete(e);

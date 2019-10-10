@@ -316,15 +316,28 @@ export default class HTMLView extends LiveSchema {
 				] )))
 				.then( layers => {
 					if(this.layers.some( ({ prop: { kit } }) => kit )) {
-						controller.to(this.createKitLayer( { $: { layers, parentViewLayers }, ...args } ).on(emt));
+						this.createKitLayer( { $: { layers, parentViewLayers }, ...args } ).connect((hook) => {
+							controller.to(hook);
+							return emt;
+						});
 					}
 					else {
 						//todo need refactor
 						if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
-							controller.to(this.createTeeEntity( args,  { layers, parentViewLayers } ).on(emt));
+							this.createTeeEntity( args,  { layers, parentViewLayers } ).connect( (hook) => {
+								controller.to(hook);
+								return (...data) => {
+									emt(...data);
+								}
+							} );
 						}
 						else {
-							controller.to(this.createNextLayers( args, { layers, parentViewLayers } ).on(emt));
+							this.createNextLayers( args, { layers, parentViewLayers } ).connect((hook) => {
+								controller.to(hook);
+								return (...data) => {
+									emt(...data);
+								}
+							});
 						}
 					}
 				} );
@@ -482,24 +495,27 @@ export default class HTMLView extends LiveSchema {
 
 	createNodeEntity() {
 		return stream2( null, (e, controller) => {
-			controller.todisconnect(combine( [
+			combine( [
 				...this.prop.resources,
 				...this.prop.styles.map( (style, priority) => {
 					priority = +(style.getAttribute("priority") || priority);
 					return StylesController.get(style, this.acid, priority, this.prop.pack)
 				})
-			] ).on( ( resources ) => {
-				const container = new PlaceHolderContainer( this, { type: "node" } );
-				container.append(this.prop.node.cloneNode(true));
-				const imgs = resources.filter(({type}) => type === "img");
-				[...container.target.querySelectorAll(`slot[img]`)]
-					.map((target, i) => {
-						const key = +target.getAttribute("img");
-						const { image } = imgs.find( img => img.key === key );
-						target.replaceWith(image.cloneNode(true))
-					});
-				e( { resources, container } );
-			}));
+			] ).connect( (hook) => {
+				controller.todisconnect( hook );
+				return ( resources ) => {
+					const container = new PlaceHolderContainer( this, { type: "node" } );
+					container.append(this.prop.node.cloneNode(true));
+					const imgs = resources.filter(({type}) => type === "img");
+					[...container.target.querySelectorAll(`slot[img]`)]
+						.map((target, i) => {
+							const key = +target.getAttribute("img");
+							const { image } = imgs.find( img => img.key === key );
+							target.replaceWith(image.cloneNode(true))
+						});
+					e( { resources, container } );
+				}
+			});
 		});
 	}
 

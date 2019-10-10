@@ -1,4 +1,4 @@
-import { stream } from "air-stream";
+import { stream2 as stream } from "air-stream";
 import csstree from "css-tree";
 import FontFaceObserver from "fontfaceobserver";
 
@@ -30,7 +30,7 @@ const PRIORITY = [];
 
 export default ({ acid, priority, style, path, revision, ...args }) => {
 
-	return stream(async (emt, {sweep}) => {
+	return stream(null, async (e, ctr) => {
 
 		if(!PRIORITY[0]) {
 			const zero = document.createElement("style");
@@ -147,12 +147,12 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 			).then(() => {
 				if (isActive) {
 					inject(commonStyle, priority);
-					emt({type: "inline-style", style: commonStyle, ...args});
+					e({type: "inline-style", style: commonStyle, ...args});
 				}
 			})
 		});
 
-		sweep.add(() => {
+		ctr.todisconnect(() => {
 			isActive = false;
 			commonStyle.remove();
 			fontStyle && fontStyle.remove();
