@@ -206,12 +206,15 @@ export default class HTMLView extends LiveSchema {
 						domTreePlacment.after(box.target);
 						domTreePlacment = box.end;
 						cache.createIfNotExist( child, signature )
-							.on( ([ { stage, container } ]) => {
-								container.remove();
-								if(stage === 1) {
-									box.append( container.target );
-								}
-							});
+							.connect( hook => {
+                controller.todisconnect(hook);
+							  return ([ { stage, container } ]) => {
+                  container.remove();
+                  if(stage === 1) {
+                    box.append( container.target );
+                  }
+                }
+              });
 						store.push( { signature, box } );
 					}
 					else {
