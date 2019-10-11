@@ -175,61 +175,58 @@ export default class HTMLView extends LiveSchema {
 
 			const store = [];
 			
-			controller.todisconnect(modelstream.on( ([ state ]) => {
-				
-				let childs;
-				
-				try {
-					childs = getfrompath(state, this.prop.kit.getter);
+			modelstream.connect( hook => {
+				controller.todisconnect(hook);
+				return ([ state ]) => {
+					let childs;
+					try {
+						childs = getfrompath(state, this.prop.kit.getter);
+					}
+					catch (e) {
+						childs = [];
+					}
+					let domTreePlacement = container.begin;
+					const deleted = [ ...store];
+					childs.map( child => {
+						let exist = null;
+						let signature = null;
+						if(child instanceof Stream2) {
+							signature = child;
+							exist = store.find(({ signature: $ }) => signature === $);
+						}
+						else {
+							signature = calcsignature(child, this.prop.kit.prop);
+							exist = store.find(({ signature: $ }) => signatureEquals(signature, $));
+						}
+						if(!exist) {
+							const box = new PlaceHolderContainer(this, { type: "item" });
+							domTreePlacement.after(box.target);
+							domTreePlacement = box.end;
+							cache.createIfNotExist( child, signature )
+								.connect( hook => {
+									controller.todisconnect(hook);
+									return ([ { stage, container } ]) => {
+										container.remove();
+										if(stage === 1) {
+											box.append( container.target );
+										}
+									}
+								});
+							store.push( { signature, box } );
+						}
+						else {
+							removeElementFromArray(deleted, exist);
+							domTreePlacement.after(exist.box.target);
+							domTreePlacement = exist.box.end;
+						}
+					} );
+					deleted.map( item => {
+						const deleted = store.indexOf(item);
+						store.splice(deleted, 1);
+						item.box.remove();
+					} );
 				}
-				catch (e) {
-					childs = [];
-				}
-				
-				let domTreePlacment = container.begin;
-				
-				const deleted = [ ...store];
-
-				childs.map( child => {
-					let exist = null;
-					let signature = null;
-					if(child instanceof Stream2) {
-						signature = child;
-						exist = store.find(({ signature: $ }) => signature === $);
-					}
-					else {
-						signature = calcsignature(child, this.prop.kit.prop);
-						exist = store.find(({ signature: $ }) => signatureEquals(signature, $));
-					}
-					if(!exist) {
-						const box = new PlaceHolderContainer(this, { type: "item" });
-						domTreePlacment.after(box.target);
-						domTreePlacment = box.end;
-						cache.createIfNotExist( child, signature )
-							.connect( hook => {
-                controller.todisconnect(hook);
-							  return ([ { stage, container } ]) => {
-                  container.remove();
-                  if(stage === 1) {
-                    box.append( container.target );
-                  }
-                }
-              });
-						store.push( { signature, box } );
-					}
-					else {
-						removeElementFromArray(deleted, exist);
-						domTreePlacment.after(exist.box.target);
-						domTreePlacment = exist.box.end;
-					}
-				} );
-				
-				deleted.map( item => {
-					const deleted = store.indexOf(item);
-					store.splice(deleted, 1);
-					item.box.remove();
-				} );
-			} ));
+			} );
 
 
 		} );
