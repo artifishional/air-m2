@@ -175,81 +175,90 @@ export default class HTMLView extends LiveSchema {
 
 			const store = [];
 			
-			controller.todisconnect(modelstream.on( ([ state ]) => {
-				
-				let childs;
-				
-				try {
-					childs = getfrompath(state, this.prop.kit.getter);
-				}
-				catch (e) {
-					childs = [];
-				}
-				
-				let domTreePlacment = container.begin;
-				
-				const deleted = [ ...store];
-
-				childs.map( child => {
-/* todo */
-					if(child instanceof Stream2) {
-
-						const signature = child;
-						const exist = store.find( ({ signature: $ }) => signature === $ );
-						if(!exist) {
-							const box = new PlaceHolderContainer(this, { type: "item" });
-							domTreePlacment.after(box.target);
-							domTreePlacment = box.end;
-							cache.createIfNotExist( child, signature )
-								.on( ([ { stage, container } ]) => {
-									container.remove();
-									if(stage === 1) {
-										box.append( container.target );
-									}
-								});
-							store.push( { signature, box } );
-						}
-						else {
-							removeElementFromArray(deleted, exist);
-							domTreePlacment.after(exist.box.target);
-							domTreePlacment = exist.box.end;
-						}
-
+			modelstream.connect( hook => {
+				controller.todisconnect(hook);
+				return ([ state ]) => {
+					
+					let childs;
+					
+					try {
+						childs = getfrompath(state, this.prop.kit.getter);
 					}
-/* todo dublicate */
-
-					else {
-						const signature = calcsignature(child, this.prop.kit.prop);
-						const exist = store.find( ({ signature: $ }) => signatureEquals(signature, $ ) );
-						if(!exist) {
-							const box = new PlaceHolderContainer(this, { type: "item" });
-							domTreePlacment.after(box.target);
-							domTreePlacment = box.end;
-							cache.createIfNotExist( child, signature )
-								.on( ([ { stage, container } ]) => {
-									container.remove();
-									if(stage === 1) {
-										box.append( container.target );
-									}
-								});
-							store.push( { signature, box } );
-						}
-						else {
-							removeElementFromArray(deleted, exist);
-							domTreePlacment.after(exist.box.target);
-							domTreePlacment = exist.box.end;
-						}
+					catch (e) {
+						childs = [];
 					}
-
-
-				} );
-				
-				deleted.map( item => {
-					const deleted = store.indexOf(item);
-					store.splice(deleted, 1);
-					item.box.remove();
-				} );
-			} ));
+					
+					let domTreePlacment = container.begin;
+					
+					const deleted = [ ...store];
+					
+					childs.map( child => {
+						/* todo */
+						if(child instanceof Stream2) {
+							
+							const signature = child;
+							const exist = store.find( ({ signature: $ }) => signature === $ );
+							if(!exist) {
+								const box = new PlaceHolderContainer(this, { type: "item" });
+								domTreePlacment.after(box.target);
+								domTreePlacment = box.end;
+								cache.createIfNotExist( child, signature )
+									.connect( hook => {
+										controller.todisconnect(hook);
+										return ([ { stage, container } ]) => {
+											container.remove();
+											if(stage === 1) {
+												box.append( container.target );
+											}
+										}
+									});
+								store.push( { signature, box } );
+							}
+							else {
+								removeElementFromArray(deleted, exist);
+								domTreePlacment.after(exist.box.target);
+								domTreePlacment = exist.box.end;
+							}
+							
+						}
+						/* todo dublicate */
+						
+						else {
+							const signature = calcsignature(child, this.prop.kit.prop);
+							const exist = store.find( ({ signature: $ }) => signatureEquals(signature, $ ) );
+							if(!exist) {
+								const box = new PlaceHolderContainer(this, { type: "item" });
+								domTreePlacment.after(box.target);
+								domTreePlacment = box.end;
+								cache.createIfNotExist( child, signature )
+									.connect( hook => {
+										controller.todisconnect(hook);
+										return ([ { stage, container } ]) => {
+											container.remove();
+											if(stage === 1) {
+												box.append( container.target );
+											}
+										}
+									});
+								store.push( { signature, box } );
+							}
+							else {
+								removeElementFromArray(deleted, exist);
+								domTreePlacment.after(exist.box.target);
+								domTreePlacment = exist.box.end;
+							}
+						}
+						
+						
+					} );
+					
+					deleted.map( item => {
+						const deleted = store.indexOf(item);
+						store.splice(deleted, 1);
+						item.box.remove();
+					} );
+				}
+			} );
 
 
 		} );
