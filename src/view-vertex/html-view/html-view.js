@@ -191,57 +191,34 @@ export default class HTMLView extends LiveSchema {
 				const deleted = [ ...store];
 
 				childs.map( child => {
-/* todo */
+					let exist = null;
+					let signature = null;
 					if(child instanceof Stream2) {
-
-						const signature = child;
-						const exist = store.find( ({ signature: $ }) => signature === $ );
-						if(!exist) {
-							const box = new PlaceHolderContainer(this, { type: "item" });
-							domTreePlacment.after(box.target);
-							domTreePlacment = box.end;
-							cache.createIfNotExist( child, signature )
-								.on( ([ { stage, container } ]) => {
-									container.remove();
-									if(stage === 1) {
-										box.append( container.target );
-									}
-								});
-							store.push( { signature, box } );
-						}
-						else {
-							removeElementFromArray(deleted, exist);
-							domTreePlacment.after(exist.box.target);
-							domTreePlacment = exist.box.end;
-						}
-
+						signature = child;
+						exist = store.find(({ signature: $ }) => signature === $);
 					}
-/* todo dublicate */
-
 					else {
-						const signature = calcsignature(child, this.prop.kit.prop);
-						const exist = store.find( ({ signature: $ }) => signatureEquals(signature, $ ) );
-						if(!exist) {
-							const box = new PlaceHolderContainer(this, { type: "item" });
-							domTreePlacment.after(box.target);
-							domTreePlacment = box.end;
-							cache.createIfNotExist( child, signature )
-								.on( ([ { stage, container } ]) => {
-									container.remove();
-									if(stage === 1) {
-										box.append( container.target );
-									}
-								});
-							store.push( { signature, box } );
-						}
-						else {
-							removeElementFromArray(deleted, exist);
-							domTreePlacment.after(exist.box.target);
-							domTreePlacment = exist.box.end;
-						}
+						signature = calcsignature(child, this.prop.kit.prop);
+						exist = store.find(({ signature: $ }) => signatureEquals(signature, $));
 					}
-
-
+					if(!exist) {
+						const box = new PlaceHolderContainer(this, { type: "item" });
+						domTreePlacment.after(box.target);
+						domTreePlacment = box.end;
+						cache.createIfNotExist( child, signature )
+							.on( ([ { stage, container } ]) => {
+								container.remove();
+								if(stage === 1) {
+									box.append( container.target );
+								}
+							});
+						store.push( { signature, box } );
+					}
+					else {
+						removeElementFromArray(deleted, exist);
+						domTreePlacment.after(exist.box.target);
+						domTreePlacment = exist.box.end;
+					}
 				} );
 				
 				deleted.map( item => {
