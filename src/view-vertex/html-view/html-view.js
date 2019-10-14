@@ -59,7 +59,7 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	createActiveNodeTarget(node, resources) {
-		return new ActiveNodeTarget(node, resources);
+		return new ActiveNodeTarget(this, node, resources);
 	}
 
 	findByLabel(label) {
@@ -701,6 +701,30 @@ export default class HTMLView extends LiveSchema {
 			} );
    
 		const keyframes = [];
+		
+		let literal = null;
+		if(!node.childElementCount && node.textContent.search(/^\`.*\`$/) > -1) {
+			let i = -1;
+			let litterals = [];
+			const raw = node
+				.textContent
+				.replace(
+					/lang\.([a-z-0-9A-Z\_]+)/,
+					(_, lit) => {
+						i ++ ;
+						litterals[i] = lit;
+						return 'eval("`" + __litterals[' + i + '] + "`")'
+					}
+				)
+				.replace(
+					/intl\.([a-z-0-9A-Z\_]+)/,
+					(_, lit) => '__intl["' + lit + '"]'
+				);
+			literal = {
+				litterals,
+				operator: new Function("__data", "__litterals", "__intl", `with(__data) return ${raw}`)
+			};
+		}
 
 		const prop = {
 			label,			//debug layer label
@@ -725,6 +749,7 @@ export default class HTMLView extends LiveSchema {
 			key,            //inherited or inner key
 			stream,         //link to model stream todo obsolete io
 			resources,      //related resources
+			literal,        //string template precompiled literal
 		};
 		
 		const res = src.acid !== -1 && src.lift( [ uvk, prop ], src ) ||
