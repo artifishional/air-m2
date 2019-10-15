@@ -9,7 +9,7 @@
     "minor": "npm version minor && npm publish && git push origin"
   },
   "dependencies": {
-    "air-anime": "^0.1.0",
+    "air-anime": "https://github.com/juliaGavris/air-anime.git#jsdom",
     "air-schema": "^0.2.0",
     "air-stream": "^0.8.0",
     "css-tree": "^1.0.0-alpha.29",

@@ -189,8 +189,10 @@ export default class HTMLView extends LiveSchema {
 					}
 					else {
 						removeElementFromArray(deleted, exist);
-						exist.box.restore();
-						domTreePlacment.after(exist.box.target);
+						if(exist.box.begin !== domTreePlacment.nextSibling) {
+							exist.box.restore();
+							domTreePlacment.after(exist.box.target);
+						}
 						domTreePlacment = exist.box.end;
 					}
 				} );
@@ -198,7 +200,7 @@ export default class HTMLView extends LiveSchema {
 				deleted.map( item => {
 					const deleted = store.indexOf(item);
 					store.splice(deleted, 1);
-					item.box.remove();
+					item.box.restore();
 				} );
 			} ));
 
