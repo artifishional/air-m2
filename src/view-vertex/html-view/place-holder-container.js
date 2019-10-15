@@ -85,8 +85,8 @@ export default class PlaceHolderContainer {
             if(
                 cur.nodeType === NODE_TYPES.ELEMENT_NODE &&
                 cur.nodeName.toUpperCase() !== "SLOT" ||
-                this.owner.prop.literal || cur.nodeType === NODE_TYPES.TEXT_NODE &&
-                cur.textContent.match(/{.+}/g)
+                cur.nodeType === NODE_TYPES.TEXT_NODE &&
+                (this.owner.prop.literal || cur.textContent.match(/{.+}/g))
             ) {
                 res.push(cur);
             }
