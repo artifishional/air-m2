@@ -204,11 +204,14 @@ export default class ActiveNodeTarget {
                         const formatter =
                             new Intl.NumberFormat(intl.locale, { currency: intl.currency, ... options });
                         acc[name] = (value) => {
+                            if(value === undefined) {
+                                return "";
+                            }
                             if(isNaN(+value)) {
                                 return formatter.format(0).replace( "0", value );
                             }
                             return formatter.format(value);
-                        }
+                        };
                         return acc;
                     } , {} );
             }
@@ -236,6 +239,7 @@ export default class ActiveNodeTarget {
             }
             else {
                 try {
+                    console.warn("Current literal form is deprecated now: ", this.template);
                     this.node.textContent = templater( this.template, this.intl, argv, this.resources );
                 }
                 catch (e) {}
