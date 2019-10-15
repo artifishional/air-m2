@@ -159,7 +159,7 @@ export default class HTMLView extends LiveSchema {
 			sweep.add(modelstream.at( ([ state ]) => {
 				
 				let childs;
-				
+
 				try {
 					childs = getfrompath(state, this.prop.kit.getter);
 				}
@@ -189,6 +189,7 @@ export default class HTMLView extends LiveSchema {
 					}
 					else {
 						removeElementFromArray(deleted, exist);
+						exist.box.restore();
 						domTreePlacment.after(exist.box.target);
 						domTreePlacment = exist.box.end;
 					}
