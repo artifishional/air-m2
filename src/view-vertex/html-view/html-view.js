@@ -479,24 +479,24 @@ export default class HTMLView extends LiveSchema {
 
 			//todo temporary solution
 			let connected = false;
-			if(!this.prop.preload) {
-				sweep.add( loaderHook = this.obtain( "@loader", {}, { layers } )
-					.at( ([ { stage, container: inner, target } ]) => {
-						if(state.stage === 0 && stage > 0) {
-							loaderContainer = inner;
-							state = { ...state, load: true, stage: 1, };
-							container.append( target );
-							emt.kf();
-							emt( [ state ] );
-						}
-					} )
-				);
-			}
 			const connect = () => {
 				if(connected) {
 					return ;
 				}
 				connected = true;
+				if(!loaderHook && !this.prop.preload) {
+					sweep.add( loaderHook = this.obtain( "@loader", {}, { layers } )
+						.at( ([ { stage, container: inner, target } ]) => {
+							if(state.stage === 0 && stage > 0) {
+								loaderContainer = inner;
+								state = { ...state, load: true, stage: 1, };
+								container.append( target );
+								emt.kf();
+								emt( [ state ] );
+							}
+						} )
+					);
+				}
 				sweep.add( childHook = view
 					.connectable( (data) => {
 						if(data !== keyF) {
