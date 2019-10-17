@@ -597,6 +597,9 @@ export default class HTMLView extends LiveSchema {
 			return new HTMLView( ["", {}], src, { createEntity: node } );
 		}
 		
+		const comments = document.createTreeWalker(node, NodeFilter.SHOW_COMMENT);
+		while(comments.nextNode()) comments.currentNode.remove();
+		
 		//TODO: (improvement required)
 		// currently clones the entire contents and then
 		// removes it from the parent element to solve the shared units problem

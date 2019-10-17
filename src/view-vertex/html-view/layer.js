@@ -17,16 +17,15 @@ export class BaseLayer {
 		this.layer = layer;
 		this.targets = targets;
 		this.state = { stage: 0 };
-
-		this.animateStream = this.createAnimateStream( this.keyframes, targets );
-
+		if(targets.length) {
+			this.animateStream = this.createAnimateStream( this.keyframes, targets );
+		}
 		this.stream = stream( (emt, { sweep, hook }) => {
-
 			hook.add( ({action}) => {
 				if(action === "fade-in") {
 					//todo patch
 					//target "data" type not allowed when animate fade-in/out
-					if(this.notObjectTargetType) {
+					if(this.notObjectTargetType && this.animateStream) {
 						this.animateHandler({ data: [{}, { action: "fade-in" }] });
 					}
 					this.state = { ...this.state, stage: 2 };
@@ -34,7 +33,7 @@ export class BaseLayer {
 					emt( [ this.state ] );
 				}
 				else if(action === "fade-out") {
-					if(this.fadeoutexist && this.notObjectTargetType) {
+					if(this.fadeoutexist && this.notObjectTargetType && this.animateStream) {
 						this.animateHandler({ data: [ {}, { action: "fade-out" } ] });
 					}
 					else {
@@ -48,13 +47,16 @@ export class BaseLayer {
 			this.loaderTimeoutID = setTimeout( () =>
 				console.warn(`too long loading layer`, this.layer), 5000
 			);*/
-			sweep.add(this.animateHandler = this.animateStream.at( ({ action }) => {
-				if(action === "fade-out-complete") {
-					this.state = { ...this.state, stage: 1 };
-					emt.kf();
-					emt( [ this.state ] );
-				}
-			} ));
+
+			if(this.animateStream) {
+				sweep.add(this.animateHandler = this.animateStream.at( ({ action }) => {
+					if(action === "fade-out-complete") {
+						this.state = { ...this.state, stage: 1 };
+						emt.kf();
+						emt( [ this.state ] );
+					}
+				} ));
+			}
 
 			this.sweep( sweep, emt );
 
@@ -86,11 +88,8 @@ export class Layer extends BaseLayer {
 				this.schema.model.layer._obtain( [], this.schema.model.vars ),
 				this.schema.model.layer._obtain( ["#intl"] ),
 			]).at( ([data, intl]) => {
-
 				this.targets.map( target => target.transition(intl) );
-
 				!this.state.stage && this.complete(emt);
-
 				let state, action = "default";
 				if(Array.isArray(data) && data.length < 3) {
 					[state, action = "default"] = data;
@@ -98,9 +97,7 @@ export class Layer extends BaseLayer {
 				else {
 					state = data;
 				}
-
 				this.animateHandler( { data: [ state, action ] } );
-
 			} ) );
 		}
 		else {
