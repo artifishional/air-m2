@@ -2,6 +2,7 @@ import { stream } from "air-stream"
 import animate from "air-anime"
 import { combine } from "air-m2"
 
+export { anime } from "air-anime"
 export class BaseLayer {
 
 	createAnimateStream( keyframes, targets ) {
