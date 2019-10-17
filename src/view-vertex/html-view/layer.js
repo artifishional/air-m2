@@ -9,7 +9,8 @@ export class BaseLayer {
 	}
 
 	constructor( layer, { targets } ) {
-
+		//todo targets.length === 0 ?
+		this.notObjectTargetType = targets.length && targets[0].type !== "data";
 		this.keyframes = layer.prop.keyframes;
 		this.fadeoutexist = this.keyframes.some(([ name ]) => name === "fade-out");
 		this.layer = layer;
@@ -22,13 +23,17 @@ export class BaseLayer {
 
 			hook.add( ({action}) => {
 				if(action === "fade-in") {
-					this.animateHandler({ data: [ {}, { action: "fade-in" } ] });
+					//todo patch
+					//target "data" type not allowed when animate fade-in/out
+					if(this.notObjectTargetType) {
+						this.animateHandler({ data: [{}, { action: "fade-in" }] });
+					}
 					this.state = { ...this.state, stage: 2 };
 					emt.kf();
 					emt( [ this.state ] );
 				}
 				else if(action === "fade-out") {
-					if(this.fadeoutexist) {
+					if(this.fadeoutexist && this.notObjectTargetType) {
 						this.animateHandler({ data: [ {}, { action: "fade-out" } ] });
 					}
 					else {
