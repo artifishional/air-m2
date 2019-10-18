@@ -28,6 +28,37 @@ export default ({ source/*, targets */}) => {
 </unit>
 ```
 
+you can access nested nodes and modify them
+
+```html
+<unit>
+    <view-source> 
+ ```
+ 
+ ```js
+import { stream } from "m2"
+ 
+export default ({ source, targets: [ { node } ] }) => {
+        const inner = node.querySelector("[custom-plugin-inner]");
+        return stream( (emt, { over }) => {
+            over.add(source.on(emt ));
+            inner.textContent = 77;
+        } );
+    }
+```
+ 
+```html
+    </view-source>
+  
+    <div>
+      <span custom-plugin-inner>custom-value</span>
+    </div>
+
+</unit>
+```
+
+
+
 #### stream plugin
 
 you can also modify the data stream before use:
