@@ -50,6 +50,7 @@ export default class HTMLView extends LiveSchema {
 		this.prop.resources = this.prop.resources || [];
 		this.prop.handlers = this.prop.handlers || [];
 		this.prop.tee = this.prop.tee || null;
+		this.prop.teeF = this.prop.teeF || null;
 		this.prop.plug = this.prop.plug || [];
 		this.prop.label = this.prop.label || "";
 		this.prop.styles = this.prop.styles || [];
@@ -136,18 +137,18 @@ export default class HTMLView extends LiveSchema {
 					const _layers = new Map([ ...layers, [this.acid, { layer: modelvertex, vars: {} } ]]);
 
 					//todo need refactor
-					if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
+					//if(this.layers.some( ({ prop: { tee, teeF } }) => tee || teeF ) || !this.prop.preload) {
 						return this.createTeeEntity(
 							{ signature: {...sign, $: parentContainerSignature }, ...args },
 							{ layers: _layers, parentViewLayers }
 						);
-					}
+					/*}
 					else {
 						return this.createNextLayers(
 							{ signature: {...sign, $: parentContainerSignature }, ...args },
 							{ layers: _layers, parentViewLayers }
 						);
-					}
+					}*/
 					
 				}
 			} );
@@ -273,12 +274,12 @@ export default class HTMLView extends LiveSchema {
 					}
 					else {
 						//todo need refactor
-						if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
+						//if(this.layers.some( ({ prop: { tee, teeF } }) => tee || teeF ) || !this.prop.preload) {
 							over.add(this.createTeeEntity( args,  { layers, parentViewLayers } ).on(emt));
-						}
-						else {
+						//}
+						/*else {
 							over.add(this.createNextLayers( args, { layers, parentViewLayers } ).on(emt));
-						}
+						}*/
 					}
 				} );
 		} );
@@ -454,16 +455,24 @@ export default class HTMLView extends LiveSchema {
 		return this.layers.every( ({ acid, prop: { tee } }) => signatureEquals( tee, layers.get(acid) ) );
 	}
 
-	createTeeEntity( args, { layers, parentViewLayers } ) {
+	createTeeEntity( args, manager ) {
+		if(!this.layers.some( ({ prop: { tee, teeF } }) => tee || teeF ) && this.prop.preload) {
+			return this.createNextLayers( args, manager );
+		}
+		const { layers, parentViewLayers } = manager;
 
 		const teeLayers = this.layers
 			.filter( ({ prop: { tee } }) => tee )
 			.map( ({ acid }) => acid );
-
 		const teeStreamLayers = new Map([...layers].filter( ([acid]) => teeLayers.includes(acid) ));
-		
+
+		const teeFLayers = this.layers
+			.filter( ({ prop: { teeF } }) => teeF )
+			.map( ({ acid }) => acid );
+		const teeFStreamLayers = new Map([...layers].filter( ([acid]) => teeFLayers.includes(acid) ));
 		const modelschema = combine(
-			[...teeStreamLayers].map( ([, { layer, vars } ]) => layer.obtain("", vars) ),
+			[...teeStreamLayers, ...teeFStreamLayers]
+				.map( ([, { layer, vars } ]) => layer.obtain("", vars) ),
 			(...layers) => layers.map( ly => Array.isArray(ly) ? ly[0] : ly )
 		);
 
@@ -539,7 +548,13 @@ export default class HTMLView extends LiveSchema {
 
 				const active = this.teeSignatureCheck(
 					new Map([ ...teeStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) )
-				);
+				) && this.layers.every( ({ acid, prop: { tee } }) => tee(layers.get(acid) ) );
+
+				//return this.layers.every( ({ acid, prop: { tee } }) => tee(layers.get(acid) ) );
+/*
+				if(teeFStreamLayers.every( (layer, i) => [acid, data[i]]) ) {
+					debugger;
+				}*/
 
 				if(!active && !this.prop.preload) {
 					loaderContainer && loaderContainer.remove();
@@ -659,6 +674,7 @@ export default class HTMLView extends LiveSchema {
 		resources.push(...sounds.map( sound => resource(pack, { type: "sound", name: sound.getAttribute("name") || "", rel: sound.getAttribute("rel") || ""}) ));
 
 		const tee = cuttee(node, key);
+		const teeF = cutteeF(node);
 		const kit = cutkit(node, key);
         const preload =
 			!["", "true"].includes(node.getAttribute("nopreload")) &&
@@ -707,42 +723,21 @@ export default class HTMLView extends LiveSchema {
 			} );
    
 		const keyframes = [];
-		
-		let literal = null;
-		if(!node.childElementCount && node.textContent.search(/^\`.*\`$/) > -1) {
-			let i = -1;
-			let litterals = [];
-			const raw = node
-				.textContent
-				.replace(
-					/lang\.([a-z-0-9A-Z\_]+)/,
-					(_, lit) => {
-						i ++ ;
-						litterals[i] = lit;
-						return 'eval("`" + __litterals[' + i + '] + "`")'
-					}
-				)
-				.replace(
-					/intl\.([a-z-0-9A-Z\_]+)/,
-					(_, lit) => '__intl["' + lit + '"]'
-				);
-			literal = {
-				litterals,
-				operator: new Function("__data", "__litterals", "__intl", `with(__data) return ${raw}`)
-			};
-		}
+
+		const literal = cutliterals( node );
 
 		const prop = {
-			label,			//debug layer label
-			styles,         //inline style defenitions
-			streamplug,		//stream inline plugins
-			plug,			//view inline plugins
+			teeF,						//switch mode (advanced)
+			label,					//debug layer label
+			styles,         //inline style definitions
+			streamplug,			//stream inline plugins
+			plug,						//view inline plugins
 			controlled,     //has one or more active childrens (text or node)
 			useOwnerProps,  //must consider parent props
 			kit,            //kit's container
-            tee,            //switch mode
-            preload,        //must be fully loaded before readiness
-            pack,           //current package
+			tee,            //switch mode
+			preload,        //must be fully loaded before readiness
+			pack,           //current package
 			keyframes,      //animation ( data ) settings
 			use,            //reused templates path
 			template,       //template node
@@ -827,6 +822,7 @@ export default class HTMLView extends LiveSchema {
 			"plug",
 			"kit",
 			"key",
+			"teeF",
 			"tee",
 			"template",
 			"handlers",
@@ -842,6 +838,33 @@ export default class HTMLView extends LiveSchema {
 		}
 	}
 	
+}
+
+function cutliterals (node) {
+	let literal = null;
+	if(!node.childElementCount && node.textContent.search(/^`.*`$/) > -1) {
+		let i = -1;
+		let literals = [];
+		const raw = node
+			.textContent
+			.replace(
+				/lang\.([a-z-0-9A-Z_]+)/,
+				(_, lit) => {
+					i ++ ;
+					literals[i] = lit;
+					return 'eval("`" + __litterals[' + i + '] + "`")'
+				}
+			)
+			.replace(
+				/intl\.([a-z-0-9A-Z_]+)/,
+				(_, lit) => '__intl["' + lit + '"]'
+			);
+		literal = {
+			litterals: literals,
+			operator: new Function("__data", "__litterals", "__intl", `with(__data) return ${raw}`)
+		};
+	}
+	return literal;
 }
 
 function pathSplitter(str = "") {
@@ -951,6 +974,16 @@ function parseKeyFrames( { node } ) {
 		} );
 	}
 	return res;
+}
+
+function cutteeF(node) {
+	let raw = node.getAttribute("tee()");
+	if(raw === null) {
+		return null;
+	}
+	else {
+		return Function("__data", `with(__data) return ${raw}`);
+	}
 }
 
 function cuttee(node, key) {
