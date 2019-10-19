@@ -29,12 +29,12 @@ function getformat( name, resources ) {
 }
 
 function getlang( name, resources, intl ) {
-    const exist = [].concat(
-        ...resources
+    const exist =
+        resources
             .filter(( { type } ) => type === "language" )
-            .map( ( { content } ) => content.slice(1) )
-    )
-        .find( ([ _name ]) => _name === name );
+            .map( ( { content } ) => content )
+            .flat()
+            .find( ([ _name ]) => _name === name );
     if(!exist) {
         return `literal '${name}' not found`
     }
@@ -217,9 +217,12 @@ export default class ActiveNodeTarget {
             }
         }
         if(this.literal && this.literal.litterals.length) {
-            const language = this.resources.find( ({type}) => type === "language");
+            const language = this.resources.filter( ({type}) => type === "language");
             this.genLiterals = this.literal.litterals.map(
-                name => language.content.find( ([ x ]) => x === name)[1][intl.locale]
+                name => language
+                    .map( ({ content }) => content )
+                    .flat()
+                    .find( ([ x ]) => x === name)[1][intl.locale]
             );
         }
         this.intl = { ...intl };
@@ -234,12 +237,16 @@ export default class ActiveNodeTarget {
                     );
                 }
                 catch (e) {
+                    /*<@debug>*/
                     this.node.textContent = "Сould not parse literal or stream data error";
+                    /*</@debug>*/
                 }
             }
             else {
                 try {
+                    /*<@debug>*/
                     console.warn("Current literal form is deprecated now: ", this.template);
+                    /*</@debug>*/
                     this.node.textContent = templater( this.template, this.intl, argv, this.resources );
                 }
                 catch (e) {}

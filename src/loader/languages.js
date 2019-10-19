@@ -6,7 +6,8 @@ export default ({url, revision}) => stream({path: url, revision, content: { type
         const parser = new DOMParser();
         const doc = parser.parseFromString(xhr.responseText, "application/xml");
 
-        const content = [ ...doc.querySelector("languages").children].reduce((acc, next) => {
+        const content = [ ...doc.querySelector("languages").children]
+            .reduce((acc, next) => {
 
             const lang = next.tagName;
 
@@ -21,7 +22,7 @@ export default ({url, revision}) => stream({path: url, revision, content: { type
 
             return acc;
 
-        }, [ "languages" ]);
+        }, [ ]);
 
         return { type: "language", content };
     } );
