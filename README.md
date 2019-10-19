@@ -379,6 +379,15 @@ allowed to use attachments and abbreviated forms
 [{obj: {prop: 1}}]
 ```
 
+functional form is also now supported
+```html
+<unit tee() = "obj.prop > 0"></unit>
+``` 
+
+```js 
+[{obj: {prop: 1}}]
+```
+
 ### Common features
 
 #### Coupling with model

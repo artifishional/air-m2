@@ -49,7 +49,6 @@ export default class HTMLView extends LiveSchema {
 		this.prop.stream = this.prop.stream || "";
 		this.prop.resources = this.prop.resources || [];
 		this.prop.handlers = this.prop.handlers || [];
-		this.prop.tee = this.prop.tee || null;
 		this.prop.teeF = this.prop.teeF || null;
 		this.prop.plug = this.prop.plug || [];
 		this.prop.label = this.prop.label || "";
@@ -133,22 +132,11 @@ export default class HTMLView extends LiveSchema {
 					}
 
 					modelvertex.parent = (layers.get(this.acid) || layers.get(-1)).layer;
-
 					const _layers = new Map([ ...layers, [this.acid, { layer: modelvertex, vars: {} } ]]);
-
-					//todo need refactor
-					//if(this.layers.some( ({ prop: { tee, teeF } }) => tee || teeF ) || !this.prop.preload) {
-						return this.createTeeEntity(
-							{ signature: {...sign, $: parentContainerSignature }, ...args },
-							{ layers: _layers, parentViewLayers }
-						);
-					/*}
-					else {
-						return this.createNextLayers(
-							{ signature: {...sign, $: parentContainerSignature }, ...args },
-							{ layers: _layers, parentViewLayers }
-						);
-					}*/
+					return this.createTeeEntity(
+						{ signature: {...sign, $: parentContainerSignature }, ...args },
+						{ layers: _layers, parentViewLayers }
+					);
 					
 				}
 			} );
@@ -273,13 +261,7 @@ export default class HTMLView extends LiveSchema {
 						over.add(this.createKitLayer( { $: { layers, parentViewLayers }, ...args } ).on(emt));
 					}
 					else {
-						//todo need refactor
-						//if(this.layers.some( ({ prop: { tee, teeF } }) => tee || teeF ) || !this.prop.preload) {
-							over.add(this.createTeeEntity( args,  { layers, parentViewLayers } ).on(emt));
-						//}
-						/*else {
-							over.add(this.createNextLayers( args, { layers, parentViewLayers } ).on(emt));
-						}*/
+						over.add(this.createTeeEntity( args,  { layers, parentViewLayers } ).on(emt));
 					}
 				} );
 		} );
@@ -450,28 +432,23 @@ export default class HTMLView extends LiveSchema {
 			}));
 		});
 	}
-
-	teeSignatureCheck( layers ) {
-		return this.layers.every( ({ acid, prop: { tee } }) => signatureEquals( tee, layers.get(acid) ) );
+	
+	teeFSignatureCheck( layers ) {
+		return this.layers.every( ({ acid, prop: { teeF } }) => teeF ? teeF(layers.get(acid)) : true );
 	}
 
 	createTeeEntity( args, manager ) {
-		if(!this.layers.some( ({ prop: { tee, teeF } }) => tee || teeF ) && this.prop.preload) {
+		if(!this.layers.some( ({ prop: { teeF } }) => teeF ) && this.prop.preload) {
 			return this.createNextLayers( args, manager );
 		}
 		const { layers, parentViewLayers } = manager;
-
-		const teeLayers = this.layers
-			.filter( ({ prop: { tee } }) => tee )
-			.map( ({ acid }) => acid );
-		const teeStreamLayers = new Map([...layers].filter( ([acid]) => teeLayers.includes(acid) ));
-
+		
 		const teeFLayers = this.layers
 			.filter( ({ prop: { teeF } }) => teeF )
 			.map( ({ acid }) => acid );
 		const teeFStreamLayers = new Map([...layers].filter( ([acid]) => teeFLayers.includes(acid) ));
 		const modelschema = combine(
-			[...teeStreamLayers, ...teeFStreamLayers]
+			[...teeFStreamLayers]
 				.map( ([, { layer, vars } ]) => layer.obtain("", vars) ),
 			(...layers) => layers.map( ly => Array.isArray(ly) ? ly[0] : ly )
 		);
@@ -546,15 +523,9 @@ export default class HTMLView extends LiveSchema {
 			const view = this.createNextLayers( args, { layers, parentViewLayers } );
 			sweep.add( modelschema.at( (data) => {
 
-				const active = this.teeSignatureCheck(
-					new Map([ ...teeStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) )
-				) && this.layers.every( ({ acid, prop: { tee } }) => tee(layers.get(acid) ) );
-
-				//return this.layers.every( ({ acid, prop: { tee } }) => tee(layers.get(acid) ) );
-/*
-				if(teeFStreamLayers.every( (layer, i) => [acid, data[i]]) ) {
-					debugger;
-				}*/
+				const active = this.teeFSignatureCheck(
+					new Map([ ...teeFStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) )
+				);
 
 				if(!active && !this.prop.preload) {
 					loaderContainer && loaderContainer.remove();
@@ -672,9 +643,8 @@ export default class HTMLView extends LiveSchema {
 
 		const sounds = [...node.children].filter(byTagName("SOUND"));
 		resources.push(...sounds.map( sound => resource(pack, { type: "sound", name: sound.getAttribute("name") || "", rel: sound.getAttribute("rel") || ""}) ));
-
-		const tee = cuttee(node, key);
-		const teeF = cutteeF(node);
+		
+		const teeF = cutteeF(node) || cuttee(node, key);
 		const kit = cutkit(node, key);
         const preload =
 			!["", "true"].includes(node.getAttribute("nopreload")) &&
@@ -727,15 +697,14 @@ export default class HTMLView extends LiveSchema {
 		const literal = cutliterals( node );
 
 		const prop = {
-			teeF,						//switch mode (advanced)
-			label,					//debug layer label
+			teeF,			//switch mode (advanced)
+			label,			//debug layer label
 			styles,         //inline style definitions
-			streamplug,			//stream inline plugins
-			plug,						//view inline plugins
+			streamplug,		//stream inline plugins
+			plug,			//view inline plugins
 			controlled,     //has one or more active childrens (text or node)
 			useOwnerProps,  //must consider parent props
 			kit,            //kit's container
-			tee,            //switch mode
 			preload,        //must be fully loaded before readiness
 			pack,           //current package
 			keyframes,      //animation ( data ) settings
@@ -823,7 +792,6 @@ export default class HTMLView extends LiveSchema {
 			"kit",
 			"key",
 			"teeF",
-			"tee",
 			"template",
 			"handlers",
 			"keyframes",
@@ -992,7 +960,7 @@ function cuttee(node, key) {
 		return null;
 	}
 	else if(rawTee === "") {
-		return key;
+		return data => signatureEquals(key, data);
 	}
 	else if(rawTee[0] === "{") {
 
@@ -1001,10 +969,11 @@ function cuttee(node, key) {
 			return "{" +  vl + ":$bool" + "}"
 		});
 
-		return new Function("$bool", "return" + rawTee)(BOOLEAN);
+		const tee = new Function("$bool", "return" + rawTee)(BOOLEAN);
+		return data => signatureEquals(tee, data);
 	}
 	else {
-		return rawTee;
+		return data => signatureEquals(rawTee, data);
 	}
 }
 
