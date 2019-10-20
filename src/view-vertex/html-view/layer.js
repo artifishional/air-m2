@@ -1,6 +1,5 @@
 import { stream } from "air-stream"
 import animate from "air-anime"
-import { combine } from "air-m2"
 
 export { anime } from "air-anime"
 export class BaseLayer {
@@ -84,21 +83,20 @@ export class Layer extends BaseLayer {
 
 	sweep( sweep, emt ) {
 		if(this.checkModelNecessity( )) {
-			sweep.add( this.handler = combine([
-				this.schema.model.layer._obtain( [], this.schema.model.vars ),
-				this.schema.model.layer._obtain( ["#intl"] ),
-			]).at( ([data, intl]) => {
-				this.targets.map( target => target.transition(intl) );
+			sweep.add(this.schema.model.layer._obtain(["#intl"]).at(
+				intl => this.targets.map(target => target.transition(intl))
+			));
+			this.handler = this.schema.model.layer._obtain([], this.schema.model.vars).at((data) => {
 				!this.state.stage && this.complete(emt);
 				let state, action = "default";
-				if(Array.isArray(data) && data.length < 3) {
+				if (Array.isArray(data) && data.length < 3) {
 					[state, action = "default"] = data;
-				}
-				else {
+				} else {
 					state = data;
 				}
-				this.animateHandler( { data: [ state, action ] } );
-			} ) );
+				this.animateHandler({data: [state, action]});
+			});
+			sweep.add(this.handler);
 		}
 		else {
 			this.complete(emt);

@@ -188,6 +188,7 @@ export default class ActiveNodeTarget {
         }
         this.template = this.type === 'data' ? node.textContent : null;
         this.intl = null;
+        this.argv = null;
     }
 
     transition(intl) {
@@ -226,10 +227,12 @@ export default class ActiveNodeTarget {
             );
         }
         this.intl = { ...intl };
+        this.argv && this.update(this.argv);
     }
 
     update(argv) {
-        if(this.type === "data") {
+        this.argv = argv;
+        if(this.intl && this.type === "data") {
             if(this.literal) {
                 try {
                     this.node.textContent = this.literal.operator(
@@ -238,7 +241,7 @@ export default class ActiveNodeTarget {
                 }
                 catch (e) {
                     /*<@debug>*/
-                    this.node.textContent = "Сould not parse literal or stream data error";
+                    this.node.textContent = "Could not parse literal or stream data error";
                     /*</@debug>*/
                 }
             }
