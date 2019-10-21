@@ -1,4 +1,4 @@
-import { BOOLEAN } from "../../def"
+import {BOOLEAN, EMPTY_FUNCTION, EMPTY_OBJECT} from "../../def"
 import { VIEW_PLUGINS } from "../../globals"
 import { stream, combine, keyF, sync } from "air-stream"
 import StylesController from "./styles-controller"
@@ -19,6 +19,7 @@ import { Layer, BaseLayer } from "./layer"
 import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
 import { ModelVertex } from "../../model-vertex"
+import spreading from "air-m2/src/view-vertex/html-view/spreading";
 
 let UNIQUE_VIEW_KEY = 0;
 let UNIQUE_IMAGE_KEY = 0;
@@ -820,16 +821,44 @@ function cutliterals (node) {
 				(_, lit) => {
 					i ++ ;
 					literals[i] = lit;
-					return 'eval("`" + __litterals[' + i + '] + "`")'
+					return 'eval("`" + __literals[' + i + '] + "`")'
 				}
 			)
 			.replace(
 				/intl\.([a-z-0-9A-Z_]+)/,
 				(_, lit) => '__intl["' + lit + '"]'
 			);
+		const fn = new Function("argv", `with(argv) return ${raw}`);
+		const operator = (data, literals, intl, ) => {
+			return fn(new Proxy(data, {
+				has() {
+					return true;
+				},
+				get(target, prop) {
+					if (prop === Symbol.unscopables) {
+						return false;
+					}
+					else if(prop === "eval") {
+						return eval;
+					}
+					else if(prop === "__intl") {
+						return intl;
+					}
+					else if(prop === "__literals") {
+						return literals;
+					}
+					const vl = target[prop];
+					if (vl !== undefined) {
+						return vl;
+					} else {
+						throw "exit";
+					}
+				}
+			}));
+		}
 		literal = {
 			litterals: literals,
-			operator: new Function("__data", "__litterals", "__intl", `with(__data) return ${raw}`)
+			operator,
 		};
 	}
 	return literal;
@@ -880,27 +909,22 @@ function pathParser(str) {
 const REG_GETTER_ATTRIBUTE = /\(([a-zA-Z_][\[\].a-zA-Z\-_0-9]*?)\)/g;
 
 
-function parseKeyProps( { classList, ...prop } ) {
-	if(classList) {
-		return {
-			classList: Object.keys(classList).reduce( (acc, next) => {
-				if(next.indexOf("|") > - 1) {
-					next.split("|").reduce( (acc, name) => {
-						acc[name] = classList[next] === name;
-						return acc;
-					}, acc);
-				}
-				else {
-					acc[next] = !!classList[next];
-				}
-				return acc;
-			}, {} ),
-			...prop,
-		}
+function parseKeyProps( prop ) {
+	if(prop.hasOwnProperty("classList")) {
+		prop.classList = Object.keys(prop.classList).reduce( (acc, next) => {
+			if(next.indexOf("|") > - 1) {
+				next.split("|").reduce( (acc, name) => {
+					acc[name] = prop.classList[next] === name;
+					return acc;
+				}, acc);
+			}
+			else {
+				acc[next] = !!prop.classList[next];
+			}
+			return acc;
+		}, {} );
 	}
-	return {
-		...prop,
-	}
+	return prop;
 }
 
 function parseKeyFrames( { node } ) {
@@ -909,49 +933,27 @@ function parseKeyFrames( { node } ) {
 	if(keyframe.length) {
 		res = [...keyframe].map( node => {
 			const action = node.getAttribute("name") || "default";
-			let prop = (node.getAttribute("prop"));
-			if(prop) {
-				prop = prop.replace(REG_GETTER_ATTRIBUTE, (_, reg) => {
-					return `(argv.${reg})`;
-				});
-				prop = new Function("argv", "ttm", `return ${prop}`);
-			}
 			const keys = [...node.querySelectorAll("key")]
 				.map( node => {
-					let prop = null;
-					let offset = node.getAttribute("offset");
-					let properties = node.getAttribute("prop");
-					if(properties) {
-						const functionBuilder = properties.replace(REG_GETTER_ATTRIBUTE, (_, reg) => {
-							return `(argv.${reg})`;
-						});
-						const handler = new Function("argv", "ttm", `return ${functionBuilder}`);
-						prop = (argv) => {
-							try {
-								return parseKeyProps(handler(argv));
-							}
-							catch (e) {
-								return {};
-							}
-						};
-					}
-					return [ offset, prop ];
+					return [
+						node.getAttribute("offset"),
+						spreading(
+							node.getAttribute("prop"),
+							EMPTY_OBJECT,
+							EMPTY_FUNCTION,
+							parseKeyProps,
+						),
+					];
 				} );
 			node.remove();
-			return [ action, prop, ...keys ];
+			return [ action, spreading(node.getAttribute("prop")), ...keys ];
 		} );
 	}
 	return res;
 }
 
 function cutteeF(node) {
-	let raw = node.getAttribute("tee()");
-	if(raw === null) {
-		return null;
-	}
-	else {
-		return Function("__data", `with(__data) return ${raw}`);
-	}
+	return spreading(node.getAttribute("tee()"), null, null);
 }
 
 function cuttee(node, key) {
