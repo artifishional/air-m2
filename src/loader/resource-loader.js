@@ -21,7 +21,7 @@ export default function (resourceloader, { path }, { type, ...args }) {
     throw "unsupported in current version";
     //return new ObservableTexture({url: `m2units/${path}${url}` })
   } else if (type === "img") {
-    return imageLoader({path}, { type, urlOrigin, revision, ...args });
+    return imageLoader(resourceloader, {path}, { type, urlOrigin, revision, ...args });
   } else if (type === "font") {
     return fontLoader({path}, { type, urlOrigin, revision, ...args });
   } else if (type === "style") {
