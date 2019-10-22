@@ -392,7 +392,7 @@ you can even use a static form
 ```html
 <unit tee() = 1></unit>
 ``` 
-however, the view component will still wait for the model to flow
+however, the view component will still wait for the model stream
 
 ### Common features
 
