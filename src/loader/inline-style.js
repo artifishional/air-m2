@@ -25,6 +25,7 @@ function inject(style, priority) {
 const PRIORITY = [];
 
 export default (resourceloader, {path}, { acid, priority, style, revision, ...args }) => {
+
 	return new Promise(resolve => {
 
 		if(!PRIORITY[0]) {
@@ -33,6 +34,8 @@ export default (resourceloader, {path}, { acid, priority, style, revision, ...ar
 			document.head.append(zero);
 			PRIORITY[0] = zero;
 		}
+
+		style.textContent = style.textContent.replace(/:scope/g, `[data-scope-acid-${acid}]`);
 
 		let isActive = true;
 
@@ -45,7 +48,7 @@ export default (resourceloader, {path}, { acid, priority, style, revision, ...ar
 
 		let fontStyle = null;
 
-		const ast = csstree.fromPlainObject(JSON.parse(style.textContent));
+		const ast = csstree.parse(style.textContent);
 
 		const dataForLoading = [];
 		const fonts = [];
@@ -109,7 +112,6 @@ export default (resourceloader, {path}, { acid, priority, style, revision, ...ar
 					rawCommonCSSContent += csstree.generate(node);
 				}
 			}
-			rawCommonCSSContent = rawCommonCSSContent.replace(/\[data-scope-acid\]/g, `[data-scope-acid-${acid}]`);
 			commonStyle.textContent = rawCommonCSSContent;
 			if (rawFontCSSContent) {
 				fontFaceStyle = document.createElement("style");
