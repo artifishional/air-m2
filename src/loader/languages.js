@@ -17,7 +17,11 @@ export default ({url, revision}) => stream({path: url, revision, content: { type
                 if(!exist) {
                     acc.push( exist = [ name, {} ] );
                 }
-                exist[1][lang] = string.textContent;
+                exist[1][lang] = string.textContent
+                    .replace(
+                      /(intl|lang)\.([a-z-0-9A-Z_]+)/,
+                      (_, type, lit) => '__' + type + '["' + lit + '"]'
+                    );
             } );
 
             return acc;
