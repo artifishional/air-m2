@@ -680,18 +680,20 @@ export default class HTMLView extends LiveSchema {
 			.filter(byTagName("script"))
 			.filter(byAttr("data-source-type", "stream-source"))
 			.map( plug => {
-				window.eval(plug.textContent);
+				const mdl =
+					this.resourceloader(this.resourceloader, {}, {scriptContent: plug.textContent, type: 'script'}).default;
 				plug.remove();
-				return window.__m2unit__.default;
+				return mdl;
 			} );
 
 		const plug = [...node.children]
 			.filter(byTagName("script"))
 			.filter(byAttr("data-source-type", "view-source"))
 			.map( plug => {
-				window.eval(plug.textContent);
+				const mdl =
+					this.resourceloader(this.resourceloader, {}, {scriptContent: plug.textContent, type: 'script'}).default;
 				plug.remove();
-				return window.__m2unit__.default;
+				return mdl;
 			} );
 
 		const keyframes = [];
