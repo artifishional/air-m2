@@ -681,7 +681,7 @@ export default class HTMLView extends LiveSchema {
 			.filter(byAttr("data-source-type", "stream-source"))
 			.map( plug => {
 				const mdl =
-					this.resourceloader(this.resourceloader, {}, {scriptContent: plug.textContent, type: 'script'}).default;
+					src.resourceloader(src.resourceloader, {}, {scriptContent: plug.textContent, type: 'script'}).default;
 				plug.remove();
 				return mdl;
 			} );
@@ -691,7 +691,7 @@ export default class HTMLView extends LiveSchema {
 			.filter(byAttr("data-source-type", "view-source"))
 			.map( plug => {
 				const mdl =
-					this.resourceloader(this.resourceloader, {}, {scriptContent: plug.textContent, type: 'script'}).default;
+					src.resourceloader(src.resourceloader, {}, {scriptContent: plug.textContent, type: 'script'}).default;
 				plug.remove();
 				return mdl;
 			} );
