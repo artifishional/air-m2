@@ -151,84 +151,90 @@ export default class HTMLView extends LiveSchema {
 					let first = 0, last = 1, childs;
 					const overscan = 1;
 
+					let prev = { first: 0, last: 0, childs };
+
 					const render = () => {
-						let domTreePlacment = container.begin;
-						const deleted = [...store];
+						if (!equal(prev, { first, last, childs })) {
+							prev = { first, last, childs };
 
-						childs.map((child, i) => {
-							const signature = calcsignature(child, this.prop.kit.prop);
-							const exist = store.find(({ signature: $ }) => signatureEquals(signature, $));
+							let domTreePlacment = container.begin;
+							const deleted = [...store];
 
-							if (i >= first - overscan && i <= last - 1 + overscan) {
-								if (!exist) {
-									const box = new PlaceHolderContainer(this, { type: 'item' });
-									domTreePlacment.after(box.target);
-									domTreePlacment = box.end;
+							childs.map((child, i) => {
+								const signature = calcsignature(child, this.prop.kit.prop);
+								const exist = store.find(({ signature: $ }) => signatureEquals(signature, $));
 
-									const cell = (data) => {
-										const modelvertex = new ModelVertex(['$$', {
-											glassy: true,
-											source: () => modelstream.map(([state]) => {
-												const childs = getfrompath(state, this.prop.kit.getter);
-												const res = childs.find(child => signatureEquals(signature, child));
-												return res !== undefined ? [res] : null;
-											})
-												.filter(Boolean)
-												.distinct(equal)
-										}]);
+								if (i >= first - overscan && i <= last - 1 + overscan) {
+									if (!exist) {
+										const box = new PlaceHolderContainer(this, { type: 'item' });
+										domTreePlacment.after(box.target);
+										domTreePlacment = box.end;
 
-										let sign;
-										if (typeof signature !== 'object') {
-											sign = { default: signature };
-										} else {
-											sign = signature;
+										const cell = (data) => {
+											const modelvertex = new ModelVertex(['$$', {
+												glassy: true,
+												source: () => modelstream.map(([state]) => {
+													const childs = getfrompath(state, this.prop.kit.getter);
+													const res = childs.find(child => signatureEquals(signature, child));
+													return res !== undefined ? [res] : null;
+												})
+													.filter(Boolean)
+													.distinct(equal)
+											}]);
+
+											let sign;
+											if (typeof signature !== 'object') {
+												sign = { default: signature };
+											} else {
+												sign = signature;
+											}
+
+											modelvertex.parent = (layers.get(this.acid) || layers.get(-1)).layer;
+											const _layers = new Map([...layers, [this.acid, { layer: modelvertex, vars: {} }]]);
+											return this.createTeeEntity(
+												{ signature: { ...sign, $: parentContainerSignature }, ...args },
+												{ layers: _layers, parentViewLayers }
+											);
+
+										};
+
+										cell(child)
+										// w/o cache
+										// cache.createIfNotExist(child, signature)
+											.at(([{ stage, container }]) => {
+												container.remove();
+												if (container.target.firstElementChild && lazyscroll !== true) {
+													container.target.firstElementChild.style.top = i * +lazyscroll + 'px';
+													container.target.firstElementChild.style.position = 'absolute';
+												}
+												if (stage === 1) {
+													box.append(container.target);
+												}
+											});
+										store.push({ signature, box });
+									} else {
+										removeElementFromArray(deleted, exist);
+										if (exist.box.begin !== domTreePlacment.nextSibling) {
+											exist.box.restore();
+											domTreePlacment.after(exist.box.target);
 										}
-
-										modelvertex.parent = (layers.get(this.acid) || layers.get(-1)).layer;
-										const _layers = new Map([...layers, [this.acid, { layer: modelvertex, vars: {} }]]);
-										return this.createTeeEntity(
-											{ signature: { ...sign, $: parentContainerSignature }, ...args },
-											{ layers: _layers, parentViewLayers }
-										);
-
-									};
-
-									cell(child)
-									// w/o cache
-									// cache.createIfNotExist(child, signature)
-										.at(([{ stage, container }]) => {
-											container.remove();
-											if (container.target.firstElementChild && lazyscroll !== true) {
-												container.target.firstElementChild.style.top = i * +lazyscroll + 'px';
-												container.target.firstElementChild.style.position = 'absolute';
-											}
-											if (stage === 1) {
-												box.append(container.target);
-											}
-										});
-									store.push({ signature, box });
-								} else {
-									removeElementFromArray(deleted, exist);
-									if (exist.box.begin !== domTreePlacment.nextSibling) {
-										exist.box.restore();
-										domTreePlacment.after(exist.box.target);
+										domTreePlacment = exist.box.end;
 									}
-									domTreePlacment = exist.box.end;
 								}
-							}
-						});
+							});
 
-						deleted.map(item => {
-							const deleted = store.indexOf(item);
-							item.box.restore();
-						});
+							deleted.map(item => {
+								const deleted = store.indexOf(item);
+								item.box.restore();
+							});
 
-						// console.log(store.length, store.map((el) => el.signature.id))
-						store.map((element, idx) => {
-							if (!childs.some((child) => signatureEquals(calcsignature(child, this.prop.kit.prop), element.signature))) {
-								store.splice(idx, 1);
-							}
-						});
+							// console.log(store.length, store.map((el) => el.signature.id))
+							store.map((element, idx) => {
+								if (!childs.some((child) => signatureEquals(calcsignature(child, this.prop.kit.prop), element.signature))) {
+									store.splice(idx, 1);
+								}
+							});
+						}
 					};
 
 					modelstream.at(([state]) => {
