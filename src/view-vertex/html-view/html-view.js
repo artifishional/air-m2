@@ -151,7 +151,7 @@ export default class HTMLView extends LiveSchema {
 					let first = 0, last = 1, childs;
 					const overscan = 1;
 
-					let prev = { first: 0, last: 0, childs };
+					let prev = {};
 
 					const render = () => {
 						if (!equal(prev, { first, last, childs })) {
@@ -170,37 +170,7 @@ export default class HTMLView extends LiveSchema {
 										domTreePlacment.after(box.target);
 										domTreePlacment = box.end;
 
-										const cell = (data) => {
-											const modelvertex = new ModelVertex(['$$', {
-												glassy: true,
-												source: () => modelstream.map(([state]) => {
-													const childs = getfrompath(state, this.prop.kit.getter);
-													const res = childs.find(child => signatureEquals(signature, child));
-													return res !== undefined ? [res] : null;
-												})
-													.filter(Boolean)
-													.distinct(equal)
-											}]);
-
-											let sign;
-											if (typeof signature !== 'object') {
-												sign = { default: signature };
-											} else {
-												sign = signature;
-											}
-
-											modelvertex.parent = (layers.get(this.acid) || layers.get(-1)).layer;
-											const _layers = new Map([...layers, [this.acid, { layer: modelvertex, vars: {} }]]);
-											return this.createTeeEntity(
-												{ signature: { ...sign, $: parentContainerSignature }, ...args },
-												{ layers: _layers, parentViewLayers }
-											);
-
-										};
-
-										cell(child)
-										// w/o cache
-										// cache.createIfNotExist(child, signature)
+										cache.createIfNotExist(child, signature)
 											.at(([{ stage, container }]) => {
 												container.remove();
 												if (container.target.firstElementChild && lazyscroll !== true) {
@@ -223,17 +193,13 @@ export default class HTMLView extends LiveSchema {
 								}
 							});
 
-							deleted.map(item => {
-								const deleted = store.indexOf(item);
-								item.box.restore();
-							});
+              deleted.map(item => item.box.restore());
 
-							// console.log(store.length, store.map((el) => el.signature.id))
-							store.map((element, idx) => {
-								if (!childs.some((child) => signatureEquals(calcsignature(child, this.prop.kit.prop), element.signature))) {
-									store.splice(idx, 1);
-								}
-							});
+              store.map((element, idx) => {
+                if (!childs.some((child) => signatureEquals(calcsignature(child, this.prop.kit.prop), element.signature))) {
+                  store.splice(idx, 1);
+                }
+              });
 						}
 					};
 
