@@ -1,7 +1,8 @@
 import { LiveSchema } from "../live-schema"
 import { ObservableCollection } from "../observable-collection"
 import { stream } from "air-stream"
-import { equal } from "../utils"
+import { error } from "../error"
+import { ENTRY_UNIT } from '../globals';
 
 function frommodule(module, _key = "main") {
 	return [ _key,
@@ -30,6 +31,13 @@ export default class ModelVertex extends LiveSchema {
 
 	constructor([ key, { source = () => stream( emt => `empty point ${key}` ), ...prop }, ...item], src) {
 		super([ key, { source, ...prop }, ...item], src);
+	}
+
+	static createApplicationRoot( { path = ENTRY_UNIT } ) {
+		return new ModelVertex( [ "$", {},
+			[ "error", { id: "error", source: error } ],
+			[ "main", { use: [{ path }]} ],
+		],);
 	}
 	
 	static observe(src, cb) {

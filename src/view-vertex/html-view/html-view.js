@@ -1,5 +1,5 @@
 import {BOOLEAN, EMPTY_FUNCTION, EMPTY_OBJECT} from "../../def"
-import { VIEW_PLUGINS } from "../../globals"
+import { ENTRY_UNIT, VIEW_PLUGINS } from '../../globals';
 import { stream, combine, keyF, sync } from "air-stream"
 import StylesController from "./styles-controller"
 import {
@@ -57,6 +57,10 @@ export default class HTMLView extends LiveSchema {
 		this.prop.streamplug = this.prop.streamplug || [];
 		this.prop.keyframes = this.prop.keyframes || [];
 		this.prop.node = this.prop.node || document.createDocumentFragment();
+	}
+
+	static createApplicationRoot( { path = ENTRY_UNIT } ) {
+		return new HTMLView( ["$", { use: [{ path, schtype: "html" }] }] );
 	}
 
 	createActiveNodeTarget(node, resources) {
