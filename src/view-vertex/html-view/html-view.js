@@ -145,55 +145,161 @@ export default class HTMLView extends LiveSchema {
 			over.add(() => cache.clear());
 
 			const store = [];
-			
-			sweep.add(modelstream.at( ([ state ]) => {
-				
-				let childs;
+			let lazyscroll = this.parent.prop.lazyscroll;
+			if (lazyscroll) {
+				this.parent.lazyscrollControlStream = stream((emt, { sweep, hook }) => {
+					let first = 0, last = 1, childs;
+					const overscan = 1;
 
-				try {
-					childs = getfrompath(state, this.prop.kit.getter);
-				}
-				catch (e) {
-					childs = [];
-				}
-				
-				let domTreePlacment = container.begin;
-				
-				const deleted = [ ...store];
+					const render = () => {
+						let domTreePlacment = container.begin;
+						const deleted = [...store];
 
-				childs.map( child => {
-					const signature = calcsignature(child, this.prop.kit.prop);
-					const exist = store.find( ({ signature: $ }) => signatureEquals(signature, $ ) );
-					if(!exist) {
-						const box = new PlaceHolderContainer(this, { type: "item" });
-						domTreePlacment.after(box.target);
-						domTreePlacment = box.end;
-						cache.createIfNotExist( child, signature )
-							.at( ([ { stage, container } ]) => {
-								container.remove();
-								if(stage === 1) {
-									box.append( container.target );
+						childs.map((child, i) => {
+							const signature = calcsignature(child, this.prop.kit.prop);
+							const exist = store.find(({ signature: $ }) => signatureEquals(signature, $));
+
+							if (i >= first - overscan && i <= last - 1 + overscan) {
+								if (!exist) {
+									const box = new PlaceHolderContainer(this, { type: 'item' });
+									domTreePlacment.after(box.target);
+									domTreePlacment = box.end;
+
+									const cell = (data) => {
+										const modelvertex = new ModelVertex(['$$', {
+											glassy: true,
+											source: () => modelstream.map(([state]) => {
+												const childs = getfrompath(state, this.prop.kit.getter);
+												const res = childs.find(child => signatureEquals(signature, child));
+												return res !== undefined ? [res] : null;
+											})
+												.filter(Boolean)
+												.distinct(equal)
+										}]);
+
+										let sign;
+										if (typeof signature !== 'object') {
+											sign = { default: signature };
+										} else {
+											sign = signature;
+										}
+
+										modelvertex.parent = (layers.get(this.acid) || layers.get(-1)).layer;
+										const _layers = new Map([...layers, [this.acid, { layer: modelvertex, vars: {} }]]);
+										return this.createTeeEntity(
+											{ signature: { ...sign, $: parentContainerSignature }, ...args },
+											{ layers: _layers, parentViewLayers }
+										);
+
+									};
+
+									cell(child)
+									// w/o cache
+									// cache.createIfNotExist(child, signature)
+										.at(([{ stage, container }]) => {
+											container.remove();
+											if (container.target.firstElementChild && lazyscroll !== true) {
+												container.target.firstElementChild.style.top = i * +lazyscroll + 'px';
+												container.target.firstElementChild.style.position = 'absolute';
+											}
+											if (stage === 1) {
+												box.append(container.target);
+											}
+										});
+									store.push({ signature, box });
+								} else {
+									removeElementFromArray(deleted, exist);
+									if (exist.box.begin !== domTreePlacment.nextSibling) {
+										exist.box.restore();
+										domTreePlacment.after(exist.box.target);
+									}
+									domTreePlacment = exist.box.end;
 								}
-							});
-						store.push( { signature, box } );
-					}
-					else {
-						removeElementFromArray(deleted, exist);
-						if(exist.box.begin !== domTreePlacment.nextSibling) {
-							exist.box.restore();
-							domTreePlacment.after(exist.box.target);
-						}
-						domTreePlacment = exist.box.end;
-					}
-				} );
-				
-				deleted.map( item => {
-					const deleted = store.indexOf(item);
-					store.splice(deleted, 1);
-					item.box.restore();
-				} );
-			} ));
+							}
+						});
 
+						deleted.map(item => {
+							const deleted = store.indexOf(item);
+							item.box.restore();
+						});
+
+						// console.log(store.length, store.map((el) => el.signature.id))
+						store.map((element, idx) => {
+							if (!childs.some((child) => signatureEquals(calcsignature(child, this.prop.kit.prop), element.signature))) {
+								store.splice(idx, 1);
+							}
+						});
+					};
+
+					modelstream.at(([state]) => {
+						try {
+							childs = getfrompath(state, this.prop.kit.getter);
+						} catch (e) {
+							childs = [];
+						}
+						emt([{ elements: childs.length }]);
+						render();
+					});
+
+					hook.add(({ action, data }) => {
+						if (action === 'scroll') {
+							const { height, offset } = data;
+							first = Math.floor(offset / +lazyscroll);
+							last = Math.ceil((offset + height) / +lazyscroll);
+							render();
+						} else if (action === 'setElementHeight') {
+							lazyscroll = data.height;
+						}
+					});
+
+				});
+			} else {
+				sweep.add(modelstream.at(([state]) => {
+
+					let childs;
+
+					try {
+						childs = getfrompath(state, this.prop.kit.getter);
+					} catch (e) {
+						childs = [];
+					}
+
+					let domTreePlacment = container.begin;
+
+					const deleted = [...store];
+
+					childs.map(child => {
+						const signature = calcsignature(child, this.prop.kit.prop);
+						const exist = store.find(({ signature: $ }) => signatureEquals(signature, $));
+						if (!exist) {
+							const box = new PlaceHolderContainer(this, { type: "item" });
+							domTreePlacment.after(box.target);
+							domTreePlacment = box.end;
+							cache.createIfNotExist(child, signature)
+								.at(([{ stage, container }]) => {
+									container.remove();
+									if (stage === 1) {
+										box.append(container.target);
+									}
+								});
+							store.push({ signature, box });
+						} else {
+							removeElementFromArray(deleted, exist);
+							if (exist.box.begin !== domTreePlacment.nextSibling) {
+								exist.box.restore();
+								domTreePlacment.after(exist.box.target);
+							}
+							domTreePlacment = exist.box.end;
+						}
+					});
+
+					deleted.map(item => {
+						const deleted = store.indexOf(item);
+						store.splice(deleted, 1);
+						item.box.restore();
+					});
+				}));
+			}
 
 		} );
 
@@ -662,7 +768,9 @@ export default class HTMLView extends LiveSchema {
 				return true;
 			}
 		} );
-		
+
+		const lazyscroll = node.getAttribute('lazyscroll') || node.hasAttribute('lazyscroll');
+
 		const streamplug = [...node.children]
 			.filter(byTagName("script"))
 			.filter(byAttr("data-source-type", "stream-source"))
@@ -721,6 +829,7 @@ export default class HTMLView extends LiveSchema {
 			stream,         //link to model stream todo obsolete io
 			resources,      //related resources
 			literal,        //string template precompiled literal
+			lazyscroll,			//height for children element, or autodetect if true
 		};
 		
 		const res = src.acid !== -1 && src.lift( [ uvk, prop ], src ) ||

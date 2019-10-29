@@ -189,6 +189,45 @@ export default class ActiveNodeTarget {
         this.template = this.type === 'data' ? node.textContent : null;
         this.intl = null;
         this.argv = null;
+
+        this.lazyscroll = src.prop.lazyscroll;
+        if (this.lazyscroll && src.lazyscrollControlStream) {
+            let lazyscrollControlStreamHook;
+
+            const scroll = (height, offset) => {
+                lazyscrollControlStreamHook({
+                    action: 'scroll',
+                    data: { height, offset }
+                });
+            };
+
+            lazyscrollControlStreamHook = src.lazyscrollControlStream.at(([{ elements }]) => {
+                if (this.lazyscroll !== true) {
+                    node.firstElementChild.style.height = +this.lazyscroll * elements + 'px';
+                    scroll(node.offsetHeight, node.scrollTop);
+                } else {
+                    const observer = new MutationObserver((list) => {
+                        const height = node.firstElementChild.firstElementChild && node.firstElementChild.firstElementChild.offsetHeight;
+                        if (height) {
+                            lazyscrollControlStreamHook({
+                                action: 'setElementHeight',
+                                data: { height }
+                            });
+                            node.firstElementChild.style.height = +height * elements + 'px';
+                        }
+                        scroll(node.offsetHeight, node.scrollTop);
+                        observer.disconnect();
+                    });
+                    observer.observe(node.firstElementChild, { childList: true });
+                }
+
+            });
+            const scrollHandler = (evt) => {
+                scroll(evt.target.offsetHeight, node.scrollTop);
+            };
+            node.addEventListener('scroll', scrollHandler);
+        }
+
     }
 
     transition(intl) {
