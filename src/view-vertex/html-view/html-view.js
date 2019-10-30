@@ -153,45 +153,61 @@ export default class HTMLView extends LiveSchema {
 
 					let prev = {};
 
-					const render = () => {
-						if (!equal(prev, { first, last, childs })) {
-							prev = { first, last, childs };
+          const render = () => {
+            if (!equal(prev, { first, last, childs })) {
 
-							let domTreePlacment = container.begin;
-							const deleted = [...store];
+              prev = { first, last, childs };
 
-							childs.map((child, i) => {
-								const signature = calcsignature(child, this.prop.kit.prop);
-								const exist = store.find(({ signature: $ }) => signatureEquals(signature, $));
+              let domTreePlacment = container.begin;
+              const deleted = [...store];
+              childs.map((child, i) => {
+                const signature = calcsignature(child, this.prop.kit.prop);
+                const exist = store.find(({ signature: $ }) => signatureEquals(signature, $));
 
-								if (i >= first - overscan && i <= last - 1 + overscan) {
-									if (!exist) {
-										const box = new PlaceHolderContainer(this, { type: 'item' });
-										domTreePlacment.after(box.target);
-										domTreePlacment = box.end;
+                if (i >= first - overscan && i < last + overscan) {
+                  if (!exist) {
+                    const box = new PlaceHolderContainer(this, { type: 'item' });
+                    domTreePlacment.after(box.target);
+                    domTreePlacment = box.end;
 
-										cache.createIfNotExist(child, signature)
-											.at(([{ stage, container }]) => {
-												container.remove();
-												if (container.target.firstElementChild && lazyscroll !== true) {
-													container.target.firstElementChild.style.top = i * +lazyscroll + 'px';
-													container.target.firstElementChild.style.position = 'absolute';
-												}
-												if (stage === 1) {
-													box.append(container.target);
-												}
-											});
-										store.push({ signature, box });
-									} else {
-										removeElementFromArray(deleted, exist);
-										if (exist.box.begin !== domTreePlacment.nextSibling) {
-											exist.box.restore();
-											domTreePlacment.after(exist.box.target);
-										}
-										domTreePlacment = exist.box.end;
-									}
-								}
-							});
+                    if (lazyscroll === true) {
+                      if (i > 0) return;
+                      cache.createIfNotExist(child, signature)
+                        .at(([{ stage, container }]) => {
+                          container.remove();
+                          container.target.firstElementChild.style.top = '0px';
+                          container.target.firstElementChild.style.position = 'absolute';
+                          if (stage === 1) {
+                            box.append(container.target);
+                          }
+                        });
+
+                    } else {
+                      cache.createIfNotExist(child, signature)
+                        .at(([{ stage, container }]) => {
+                          container.remove();
+                          container.target.firstElementChild.style.top = i * +lazyscroll + 'px';
+                          container.target.firstElementChild.style.position = 'absolute';
+                          if (stage === 1) {
+                            box.append(container.target);
+                          }
+                        });
+
+                    }
+                    store.push({ signature, box });
+                  } else {
+                    removeElementFromArray(deleted, exist);
+                    if (exist.box.begin !== domTreePlacment.nextSibling) {
+                      exist.box.restore();
+                      exist.box.target.firstElementChild.style.top = i * +lazyscroll + 'px';
+                      exist.box.target.firstElementChild.style.position = 'absolute';
+                      domTreePlacment.after(exist.box.target);
+                    }
+
+                    domTreePlacment = exist.box.end;
+                  }
+                }
+              });
 
               deleted.map(item => item.box.restore());
 
@@ -200,8 +216,9 @@ export default class HTMLView extends LiveSchema {
                   store.splice(idx, 1);
                 }
               });
-						}
-					};
+            }
+          };
+
 
 					modelstream.at(([state]) => {
 						try {
