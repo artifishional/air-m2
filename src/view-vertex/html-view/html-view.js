@@ -199,8 +199,10 @@ export default class HTMLView extends LiveSchema {
                     removeElementFromArray(deleted, exist);
                     if (exist.box.begin !== domTreePlacment.nextSibling) {
                       exist.box.restore();
-                      exist.box.target.firstElementChild.style.top = i * +lazyscroll + 'px';
-                      exist.box.target.firstElementChild.style.position = 'absolute';
+                      if (exist.box.target.firstElementChild) {
+                        exist.box.target.firstElementChild.style.top = i * +lazyscroll + 'px';
+                        exist.box.target.firstElementChild.style.position = 'absolute';
+                      }
                       domTreePlacment.after(exist.box.target);
                     }
 
