@@ -176,7 +176,7 @@ export class Layer extends BaseLayer {
 				null, //({...args} = {}) => this.handler({ dissolve: false, ...args }),
 				this.layer.prop.key,
 				this.signature,
-				(action, {...args} = {}) => this.handler({ dissolve: false, action, ...args }),
+				(action, args) => this.handler(action, args),
 			);
 		}
 	}
