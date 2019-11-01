@@ -24,18 +24,52 @@ import spreading from "air-m2/src/view-vertex/html-view/spreading";
 let UNIQUE_VIEW_KEY = 0;
 let UNIQUE_IMAGE_KEY = 0;
 
+const CACHE_LIFETIME = 5000;
+
 class Cached {
 
-	constructor({ constructor }) {
+	constructor ({ constructor }) {
 		this.__cache = [];
 		this.constructor = constructor;
+		this.timer = setInterval(this.clearCache.bind(this), CACHE_LIFETIME);
 	}
 
-	createIfNotExist( data, signature ) {
-		let exist = this.__cache.find( ({ signature: x }) => signatureEquals(signature, x) );
-		if(!exist) {
-			exist = { signature, cell: this.constructor(data, data) };
+	clearCache () {
+		this.__cache.map((element, idx) => {
+			if (window.performance.now() > element.lastAccessTime + CACHE_LIFETIME) {
+				if (element.hook) {
+					element.hook({ dissolve: true });
+					this.__cache.splice(idx, 1);
+				}
+			}
+		});
+	}
+
+	clear () {
+		this.__cache.map((element, idx) => {
+			if (element.hook) {
+				element.hook({ dissolve: true });
+				this.__cache.splice(idx, 1);
+			}
+		});
+	}
+
+	pushHook (hook, signature) {
+		let exist = this.__cache.find(({ signature: x }) => signatureEquals(signature, x));
+		if (exist) {
+			exist.hook = hook
+		} else {
+			throw `element does not exist`
+		}
+	}
+
+	createIfNotExist (data, signature) {
+		let exist = this.__cache.find(({ signature: x }) => signatureEquals(signature, x));
+		if (!exist) {
+			exist = { signature, cell: this.constructor(data, data), lastAccessTime: window.performance.now() };
 			this.__cache.push(exist);
+		} else {
+			exist.lastAccessTime = window.performance.now();
 		}
 		return exist.cell;
 	}
@@ -84,7 +118,7 @@ export default class HTMLView extends LiveSchema {
 		signature: parentContainerSignature = null,
 		...args
 	} ) {
-		
+
 		function removeElementFromArray(arr, elem) {
 			const indexOf = arr.indexOf(elem);
 			if(indexOf === -1) {
@@ -92,11 +126,11 @@ export default class HTMLView extends LiveSchema {
 			}
 			return arr.splice(indexOf, 1)[0];
 		}
-		
+
 		return stream( ( emt, { sweep, over }) => {
-			
+
 			const container = new PlaceHolderContainer( this, { type: "kit" } );
-			
+
 			emt( [ {
 				stage: 1,
 				container,
@@ -107,12 +141,12 @@ export default class HTMLView extends LiveSchema {
 			//todo need layers sup
 			const modelvertex = layers.get(this.acid) || layers.get(-1);
 			const modelstream = modelvertex.layer.obtain("", modelvertex.vars);
-			
+
 			const cache = new Cached( {
 				constructor: (data) => {
-					
+
 					const signature = calcsignature(data, this.prop.kit.prop);
-					
+
 					const modelvertex = new ModelVertex(["$$", {
 						glassy: true,
 						source: () => modelstream.map(([state]) => {
@@ -123,7 +157,7 @@ export default class HTMLView extends LiveSchema {
 							.filter(Boolean)
 							.distinct(equal)
 					}]);
-					
+
 					let sign;
 					if(typeof signature !== "object") {
 						sign = { default: signature };
@@ -138,10 +172,10 @@ export default class HTMLView extends LiveSchema {
 						{ signature: {...sign, $: parentContainerSignature }, ...args },
 						{ layers: _layers, parentViewLayers }
 					);
-					
+
 				}
 			} );
-			
+
 			over.add(() => cache.clear());
 
 			const store = [];
@@ -170,30 +204,32 @@ export default class HTMLView extends LiveSchema {
                     domTreePlacment.after(box.target);
                     domTreePlacment = box.end;
 
-                    if (lazyscroll === true) {
-                      if (i > 0) return;
-                      cache.createIfNotExist(child, signature)
-                        .at(([{ stage, container }]) => {
-                          container.remove();
-                          container.target.firstElementChild.style.top = '0px';
-                          container.target.firstElementChild.style.position = 'absolute';
-                          if (stage === 1) {
-                            box.append(container.target);
-                          }
-                        });
+										if (lazyscroll === true) {
+											if (i > 0) return;
+											const hook = cache.createIfNotExist(child, signature)
+												.at(([{ stage, container }]) => {
+													cache.pushHook(hook, signature);
+													container.remove();
+													container.target.firstElementChild.style.top = '0px';
+													container.target.firstElementChild.style.position = 'absolute';
+													if (stage === 1) {
+														box.append(container.target);
+													}
+												});
 
-                    } else {
-                      cache.createIfNotExist(child, signature)
-                        .at(([{ stage, container }]) => {
-                          container.remove();
-                          container.target.firstElementChild.style.top = i * +lazyscroll + 'px';
-                          container.target.firstElementChild.style.position = 'absolute';
-                          if (stage === 1) {
-                            box.append(container.target);
-                          }
-                        });
+										} else {
+											const hook = cache.createIfNotExist(child, signature)
+												.at(([{ stage, container }]) => {
+													cache.pushHook(hook, signature);
+													container.remove();
+													container.target.firstElementChild.style.top = i * +lazyscroll + 'px';
+													container.target.firstElementChild.style.position = 'absolute';
+													if (stage === 1) {
+														box.append(container.target);
+													}
+												});
 
-                    }
+										}
                     store.push({ signature, box });
                   } else {
                     removeElementFromArray(deleted, exist);
@@ -376,7 +412,7 @@ export default class HTMLView extends LiveSchema {
 		return stream( (emt, { sweep, over }) => {
 
 			const container = new PlaceHolderContainer(this, { type: "layers" });
-			
+
 			let state = {
 				acids: this.layers.map( ({ acid }) => acid ),
 				acid: this.acid,
@@ -401,7 +437,7 @@ export default class HTMLView extends LiveSchema {
 				})
 				.filter( Boolean )
 			);
-			
+
 			sweep.add( combine( [
 				...this.layers.map( (layer) => layer.createNodeEntity(  ) ),
 				this.createChildrenEntity( args, { layers, parentViewLayers } ),
@@ -436,7 +472,7 @@ export default class HTMLView extends LiveSchema {
 					})
 					.filter( Boolean )
 				);
-				
+
 				const slots = container.slots();
 				if(children.length) {
 					if(slots.length) {
@@ -469,17 +505,17 @@ export default class HTMLView extends LiveSchema {
 
 				//todo hack clear unused slots ( when cross template mix to exmpl )
 				slots.map( ({ slot }) => slot.remove() );
-				
+
 				const targets = [ ...container.targets("actives", [] ) ];
-				
+
 				if(targets.length) {
-					
+
 					if(this.prop.styles.length) {
 						targets.map(({node}) =>
 							node.setAttribute(`data-scope-acid-${this.acid}`, "")
 						);
 					}
-					
+
 					rlayers.push( ...currentCommonViewLayers.map( ({ layer, schema }) => {
 						return layer.createLayer(
 							{ schema },
@@ -530,7 +566,7 @@ export default class HTMLView extends LiveSchema {
 			}));
 		});
 	}
-	
+
 	teeFSignatureCheck( layers ) {
 		return this.layers.every( ({ acid, prop: { teeF } }) => teeF ? teeF(layers.get(acid)) : true );
 	}
@@ -540,7 +576,7 @@ export default class HTMLView extends LiveSchema {
 			return this.createNextLayers( args, manager );
 		}
 		const { layers, parentViewLayers } = manager;
-		
+
 		const teeFLayers = this.layers
 			.filter( ({ prop: { teeF } }) => teeF )
 			.map( ({ acid }) => acid );
@@ -668,22 +704,22 @@ export default class HTMLView extends LiveSchema {
 			.map(x => x._obtain( [], args, { layers, parentViewLayers } ))
 		);
 	}
-	
+
 	parse(node, src, { pack } ) {
 		return this.constructor.parse( node, src, { pack } );
 	}
-	
+
 	static parse( node, src, { pack, type = "unit" } ) {
 
 		let uvk = `${++UNIQUE_VIEW_KEY}`;
-		
+
 		if(!(node instanceof Element)) {
 			return new HTMLView( ["", {}], src, { createEntity: node } );
 		}
-		
+
 		const comments = document.createTreeWalker(node, NodeFilter.SHOW_COMMENT);
 		while(comments.nextNode()) comments.currentNode.remove();
-		
+
 		//TODO: (improvement required)
 		// currently clones the entire contents and then
 		// removes it from the parent element to solve the shared units problem
@@ -695,7 +731,7 @@ export default class HTMLView extends LiveSchema {
 		const { path = "./", key: pkey = uvk } = (src || {}).prop || {};
 
 		let key = node.getAttribute("key");
-		
+
 		if(key !== null) {
 			if(/[`"'{}\]\[]/.test(key)) {
 				key = JSON5.parse(key);
@@ -705,7 +741,7 @@ export default class HTMLView extends LiveSchema {
 		else {
 			key = pkey;
 		}
-		
+
 		const handlers = [ ...node.attributes ]
 			.filter( ({ name }) => events.includes(name) || name.indexOf("on:") === 0 )
 			.map( ({ name, value }) => ({
@@ -731,7 +767,7 @@ export default class HTMLView extends LiveSchema {
             ];
 
 		const styles = [...node.children].filter(byTagName("STYLE"));
-		
+
 		styles.map( style => {
 			//todo hack
 			style.pack = pack;
@@ -741,16 +777,16 @@ export default class HTMLView extends LiveSchema {
 
 		const sounds = [...node.children].filter(byTagName("SOUND"));
 		resources.push(...sounds.map( sound => resource(pack, { type: "sound", name: sound.getAttribute("name") || "", rel: sound.getAttribute("rel") || ""}) ));
-		
+
 		const teeF = cutteeF(node) || cuttee(node, key);
 		const kit = cutkit(node, key);
         const preload =
 			!["", "true"].includes(node.getAttribute("nopreload")) &&
 			!["", "true"].includes(node.getAttribute("lazy"));
-        
+
         const useOwnerProps = node.parentNode.tagName.toUpperCase() === "UNIT";
 		node.remove();
-        
+
         const controlled = [ ...node.childNodes ].some( node => {
 			if(node.nodeType === 1 && !["UNIT", "PLUG", "STYLE"].includes(node.tagName.toUpperCase())) {
 				return true;
@@ -776,7 +812,7 @@ export default class HTMLView extends LiveSchema {
 				src.remove();
 				return res;
 			} );
-		
+
 		const plug = [...node.children]
 			.filter(byTagName("script"))
 			.filter(byAttr("data-source-type", "view-source"))
@@ -791,7 +827,7 @@ export default class HTMLView extends LiveSchema {
 				src.remove();
 				return res;
 			} );
-   
+
 		const keyframes = [];
 
 		const literal = cutliterals( node );
@@ -822,10 +858,10 @@ export default class HTMLView extends LiveSchema {
 			literal,        //string template precompiled literal
 			lazyscroll,			//height for children element, or autodetect if true
 		};
-		
+
 		const res = src.acid !== -1 && src.lift( [ uvk, prop ], src ) ||
 			new HTMLView( [ uvk, prop ], src );
-		
+
 		//[...node.childNodes].map( next => setup( next, res.prop ));
 
 		res.append(...[...node.children].reduce((acc, next) =>
@@ -836,20 +872,20 @@ export default class HTMLView extends LiveSchema {
 
 		res.prop.node = document.createDocumentFragment();
 		res.prop.node.append( ...node.childNodes );
-		
+
 		/*[...styles].map( style => {
 			style.textContent = style.textContent.replace(/:scope/g, `[data-scope-acid-${res.acid}]`);
 		} );*/
-		
+
 		/*styles.length && [...res.prop.node.children]
 			.map( node => {
 				node.setAttribute(`data-scope-acid-${res.acid}`, "");
 			} );*/
-		
+
 		return res;
-		
+
 	}
-	
+
 	mergeProperties( name, value ) {
 		if(name === "stream") {
 			return this.prop.stream;
@@ -906,7 +942,7 @@ export default class HTMLView extends LiveSchema {
 			return super.mergeProperties( name, value );
 		}
 	}
-	
+
 }
 
 function cutliterals (node) {
