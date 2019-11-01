@@ -207,16 +207,20 @@ export default class ActiveNodeTarget {
                     scroll(node.offsetHeight, node.scrollTop);
                 } else {
                     const observer = new MutationObserver((list) => {
-                        const height = node.firstElementChild.firstElementChild && node.firstElementChild.firstElementChild.offsetHeight;
-                        if (height) {
-                            lazyscrollControlStreamHook({
-                                action: 'setElementHeight',
-                                data: { height }
-                            });
-                            node.firstElementChild.style.height = +height * elements + 'px';
+                        const el = node.firstElementChild.firstElementChild;
+                        const style = window.getComputedStyle(el);
+                        if (el && el.offsetHeight) {
+                            const height = el.offsetHeight + parseInt(style.marginBottom) + parseInt(style.marginTop);
+                            if (height) {
+                                lazyscrollControlStreamHook({
+                                    action: 'setElementHeight',
+                                    data: { height }
+                                });
+                                node.firstElementChild.style.height = +height * elements + 'px';
+                            }
+                            scroll(node.offsetHeight, node.scrollTop);
+                            observer.disconnect();
                         }
-                        scroll(node.offsetHeight, node.scrollTop);
-                        observer.disconnect();
                     });
                     observer.observe(node.firstElementChild, { childList: true });
                 }
