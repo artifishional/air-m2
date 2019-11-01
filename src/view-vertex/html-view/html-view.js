@@ -943,14 +943,14 @@ function parseKeyFrames( { node } ) {
 						node.getAttribute("offset"),
 						spreading(
 							node.getAttribute("prop"),
-							EMPTY_OBJECT,
+							null,
 							EMPTY_FUNCTION,
 							parseKeyProps,
 						),
 					];
 				} );
 			node.remove();
-			return [ action, spreading(node.getAttribute("prop")), ...keys ];
+			return [ action, spreading(node.getAttribute("prop"), null), ...keys ];
 		} );
 	}
 	return res;
