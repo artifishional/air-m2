@@ -204,7 +204,11 @@ export default class ActiveNodeTarget {
             lazyscrollControlStreamHook = src.lazyscrollControlStream.at(([{ elements }]) => {
                 if (this.lazyscroll !== true) {
                     node.firstElementChild.style.height = +this.lazyscroll * elements + 'px';
-                    scroll(node.offsetHeight, node.scrollTop);
+                    const initScroll = () => {
+                      scroll(node.offsetHeight, node.scrollTop);
+                      node.removeEventListener('DOMNodeInsertedIntoDocument', initScroll);
+                    };
+                    node.addEventListener('DOMNodeInsertedIntoDocument', initScroll);
                 } else {
                     const observer = new MutationObserver((list) => {
                         const el = node.firstElementChild.firstElementChild;

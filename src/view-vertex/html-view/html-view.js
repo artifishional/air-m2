@@ -31,7 +31,7 @@ class Cached {
 	constructor ({ constructor }) {
 		this.__cache = [];
 		this.constructor = constructor;
-		this.timer = setInterval(this.clearCache.bind(this), CACHE_LIFETIME);
+		// this.timer = setInterval(this.clearCache.bind(this), CACHE_LIFETIME);
 	}
 
 	clearCache () {
@@ -233,15 +233,12 @@ export default class HTMLView extends LiveSchema {
                     store.push({ signature, box });
                   } else {
                     removeElementFromArray(deleted, exist);
-                    if (exist.box.begin !== domTreePlacment.nextSibling) {
-                      exist.box.restore();
-                      if (exist.box.target.firstElementChild) {
-                        exist.box.target.firstElementChild.style.top = i * +lazyscroll + 'px';
-                        exist.box.target.firstElementChild.style.position = 'absolute';
-                      }
-                      domTreePlacment.after(exist.box.target);
+                    exist.box.restore();
+                    if (exist.box.target.firstElementChild) {
+                      exist.box.target.firstElementChild.style.top = i * +lazyscroll + 'px';
+                      exist.box.target.firstElementChild.style.position = 'absolute';
                     }
-
+                    domTreePlacment.after(exist.box.target);
                     domTreePlacment = exist.box.end;
                   }
                 }
