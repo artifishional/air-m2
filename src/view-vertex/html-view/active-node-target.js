@@ -1,5 +1,5 @@
 import {NODE_TYPES} from "./def"
-import { getfrompath } from "../../utils"
+import { getfrompath, equal } from "../../utils"
 
 
 class NumberFormat {
@@ -193,6 +193,7 @@ export default class ActiveNodeTarget {
         this.lazyscroll = src.prop.lazyscroll;
         if (this.lazyscroll && src.lazyscrollControlStream) {
             let lazyscrollControlStreamHook;
+            let prevSize = { height: 0, width: 0 };
 
             const scroll = (height, offset) => {
                 lazyscrollControlStreamHook({
@@ -205,8 +206,9 @@ export default class ActiveNodeTarget {
                 if (this.lazyscroll !== true) {
                     node.firstElementChild.style.height = +this.lazyscroll * elements + 'px';
                     const initScroll = () => {
-                      scroll(node.offsetHeight, node.scrollTop);
-                      node.removeEventListener('DOMNodeInsertedIntoDocument', initScroll);
+                        prevSize = { height: node.offsetHeight, width: node.offsetWidth };
+                        scroll(node.offsetHeight, node.scrollTop);
+                        node.removeEventListener('DOMNodeInsertedIntoDocument', initScroll);
                     };
                     node.addEventListener('DOMNodeInsertedIntoDocument', initScroll);
                 } else {
@@ -231,9 +233,21 @@ export default class ActiveNodeTarget {
 
             });
             const scrollHandler = (evt) => {
-                scroll(evt.target.offsetHeight, node.scrollTop);
+                scroll(node.offsetHeight, node.scrollTop);
             };
+            const resizeHandler = (evt) => {
+                const currentSize = { height: node.offsetHeight, width: node.offsetWidth };
+                if (!equal(prevSize, currentSize)) {
+                    prevSize = currentSize;
+                    scroll(node.offsetHeight, node.scrollTop);
+                }
+            };
+            window.addEventListener('resize', resizeHandler);
             node.addEventListener('scroll', scrollHandler);
+            node.addEventListener('DOMNodeRemovedFromDocument', () => {
+                node.removeEventListener('scroll', scrollHandler);
+                window.removeEventListener('resize', resizeHandler)
+            });
         }
 
     }
