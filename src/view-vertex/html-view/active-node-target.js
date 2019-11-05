@@ -1,6 +1,5 @@
-import {NODE_TYPES} from "./def"
-import { getfrompath, equal } from "../../utils"
-
+import { NODE_TYPES } from './def';
+import { equal, getfrompath } from '../../utils';
 
 class NumberFormat {
 
@@ -242,11 +241,16 @@ export default class ActiveNodeTarget {
                     scroll(node.offsetHeight, node.scrollTop);
                 }
             };
-            window.addEventListener('resize', resizeHandler);
-            node.addEventListener('scroll', scrollHandler);
+
+            node.addEventListener('DOMNodeInsertedIntoDocument', () => {
+              window.addEventListener('resize', resizeHandler);
+              node.addEventListener('scroll', scrollHandler);
+              scroll(0, 0);
+            });
+
             node.addEventListener('DOMNodeRemovedFromDocument', () => {
-                node.removeEventListener('scroll', scrollHandler);
-                window.removeEventListener('resize', resizeHandler)
+              node.removeEventListener('scroll', scrollHandler);
+              window.removeEventListener('resize', resizeHandler)
             });
         }
 

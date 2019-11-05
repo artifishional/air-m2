@@ -268,8 +268,10 @@ export default class HTMLView extends LiveSchema {
 					hook.add(({ action, data }) => {
 						if (action === 'scroll') {
 							const { height, offset } = data;
-							first = Math.floor(offset / +lazyscroll);
-							last = Math.ceil((offset + height) / +lazyscroll);
+              if (height !== 0) {
+                first = Math.floor(offset / +lazyscroll);
+                last = Math.ceil((offset + height) / +lazyscroll);
+              }
 							render();
 						} else if (action === 'setElementHeight') {
 							lazyscroll = data.height;
