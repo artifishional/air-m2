@@ -570,7 +570,7 @@ export default class HTMLView extends LiveSchema {
 						}
 						if( stage === 1 ) {
 							if(state.active) {
-								childHook({action: "fade-in"});
+								childHook("fade-in");
 								container.begin.after( _inner.target );
 							}
 							else {
@@ -613,14 +613,14 @@ export default class HTMLView extends LiveSchema {
 							}
 							else {
 								if(state.stage === 1) {
-									childHook({action: "fade-in"});
+									childHook("fade-in");
 									container.begin.after( _inner.target );
 								}
 							}
 						}
 						else {
 							if(childHook) {
-								childHook({action: "fade-out"});
+								childHook("fade-out");
 							}
 						}
 					}

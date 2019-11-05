@@ -27,12 +27,12 @@ export class BaseLayer {
 				
 				controller.tocommand( ({action}) => {
 					if(action === "fade-in") {
-						this.animateHandler({ data: [ {}, { action: "fade-in" } ] });
+						this.animateHandler("fade-in");
 						this.state = { ...this.state, stage: 2 };
 						e( [ this.state ] );
 					}
 					else if(action === "fade-out") {
-						this.animateHandler({ data: [ {}, { action: "fade-out" } ] });
+						this.animateHandler("fade-out");
 					}
 				} );
 				
@@ -81,12 +81,12 @@ export class Layer extends BaseLayer {
 					!this.state.stage && this.complete(e);
 					let state, action = "default";
 					if(Array.isArray(data) && data.length < 3) {
-						[state, action = "default"] = data;
+						[state, { name: action = "default" } = { name: "default" }] = data;
 					}
 					else {
 						state = data;
 					}
-					this.animateHandler( { data: [ state, action ] } );
+					this.animateHandler( action, state );
 				}
 			} );
 		}
