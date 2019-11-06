@@ -180,62 +180,57 @@ export default class HTMLView extends LiveSchema {
 
 			const store = [];
 			let lazyscroll = this.parent.prop.lazyscroll;
-			if (lazyscroll) {
-				this.parent.lazyscrollControlStream = stream((emt, { sweep, hook }) => {
-					let first = 0, last = 1, childs;
-					const overscan = 1;
+      if (lazyscroll) {
+        this.parent.lazyscrollControlStream = stream((emt, { sweep, hook }) => {
+          let first = 0, last = 1, childs = [];
+          const overscan = 1;
 
-					let prev = {};
+          let prev = { first, last, childs };
 
           const render = () => {
+
+            if (childs === undefined) {
+              childs = []
+            }
+
             if (!equal(prev, { first, last, childs })) {
 
               prev = { first, last, childs };
 
               let domTreePlacment = container.begin;
               const deleted = [...store];
+
               childs.map((child, i) => {
                 const signature = calcsignature(child, this.prop.kit.prop);
                 const exist = store.find(({ signature: $ }) => signatureEquals(signature, $));
 
                 if (i >= first - overscan && i < last + overscan) {
+                  const elementHeight = lazyscroll === true ? 0 : +lazyscroll;
                   if (!exist) {
                     const box = new PlaceHolderContainer(this, { type: 'item' });
                     domTreePlacment.after(box.target);
                     domTreePlacment = box.end;
 
-										if (lazyscroll === true) {
-											if (i > 0) return;
-											const hook = cache.createIfNotExist(child, signature)
-												.at(([{ stage, container }]) => {
-													cache.pushHook(hook, signature);
-													container.remove();
-													container.target.firstElementChild.style.top = '0px';
-													container.target.firstElementChild.style.position = 'absolute';
-													if (stage === 1) {
-														box.append(container.target);
-													}
-												});
+                    if (lazyscroll === true && i > 0) {
+                      return;
+                    }
 
-										} else {
-											const hook = cache.createIfNotExist(child, signature)
-												.at(([{ stage, container }]) => {
-													cache.pushHook(hook, signature);
-													container.remove();
-													container.target.firstElementChild.style.top = i * +lazyscroll + 'px';
-													container.target.firstElementChild.style.position = 'absolute';
-													if (stage === 1) {
-														box.append(container.target);
-													}
-												});
-
-										}
+                    const hook = cache.createIfNotExist(child, signature)
+                      .at(([{ stage, container }]) => {
+                        container.remove();
+                        container.target.firstElementChild.style.top = i * elementHeight + 'px';
+                        container.target.firstElementChild.style.position = 'absolute';
+                        if (stage === 1) {
+                          box.append(container.target);
+                        }
+                      });
+                    cache.pushHook(hook, signature);
                     store.push({ signature, box });
                   } else {
                     removeElementFromArray(deleted, exist);
                     exist.box.restore();
                     if (exist.box.target.firstElementChild) {
-                      exist.box.target.firstElementChild.style.top = i * +lazyscroll + 'px';
+                      exist.box.target.firstElementChild.style.top = i * elementHeight + 'px';
                       exist.box.target.firstElementChild.style.position = 'absolute';
                     }
                     domTreePlacment.after(exist.box.target);
@@ -254,32 +249,32 @@ export default class HTMLView extends LiveSchema {
             }
           };
 
+          modelstream.at(([state]) => {
+            try {
+              childs = getfrompath(state, this.prop.kit.getter);
+            } catch (e) {
+              childs = [];
+            }
 
-					modelstream.at(([state]) => {
-						try {
-							childs = getfrompath(state, this.prop.kit.getter);
-						} catch (e) {
-							childs = [];
-						}
-						emt([{ elements: childs.length }]);
-						render();
-					});
+            emt([{ elements: childs.length }]);
+            render();
+          });
 
-					hook.add(({ action, data }) => {
-						if (action === 'scroll') {
-							const { height, offset } = data;
+          hook.add(({ action, data }) => {
+            if (action === 'scroll') {
+              const { height, offset } = data;
               if (height !== 0) {
                 first = Math.floor(offset / +lazyscroll);
                 last = Math.ceil((offset + height) / +lazyscroll);
               }
-							render();
-						} else if (action === 'setElementHeight') {
-							lazyscroll = data.height;
-						}
-					});
+              render();
+            } else if (action === 'setElementHeight') {
+              lazyscroll = data.height;
+            }
+          });
 
-				});
-			} else {
+        });
+      } else {
 				sweep.add(modelstream.at(([state]) => {
 
 					let childs;
