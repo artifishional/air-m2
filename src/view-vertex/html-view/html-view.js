@@ -18,6 +18,7 @@ import { NODE_TYPES } from "./def"
 import { Layer, BaseLayer } from "./layer"
 import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
+import LazyActiveNodeTarget from "./lazy-active-node-target"
 import { ModelVertex } from "../../model-vertex"
 import spreading from "air-m2/src/view-vertex/html-view/spreading";
 
@@ -94,8 +95,13 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	createActiveNodeTarget(node, resources) {
-		return new ActiveNodeTarget(this, node, resources);
+		if (this.prop.lazyscroll) {
+			return new LazyActiveNodeTarget(this, node, resources);
+		} else {
+			return new ActiveNodeTarget(this, node, resources);
+		}
 	}
+
 
 	findByLabel(label) {
 		if(this.layers.some(({ prop: { label: x } }) => x === label)) {

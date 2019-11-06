@@ -1,5 +1,5 @@
 import { NODE_TYPES } from './def';
-import { equal, getfrompath } from '../../utils';
+import { getfrompath } from '../../utils';
 
 class NumberFormat {
 
@@ -188,72 +188,6 @@ export default class ActiveNodeTarget {
         this.template = this.type === 'data' ? node.textContent : null;
         this.intl = null;
         this.argv = null;
-
-        this.lazyscroll = src.prop.lazyscroll;
-        if (this.lazyscroll && src.lazyscrollControlStream) {
-            let lazyscrollControlStreamHook;
-            let prevSize = { height: 0, width: 0 };
-
-            const scroll = (height, offset) => {
-                lazyscrollControlStreamHook({
-                    action: 'scroll',
-                    data: { height, offset }
-                });
-            };
-
-            lazyscrollControlStreamHook = src.lazyscrollControlStream.at(([{ elements }]) => {
-                if (this.lazyscroll !== true) {
-                    node.firstElementChild.style.height = +this.lazyscroll * elements + 'px';
-                    const initScroll = () => {
-                        prevSize = { height: node.offsetHeight, width: node.offsetWidth };
-                        scroll(node.offsetHeight, node.scrollTop);
-                        node.removeEventListener('DOMNodeInsertedIntoDocument', initScroll);
-                    };
-                    node.addEventListener('DOMNodeInsertedIntoDocument', initScroll);
-                } else {
-                    const observer = new MutationObserver((list) => {
-                        const el = node.firstElementChild.firstElementChild;
-                        const style = window.getComputedStyle(el);
-                        if (el && el.offsetHeight) {
-                            const height = el.offsetHeight + parseInt(style.marginBottom) + parseInt(style.marginTop);
-                            if (height) {
-                                lazyscrollControlStreamHook({
-                                    action: 'setElementHeight',
-                                    data: { height }
-                                });
-                                node.firstElementChild.style.height = +height * elements + 'px';
-                            }
-                            scroll(node.offsetHeight, node.scrollTop);
-                            observer.disconnect();
-                        }
-                    });
-                    observer.observe(node.firstElementChild, { childList: true });
-                }
-
-            });
-            const scrollHandler = (evt) => {
-                scroll(node.offsetHeight, node.scrollTop);
-            };
-            const resizeHandler = (evt) => {
-                const currentSize = { height: node.offsetHeight, width: node.offsetWidth };
-                if (!equal(prevSize, currentSize)) {
-                    prevSize = currentSize;
-                    scroll(node.offsetHeight, node.scrollTop);
-                }
-            };
-
-            node.addEventListener('DOMNodeInsertedIntoDocument', () => {
-              window.addEventListener('resize', resizeHandler);
-              node.addEventListener('scroll', scrollHandler);
-              scroll(0, 0);
-            });
-
-            node.addEventListener('DOMNodeRemovedFromDocument', () => {
-              node.removeEventListener('scroll', scrollHandler);
-              window.removeEventListener('resize', resizeHandler)
-            });
-        }
-
     }
 
     transition(intl) {
