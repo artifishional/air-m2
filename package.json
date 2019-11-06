@@ -10,8 +10,8 @@
   },
   "dependencies": {
     "air-anime": "https://github.com/artifishional/air-anime.git",
-    "air-schema": "^0.2.0",
-    "air-stream": "^0.8.0",
+    "air-schema": "git+ssh://git@github.com/artifishional/air-schema.git#jsdom-test",
+    "air-stream": "git+ssh://git@github.com/artifishional/air-stream.git#res-loader-refactor",
     "css-tree": "^1.0.0-alpha.29",
     "fontfaceobserver": "^2.1.0",
     "howler": "^2.0.15",
