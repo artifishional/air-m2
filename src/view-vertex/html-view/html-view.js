@@ -1,5 +1,5 @@
-import { BOOLEAN } from "../../def"
-import { VIEW_PLUGINS } from "../../globals"
+import {BOOLEAN, EMPTY_FUNCTION, EMPTY_OBJECT} from "../../def"
+import { ENTRY_UNIT, VIEW_PLUGINS } from '../../globals';
 import { stream, combine, keyF, sync, fromPromise } from "air-stream"
 import StylesController from "./styles-controller"
 import {
@@ -19,6 +19,7 @@ import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
 import { ModelVertex } from "../../model-vertex"
 import resourceloader from "../../loader/resource-loader"
+import spreading from "air-m2/src/view-vertex/html-view/spreading";
 
 let UNIQUE_VIEW_KEY = 0;
 let UNIQUE_IMAGE_KEY = 0;
@@ -52,7 +53,7 @@ export default class HTMLView extends LiveSchema {
 		this.prop.stream = this.prop.stream || "";
 		this.prop.resources = this.prop.resources || [];
 		this.prop.handlers = this.prop.handlers || [];
-		this.prop.tee = this.prop.tee || null;
+		this.prop.teeF = this.prop.teeF || null;
 		this.prop.plug = this.prop.plug || [];
 		this.prop.label = this.prop.label || "";
 		this.prop.styles = this.prop.styles || [];
@@ -61,8 +62,12 @@ export default class HTMLView extends LiveSchema {
 		this.prop.node = this.prop.node || document.createDocumentFragment();
 	}
 
+	static createApplicationRoot( { path = ENTRY_UNIT } ) {
+		return new HTMLView( ["$", { use: [{ path, schtype: "html" }] }] );
+	}
+
 	createActiveNodeTarget(node, resources) {
-		return new ActiveNodeTarget(node, resources);
+		return new ActiveNodeTarget(this, node, resources);
 	}
 
 	findByLabel(label) {
@@ -135,22 +140,11 @@ export default class HTMLView extends LiveSchema {
 					}
 
 					modelvertex.parent = (layers.get(this.acid) || layers.get(-1)).layer;
-
 					const _layers = new Map([ ...layers, [this.acid, { layer: modelvertex, vars: {} } ]]);
-
-					//todo need refactor
-					if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
-						return this.createTeeEntity(
-							{ signature: {...sign, $: parentContainerSignature }, ...args },
-							{ layers: _layers, parentViewLayers }
-						);
-					}
-					else {
-						return this.createNextLayers(
-							{ signature: {...sign, $: parentContainerSignature }, ...args },
-							{ layers: _layers, parentViewLayers }
-						);
-					}
+					return this.createTeeEntity(
+						{ signature: {...sign, $: parentContainerSignature }, ...args },
+						{ layers: _layers, parentViewLayers }
+					);
 					
 				}
 			} );
@@ -162,7 +156,7 @@ export default class HTMLView extends LiveSchema {
 			sweep.add(modelstream.at( ([ state ]) => {
 				
 				let childs;
-				
+
 				try {
 					childs = getfrompath(state, this.prop.kit.getter);
 				}
@@ -192,7 +186,10 @@ export default class HTMLView extends LiveSchema {
 					}
 					else {
 						removeElementFromArray(deleted, exist);
-						domTreePlacment.after(exist.box.target);
+						if(exist.box.begin !== domTreePlacment.nextSibling) {
+							exist.box.restore();
+							domTreePlacment.after(exist.box.target);
+						}
 						domTreePlacment = exist.box.end;
 					}
 				} );
@@ -200,7 +197,7 @@ export default class HTMLView extends LiveSchema {
 				deleted.map( item => {
 					const deleted = store.indexOf(item);
 					store.splice(deleted, 1);
-					item.box.remove();
+					item.box.restore();
 				} );
 			} ));
 
@@ -272,13 +269,7 @@ export default class HTMLView extends LiveSchema {
 						over.add(this.createKitLayer( { $: { layers, parentViewLayers }, ...args } ).on(emt));
 					}
 					else {
-						//todo need refactor
-						if(this.layers.some( ({ prop: { tee } }) => tee ) || !this.prop.preload) {
-							over.add(this.createTeeEntity( args,  { layers, parentViewLayers } ).on(emt));
-						}
-						else {
-							over.add(this.createNextLayers( args, { layers, parentViewLayers } ).on(emt));
-						}
+						over.add(this.createTeeEntity( args,  { layers, parentViewLayers } ).on(emt));
 					}
 				} );
 		} );
@@ -450,20 +441,23 @@ export default class HTMLView extends LiveSchema {
 		});
 	}
 
-	teeSignatureCheck( layers ) {
-		return this.layers.every( ({ acid, prop: { tee } }) => signatureEquals( tee, layers.get(acid) ) );
+	teeFSignatureCheck( layers ) {
+		return this.layers.every( ({ acid, prop: { teeF } }) => teeF ? teeF(layers.get(acid)) : true );
 	}
 
-	createTeeEntity( args, { layers, parentViewLayers } ) {
+	createTeeEntity( args, manager ) {
+		if(!this.layers.some( ({ prop: { teeF } }) => teeF ) && this.prop.preload) {
+			return this.createNextLayers( args, manager );
+		}
+		const { layers, parentViewLayers } = manager;
 
-		const teeLayers = this.layers
-			.filter( ({ prop: { tee } }) => tee )
+		const teeFLayers = this.layers
+			.filter( ({ prop: { teeF } }) => teeF )
 			.map( ({ acid }) => acid );
-
-		const teeStreamLayers = new Map([...layers].filter( ([acid]) => teeLayers.includes(acid) ));
-		
+		const teeFStreamLayers = new Map([...layers].filter( ([acid]) => teeFLayers.includes(acid) ));
 		const modelschema = combine(
-			[...teeStreamLayers].map( ([, { layer, vars } ]) => layer.obtain("", vars) ),
+			[...teeFStreamLayers]
+				.map( ([, { layer, vars } ]) => layer.obtain("", vars) ),
 			(...layers) => layers.map( ly => Array.isArray(ly) ? ly[0] : ly )
 		);
 
@@ -482,24 +476,24 @@ export default class HTMLView extends LiveSchema {
 
 			//todo temporary solution
 			let connected = false;
-			if(!this.prop.preload) {
-				sweep.add( loaderHook = this.obtain( "@loader", {}, { layers } )
-					.at( ([ { stage, container: inner, target } ]) => {
-						if(state.stage === 0 && stage > 0) {
-							loaderContainer = inner;
-							state = { ...state, load: true, stage: 1, };
-							container.append( target );
-							emt.kf();
-							emt( [ state ] );
-						}
-					} )
-				);
-			}
 			const connect = () => {
 				if(connected) {
 					return ;
 				}
 				connected = true;
+				if(!loaderHook && !this.prop.preload) {
+					sweep.add( loaderHook = this.obtain( "@loader", {}, { layers } )
+						.at( ([ { stage, container: inner, target } ]) => {
+							if(state.stage === 0 && stage > 0) {
+								loaderContainer = inner;
+								state = { ...state, load: true, stage: 1, };
+								container.append( target );
+								emt.kf();
+								emt( [ state ] );
+							}
+						} )
+					);
+				}
 				sweep.add( childHook = view
 					.connectable( (data) => {
 						if(data !== keyF) {
@@ -537,8 +531,8 @@ export default class HTMLView extends LiveSchema {
 			const view = this.createNextLayers( args, { layers, parentViewLayers } );
 			sweep.add( modelschema.at( (data) => {
 
-				const active = this.teeSignatureCheck(
-					new Map([ ...teeStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) )
+				const active = this.teeFSignatureCheck(
+					new Map([ ...teeFStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) )
 				);
 
 				if(!active && !this.prop.preload) {
@@ -595,6 +589,10 @@ export default class HTMLView extends LiveSchema {
 		if(!(node instanceof Element)) {
 			return new HTMLView( [""], src, { createEntity: node } );
 		}
+
+
+		const comments = document.createTreeWalker(node, NodeFilter.SHOW_COMMENT);
+		while(comments.nextNode()) comments.currentNode.remove();
 
 		//TODO: (improvement required)
 		// currently clones the entire contents and then
@@ -653,12 +651,12 @@ export default class HTMLView extends LiveSchema {
 
 		const sounds = [...node.children].filter(byTagName("SOUND"));
 		resources.push(...sounds.map( sound =>
-      fromPromise(src.resourceloader(src.resourceloader, pack, {
-				type: "sound", name: sound.getAttribute("name") || "", rel: sound.getAttribute("rel") || ""
-			}) ))
-		);
+        fromPromise(src.resourceloader(src.resourceloader, pack, {
+                type: "sound", name: sound.getAttribute("name") || "", rel: sound.getAttribute("rel") || ""
+            }) ))
+        );
 
-		const tee = cuttee(node, key);
+        const teeF = cutteeF(node) || cuttee(node, key);
 		const kit = cutkit(node, key);
 		const preload =
 			!["", "true"].includes(node.getAttribute("nopreload")) &&
@@ -698,15 +696,17 @@ export default class HTMLView extends LiveSchema {
 
 		const keyframes = [];
 
+		const literal = cutliterals( node );
+
 		const prop = {
+			teeF,			//switch mode (advanced)
 			label,			//debug layer label
-			styles,         //inline style defenitions
+			styles,         //inline style definitions
 			streamplug,		//stream inline plugins
 			plug,			//view inline plugins
 			controlled,     //has one or more active childrens (text or node)
 			useOwnerProps,  //must consider parent props
 			kit,            //kit's container
-			tee,            //switch mode
 			preload,        //must be fully loaded before readiness
 			pack,           //current package
 			keyframes,      //animation ( data ) settings
@@ -721,6 +721,7 @@ export default class HTMLView extends LiveSchema {
 			key,            //inherited or inner key
 			stream,         //link to model stream todo obsolete io
 			resources,      //related resources
+			literal,        //string template precompiled literal
 		};
 
 		const res = src.acid !== -1 && src.lift( [ uvk, prop ], src ) ||
@@ -792,7 +793,7 @@ export default class HTMLView extends LiveSchema {
 			"plug",
 			"kit",
 			"key",
-			"tee",
+			"teeF",
 			"template",
 			"handlers",
 			"keyframes",
@@ -810,6 +811,61 @@ export default class HTMLView extends LiveSchema {
 }
 
 HTMLView.resourceloader = resourceloader;
+
+function cutliterals (node) {
+	let literal = null;
+	if(!node.childElementCount && node.textContent.search(/^`.*`$/) > -1) {
+		let i = -1;
+		let literals = [];
+		const raw = node
+			.textContent
+			.replace(
+				/lang\.([a-z-0-9A-Z_]+)/,
+				(_, lit) => {
+					i ++ ;
+					literals[i] = lit;
+					return 'eval("`" + __literals[' + i + '] + "`")'
+				}
+			)
+			.replace(
+				/intl\.([a-z-0-9A-Z_]+)/,
+				(_, lit) => '__intl["' + lit + '"]'
+			);
+		const fn = new Function("argv", `with(argv) return ${raw}`);
+		const operator = (data, literals, intl, ) => {
+			return fn(new Proxy(data, {
+				has() {
+					return true;
+				},
+				get(target, prop) {
+					if (prop === Symbol.unscopables) {
+						return false;
+					}
+					else if(prop === "eval") {
+						return eval;
+					}
+					else if(prop === "__intl") {
+						return intl;
+					}
+					else if(prop === "__literals") {
+						return literals;
+					}
+					const vl = target[prop];
+					if (vl !== undefined) {
+						return vl;
+					} else {
+						throw "exit";
+					}
+				}
+			}));
+		}
+		literal = {
+			litterals: literals,
+			operator,
+		};
+	}
+	return literal;
+}
 
 function pathSplitter(str = "") {
 	str = str + ",";
@@ -856,27 +912,22 @@ function pathParser(str) {
 const REG_GETTER_ATTRIBUTE = /\(([a-zA-Z_][\[\].a-zA-Z\-_0-9]*?)\)/g;
 
 
-function parseKeyProps( { classList, ...prop } ) {
-	if(classList) {
-		return {
-			classList: Object.keys(classList).reduce( (acc, next) => {
-				if(next.indexOf("|") > - 1) {
-					next.split("|").reduce( (acc, name) => {
-						acc[name] = classList[next] === name;
-						return acc;
-					}, acc);
-				}
-				else {
-					acc[next] = !!classList[next];
-				}
-				return acc;
-			}, {} ),
-			...prop,
-		}
+function parseKeyProps( prop ) {
+	if(prop.hasOwnProperty("classList")) {
+		prop.classList = Object.keys(prop.classList).reduce( (acc, next) => {
+			if(next.indexOf("|") > - 1) {
+				next.split("|").reduce( (acc, name) => {
+					acc[name] = prop.classList[next] === name;
+					return acc;
+				}, acc);
+			}
+			else {
+				acc[next] = !!prop.classList[next];
+			}
+			return acc;
+		}, {} );
 	}
-	return {
-		...prop,
-	}
+	return prop;
 }
 
 function parseKeyFrames( { node } ) {
@@ -885,39 +936,27 @@ function parseKeyFrames( { node } ) {
 	if(keyframe.length) {
 		res = [...keyframe].map( node => {
 			const action = node.getAttribute("name") || "default";
-			let prop = (node.getAttribute("prop"));
-			if(prop) {
-				prop = prop.replace(REG_GETTER_ATTRIBUTE, (_, reg) => {
-					return `(argv.${reg})`;
-				});
-				prop = new Function("argv", "ttm", `return ${prop}`);
-			}
 			const keys = [...node.querySelectorAll("key")]
 				.map( node => {
-					let prop = null;
-					let offset = node.getAttribute("offset");
-					let properties = node.getAttribute("prop");
-					if(properties) {
-						const functionBuilder = properties.replace(REG_GETTER_ATTRIBUTE, (_, reg) => {
-							return `(argv.${reg})`;
-						});
-						const handler = new Function("argv", "ttm", `return ${functionBuilder}`);
-						prop = (argv) => {
-							try {
-								return parseKeyProps(handler(argv));
-							}
-							catch (e) {
-								return {};
-							}
-						};
-					}
-					return [ offset, prop ];
+					return [
+						node.getAttribute("offset"),
+						spreading(
+							node.getAttribute("prop"),
+							null,
+							EMPTY_FUNCTION,
+							parseKeyProps,
+						),
+					];
 				} );
 			node.remove();
-			return [ action, prop, ...keys ];
+			return [ action, spreading(node.getAttribute("prop"), null), ...keys ];
 		} );
 	}
 	return res;
+}
+
+function cutteeF(node) {
+	return spreading(node.getAttribute("tee()"), null, null);
 }
 
 function cuttee(node, key) {
@@ -926,7 +965,7 @@ function cuttee(node, key) {
 		return null;
 	}
 	else if(rawTee === "") {
-		return key;
+		return data => signatureEquals(key, data);
 	}
 	else if(rawTee[0] === "{") {
 
@@ -935,10 +974,11 @@ function cuttee(node, key) {
 			return "{" +  vl + ":$bool" + "}"
 		});
 
-		return new Function("$bool", "return" + rawTee)(BOOLEAN);
+		const tee = new Function("$bool", "return" + rawTee)(BOOLEAN);
+		return data => signatureEquals(tee, data);
 	}
 	else {
-		return rawTee;
+		return data => signatureEquals(rawTee, data);
 	}
 }
 
@@ -1012,7 +1052,7 @@ function parseChildren(next, { resources, path, key }, src) {
 		const _slot = img( key );
 		next.replaceWith( _slot );
     resources.push(
-      fromPromise(src.resourceloader(src.resourceloader, 
+      fromPromise(src.resourceloader(src.resourceloader,
 			  src.prop.pack, { key, origin: next, type: "img", url: next.getAttribute("src") }
 			  )
       )

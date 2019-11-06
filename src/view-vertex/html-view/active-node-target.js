@@ -29,12 +29,12 @@ function getformat( name, resources ) {
 }
 
 function getlang( name, resources, intl ) {
-    const exist = [].concat(
-        ...resources
+    const exist =
+        resources
             .filter(( { type } ) => type === "language" )
-            .map( ( { content } ) => content.slice(1) )
-    )
-        .find( ([ _name ]) => _name === name );
+            .map( ( { content } ) => content )
+            .flat()
+            .find( ([ _name ]) => _name === name );
     if(!exist) {
         return `literal '${name}' not found`
     }
@@ -172,10 +172,15 @@ function templater(vl, intl = null, argv, resources) {
 
 export default class ActiveNodeTarget {
 
-    constructor(node, resources) {
+    constructor(src, node, resources) {
+        this.literal = src.prop.literal;
         this.resources = resources;
         this.node = node;
-        if (node.nodeType === NODE_TYPES.ELEMENT_NODE && node.tagName.toLocaleUpperCase() === 'SOUND') {
+        this.formatters = {};
+        if(this.literal) {
+            this.type = "data";
+        }
+        else if (node.nodeType === NODE_TYPES.ELEMENT_NODE && node.tagName.toLocaleUpperCase() === 'SOUND') {
             this.type = 'sound';
             node.remove()
         } else {
@@ -183,18 +188,72 @@ export default class ActiveNodeTarget {
         }
         this.template = this.type === 'data' ? node.textContent : null;
         this.intl = null;
+        this.argv = null;
     }
 
     transition(intl) {
-        this.intl = intl;
+        //todo perf hack
+        if(this.intl && intl.locale === this.intl.locale && intl.currency === this.intl.currency) {
+            return;
+        }
+        const formattersRes = this.resources.find(({type}) => type === "intl");
+        //todo if optional provides formatters
+        if(formattersRes) {
+            if(!this.formatters[intl.locale]) {
+                this.formatters[intl.locale] = formattersRes.content.slice(1)
+                    .reduce( (acc, [ name, options ]) => {
+                        const formatter =
+                            new Intl.NumberFormat(intl.locale, { currency: intl.currency, ... options });
+                        acc[name] = (value) => {
+                            if(value === undefined) {
+                                return "";
+                            }
+                            if(isNaN(+value)) {
+                                return formatter.format(0).replace( "0", value );
+                            }
+                            return formatter.format(value);
+                        };
+                        return acc;
+                    } , {} );
+            }
+        }
+        if(this.literal && this.literal.litterals.length) {
+            const language = this.resources.filter( ({type}) => type === "language");
+            this.genLiterals = this.literal.litterals.map(
+                name => language
+                    .map( ({ content }) => content )
+                    .flat()
+                    .find( ([ x ]) => x === name)[1][intl.locale]
+            );
+        }
+        this.intl = { ...intl };
+        this.argv && this.update(this.argv);
     }
 
     update(argv) {
-        if(this.type === "data") {
-            try {
-	            this.node.textContent = templater( this.template, this.intl, argv, this.resources );
+        this.argv = argv;
+        if(this.intl && this.type === "data") {
+            if(this.literal) {
+                try {
+                    this.node.textContent = this.literal.operator(
+                        argv, this.genLiterals, this.formatters[this.intl.locale]
+                    );
+                }
+                catch (e) {
+                    /*<@debug>*/
+                    this.node.textContent = "Could not parse literal or stream data error";
+                    /*</@debug>*/
+                }
             }
-            catch (e) {}
+            else {
+                try {
+                    /*<@debug>*/
+                    console.warn("Current literal form is deprecated now: ", this.template);
+                    /*</@debug>*/
+                    this.node.textContent = templater( this.template, this.intl, argv, this.resources );
+                }
+                catch (e) {}
+            }
         }
     }
 

@@ -28,6 +28,37 @@ export default ({ source/*, targets */}) => {
 </unit>
 ```
 
+you can access nested nodes and modify them
+
+```html
+<unit>
+    <view-source> 
+ ```
+ 
+ ```js
+import { stream } from "m2"
+ 
+export default ({ source, targets: [ { node } ] }) => {
+        const inner = node.querySelector("[custom-plugin-inner]");
+        return stream( (emt, { over }) => {
+            over.add(source.on(emt ));
+            inner.textContent = 77;
+        } );
+    }
+```
+ 
+```html
+    </view-source>
+  
+    <div>
+      <span custom-plugin-inner>custom-value</span>
+    </div>
+
+</unit>
+```
+
+
+
 #### stream plugin
 
 you can also modify the data stream before use:
@@ -57,7 +88,7 @@ export default ({ obtain }) =>
 
 data transmission from events
 ```html
-<span>{(property)}</span>
+<span>`${property}`</span>
 ``` 
 
 the event source must have the form
@@ -69,7 +100,7 @@ the event source must have the form
 the data source can be an object with a nested structure
 
 ```html
-<span>{(somefield.nested)}</span>
+<span>`${somefield.nested}`</span>
 ``` 
 
 ```js 
@@ -78,11 +109,13 @@ the data source can be an object with a nested structure
 
 formatting
 
+if you provide number settings, you can use formatting:
+
 ```html
-<span>{intl.formatter-resource-name,{property}}</span>
+<span>`${intl.formatter-resource-name(value)}`</span>
 ``` 
 
-,where ```{property}``` - data transmission template
+,where ```{formatter-resource-name}``` - data transmission template
 
 the event source must have the form
 
@@ -90,11 +123,43 @@ the event source must have the form
 [{property: 77}]
 ```
 
+formatting resource file example:
+
+```json
+[
+  "formatters",
+  ["currency", { "style": "currency", "splitter": ".", "currencyDisplay": "symbol" }],
+  ["compact-currency", { "style": "currency", "splitter": ".", "currencyDisplay": "symbol",
+    "minimumFractionDigits": 0
+  }],
+  ["number", { "style": "decimal", "splitter": "." }],
+  ["percent", { "style": "percent" }]
+]
+```
+
 localization
 
+if you supply localization resources you can use automatic literal substitution:
+
 ```html
-<span>{lang.localization-string-resource-name}</span>
+<span>`${lang.localization-string-resource-name}`</span>
 ``` 
+
+localization resource file example: 
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<languages>
+    <en>
+        <string name="example-literal-string">Example literal text content</string>
+        <string name="example-literal-string-2">Example literal text content 2</string>
+    </en>
+    <ru>
+        <string name="example-literal-string">Пример случайной строки</string>
+        <string name="example-literal-string-2">Пример случайной строки 2</string>
+    </ru>
+</languages>
+```
 
 #### Actions definition
 
@@ -313,6 +378,21 @@ allowed to use attachments and abbreviated forms
 ```js 
 [{obj: {prop: 1}}]
 ```
+
+functional form is also now supported
+```html
+<unit tee() = "obj.prop > 0"></unit>
+``` 
+
+```js 
+[{obj: {prop: 1}}]
+```
+
+you can even use a static form
+```html
+<unit tee() = 1></unit>
+``` 
+however, the view component will still wait for the model stream
 
 ### Common features
 
