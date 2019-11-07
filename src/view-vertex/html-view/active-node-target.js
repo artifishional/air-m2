@@ -217,9 +217,9 @@ export default class ActiveNodeTarget {
                     } , {} );
             }
         }
-        if(this.literal && this.literal.litterals.length) {
+        if(this.literal && this.literal.literals.length) {
             const language = this.resources.filter( ({type}) => type === "language");
-            this.genLiterals = this.literal.litterals.map(
+            this.genLiterals = this.literal.literals.map(
                 name => language
                     .map( ({ content }) => content )
                     .flat()
