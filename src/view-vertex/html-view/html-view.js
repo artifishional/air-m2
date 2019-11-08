@@ -62,8 +62,8 @@ export default class HTMLView extends LiveSchema {
 		this.prop.node = this.prop.node || document.createDocumentFragment();
 	}
 
-	static createApplicationRoot( { path = ENTRY_UNIT } ) {
-		return new HTMLView( ["$", { use: [{ path, schtype: "html" }] }] );
+	static createApplicationRoot( { path = ENTRY_UNIT, resourceloader = HTMLView.resourceloader } ) {
+		return new HTMLView( ["$", { use: [{ path, schtype: "html" }] }], { resourceloader }, );
 	}
 
 	createActiveNodeTarget(node, resources) {

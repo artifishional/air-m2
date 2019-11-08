@@ -3,6 +3,7 @@ import { ObservableCollection } from "../observable-collection"
 import { stream } from "air-stream"
 import { error } from "../error"
 import { ENTRY_UNIT } from '../globals';
+import resourceloader from "../loader/resource-loader";
 
 function frommodule(module, _key = "main") {
 	return [ _key,
@@ -33,11 +34,11 @@ export default class ModelVertex extends LiveSchema {
 		super([ key, { source, ...prop }, ...item], src);
 	}
 
-	static createApplicationRoot( { path = ENTRY_UNIT } ) {
+	static createApplicationRoot( { path = ENTRY_UNIT, resourceloader = ModelVertex.resourceloader } ) {
 		return new ModelVertex( [ "$", {},
 			[ "error", { id: "error", source: error } ],
 			[ "main", { use: [{ path }]} ],
-		],);
+		], { resourceloader }, );
 	}
 	
 	static observe(src, cb) {
@@ -102,3 +103,5 @@ export default class ModelVertex extends LiveSchema {
     }
 
 }
+
+ModelVertex.resourceloader = resourceloader;
