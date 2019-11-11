@@ -1,7 +1,6 @@
 import ActiveNodeTarget from './active-node-target';
 import { equal } from '../../utils';
 
-
 export default class LazyActiveNodeTarget extends ActiveNodeTarget {
 
   constructor (src, node, resources) {
@@ -11,7 +10,7 @@ export default class LazyActiveNodeTarget extends ActiveNodeTarget {
     this.stream = src.lazyscrollControlStream;
 
     node.addEventListener('DOMNodeInsertedIntoDocument', this.bindLazyscroll.bind(this));
-    node.removeEventListener('DOMNodeInsertedIntoDocument', this.unbindLazyscroll.bind(this));
+    node.addEventListener('DOMNodeRemovedFromDocument', this.unbindLazyscroll.bind(this));
   }
 
   scroll (height, offset) {
@@ -41,7 +40,10 @@ export default class LazyActiveNodeTarget extends ActiveNodeTarget {
     this.hook = stream.at(([{ elements }]) => {
       if (this.lazyscroll !== true) {
         node.firstElementChild.style.height = +this.lazyscroll * elements + 'px';
-        this.scroll(node.offsetHeight, node.scrollTop);
+        if (!this.inited) {
+          this.scroll(node.offsetHeight, node.scrollTop);
+          this.inited = true;
+        }
       } else {
         const observer = new MutationObserver((list) => {
           const el = node.firstElementChild.firstElementChild;
@@ -69,9 +71,10 @@ export default class LazyActiveNodeTarget extends ActiveNodeTarget {
   }
 
   unbindLazyscroll () {
-    this.hook({ dissolve: true });
-    this.hook = null;
-    node.removeEventListener('scroll', this.scrollHandler.bind(this));
+    // this.hook({ dissolve: true });
+    // this.hook = null;
+    this.inited = false;
+    this.node.removeEventListener('scroll', this.scrollHandler.bind(this));
     window.removeEventListener('resize', this.resizeHandler.bind(this));
   }
 }
