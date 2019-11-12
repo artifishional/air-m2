@@ -9,8 +9,21 @@ export default class LazyActiveNodeTarget extends ActiveNodeTarget {
     this.lazyscroll = src.prop.lazyscroll;
     this.stream = src.lazyscrollControlStream;
 
-    node.addEventListener('DOMNodeInsertedIntoDocument', this.bindLazyscroll.bind(this));
-    node.addEventListener('DOMNodeRemovedFromDocument', this.unbindLazyscroll.bind(this));
+    const observer = new MutationObserver((mutations) => {
+      const addedNodes = [];
+      const removedNodes = [];
+      mutations.map((mutation) => {
+        addedNodes.push(...mutation.addedNodes);
+        removedNodes.push(...mutation.removedNodes);
+      });
+      if (Array.from(addedNodes).some((n) => n.contains(node))) {
+        this.bindLazyscroll();
+      }
+      if (Array.from(removedNodes).some((n) => n.contains(node))) {
+        this.unbindLazyscroll();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
   }
 
   scroll (height, offset) {

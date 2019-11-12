@@ -94,9 +94,9 @@ export default class HTMLView extends LiveSchema {
 		this.prop.node = this.prop.node || document.createDocumentFragment();
 	}
 
-	createActiveNodeTarget(node, resources) {
-		if (this.prop.lazyscroll) {
-			return new LazyActiveNodeTarget(this, node, resources);
+	createActiveNodeTarget (node, resources, container) {
+		if (container.type === 'lazy-node') {
+			return new LazyActiveNodeTarget(this, node, resources, container);
 		} else {
 			return new ActiveNodeTarget(this, node, resources);
 		}
@@ -552,7 +552,8 @@ export default class HTMLView extends LiveSchema {
 					return StylesController.get(style, this.acid, priority, this.prop.pack)
 				})
 			] ).at( ( resources ) => {
-				const container = new PlaceHolderContainer( this, { type: "node" } );
+				const type = this.prop.lazyscroll ? 'lazy-node' : 'node';
+				const container = new PlaceHolderContainer(this, { type });
 				container.append(this.prop.node.cloneNode(true));
 				const imgs = resources.filter(({type}) => type === "img");
 				[...container.target.querySelectorAll(`slot[img]`)]
