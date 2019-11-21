@@ -1,5 +1,5 @@
 import {BOOLEAN, EMPTY_FUNCTION, EMPTY_OBJECT} from "../../def"
-import { VIEW_PLUGINS } from "../../globals"
+import { ENTRY_UNIT, VIEW_PLUGINS } from '../../globals';
 import { stream, combine, keyF, sync } from "air-stream"
 import StylesController from "./styles-controller"
 import {
@@ -94,6 +94,10 @@ export default class HTMLView extends LiveSchema {
 		this.prop.node = this.prop.node || document.createDocumentFragment();
 	}
 
+	static createApplicationRoot( { path = ENTRY_UNIT } ) {
+		return new HTMLView( ["$", { use: [{ path, schtype: "html" }] }] );
+	}
+
 	createActiveNodeTarget (node, resources, container) {
 		if (container.type === 'lazy-node') {
 			return new LazyActiveNodeTarget(this, node, resources, container);
@@ -124,7 +128,7 @@ export default class HTMLView extends LiveSchema {
 		signature: parentContainerSignature = null,
 		...args
 	} ) {
-
+		
 		function removeElementFromArray(arr, elem) {
 			const indexOf = arr.indexOf(elem);
 			if(indexOf === -1) {
@@ -132,11 +136,11 @@ export default class HTMLView extends LiveSchema {
 			}
 			return arr.splice(indexOf, 1)[0];
 		}
-
+		
 		return stream( ( emt, { sweep, over }) => {
-
+			
 			const container = new PlaceHolderContainer( this, { type: "kit" } );
-
+			
 			emt( [ {
 				stage: 1,
 				container,
@@ -147,12 +151,12 @@ export default class HTMLView extends LiveSchema {
 			//todo need layers sup
 			const modelvertex = layers.get(this.acid) || layers.get(-1);
 			const modelstream = modelvertex.layer.obtain("", modelvertex.vars);
-
+			
 			const cache = new Cached( {
 				constructor: (data) => {
-
+					
 					const signature = calcsignature(data, this.prop.kit.prop);
-
+					
 					const modelvertex = new ModelVertex(["$$", {
 						glassy: true,
 						source: () => modelstream.map(([state]) => {
@@ -163,7 +167,7 @@ export default class HTMLView extends LiveSchema {
 							.filter(Boolean)
 							.distinct(equal)
 					}]);
-
+					
 					let sign;
 					if(typeof signature !== "object") {
 						sign = { default: signature };
@@ -178,10 +182,10 @@ export default class HTMLView extends LiveSchema {
 						{ signature: {...sign, $: parentContainerSignature }, ...args },
 						{ layers: _layers, parentViewLayers }
 					);
-
+					
 				}
 			} );
-
+			
 			over.add(() => cache.clear());
 
 			const store = [];
@@ -412,7 +416,7 @@ export default class HTMLView extends LiveSchema {
 		return stream( (emt, { sweep, over }) => {
 
 			const container = new PlaceHolderContainer(this, { type: "layers" });
-
+			
 			let state = {
 				acids: this.layers.map( ({ acid }) => acid ),
 				acid: this.acid,
@@ -437,7 +441,7 @@ export default class HTMLView extends LiveSchema {
 				})
 				.filter( Boolean )
 			);
-
+			
 			sweep.add( combine( [
 				...this.layers.map( (layer) => layer.createNodeEntity(  ) ),
 				this.createChildrenEntity( args, { layers, parentViewLayers } ),
@@ -472,7 +476,7 @@ export default class HTMLView extends LiveSchema {
 					})
 					.filter( Boolean )
 				);
-
+				
 				const slots = container.slots();
 				if(children.length) {
 					if(slots.length) {
@@ -505,17 +509,17 @@ export default class HTMLView extends LiveSchema {
 
 				//todo hack clear unused slots ( when cross template mix to exmpl )
 				slots.map( ({ slot }) => slot.remove() );
-
+				
 				const targets = [ ...container.targets("actives", [] ) ];
-
+				
 				if(targets.length) {
-
+					
 					if(this.prop.styles.length) {
 						targets.map(({node}) =>
 							node.setAttribute(`data-scope-acid-${this.acid}`, "")
 						);
 					}
-
+					
 					rlayers.push( ...currentCommonViewLayers.map( ({ layer, schema }) => {
 						return layer.createLayer(
 							{ schema },
@@ -567,7 +571,7 @@ export default class HTMLView extends LiveSchema {
 			}));
 		});
 	}
-
+	
 	teeFSignatureCheck( layers ) {
 		return this.layers.every( ({ acid, prop: { teeF } }) => teeF ? teeF(layers.get(acid)) : true );
 	}
@@ -577,7 +581,7 @@ export default class HTMLView extends LiveSchema {
 			return this.createNextLayers( args, manager );
 		}
 		const { layers, parentViewLayers } = manager;
-
+		
 		const teeFLayers = this.layers
 			.filter( ({ prop: { teeF } }) => teeF )
 			.map( ({ acid }) => acid );
@@ -705,22 +709,22 @@ export default class HTMLView extends LiveSchema {
 			.map(x => x._obtain( [], args, { layers, parentViewLayers } ))
 		);
 	}
-
+	
 	parse(node, src, { pack } ) {
 		return this.constructor.parse( node, src, { pack } );
 	}
-
+	
 	static parse( node, src, { pack, type = "unit" } ) {
 
 		let uvk = `${++UNIQUE_VIEW_KEY}`;
-
+		
 		if(!(node instanceof Element)) {
 			return new HTMLView( ["", {}], src, { createEntity: node } );
 		}
-
+		
 		const comments = document.createTreeWalker(node, NodeFilter.SHOW_COMMENT);
 		while(comments.nextNode()) comments.currentNode.remove();
-
+		
 		//TODO: (improvement required)
 		// currently clones the entire contents and then
 		// removes it from the parent element to solve the shared units problem
@@ -732,7 +736,7 @@ export default class HTMLView extends LiveSchema {
 		const { path = "./", key: pkey = uvk } = (src || {}).prop || {};
 
 		let key = node.getAttribute("key");
-
+		
 		if(key !== null) {
 			if(/[`"'{}\]\[]/.test(key)) {
 				key = JSON5.parse(key);
@@ -742,7 +746,7 @@ export default class HTMLView extends LiveSchema {
 		else {
 			key = pkey;
 		}
-
+		
 		const handlers = [ ...node.attributes ]
 			.filter( ({ name }) => events.includes(name) || name.indexOf("on:") === 0 )
 			.map( ({ name, value }) => ({
@@ -768,7 +772,7 @@ export default class HTMLView extends LiveSchema {
             ];
 
 		const styles = [...node.children].filter(byTagName("STYLE"));
-
+		
 		styles.map( style => {
 			//todo hack
 			style.pack = pack;
@@ -778,16 +782,16 @@ export default class HTMLView extends LiveSchema {
 
 		const sounds = [...node.children].filter(byTagName("SOUND"));
 		resources.push(...sounds.map( sound => resource(pack, { type: "sound", name: sound.getAttribute("name") || "", rel: sound.getAttribute("rel") || ""}) ));
-
+		
 		const teeF = cutteeF(node) || cuttee(node, key);
 		const kit = cutkit(node, key);
         const preload =
 			!["", "true"].includes(node.getAttribute("nopreload")) &&
 			!["", "true"].includes(node.getAttribute("lazy"));
-
+        
         const useOwnerProps = node.parentNode.tagName.toUpperCase() === "UNIT";
 		node.remove();
-
+        
         const controlled = [ ...node.childNodes ].some( node => {
 			if(node.nodeType === 1 && !["UNIT", "PLUG", "STYLE"].includes(node.tagName.toUpperCase())) {
 				return true;
@@ -813,7 +817,7 @@ export default class HTMLView extends LiveSchema {
 				src.remove();
 				return res;
 			} );
-
+		
 		const plug = [...node.children]
 			.filter(byTagName("script"))
 			.filter(byAttr("data-source-type", "view-source"))
@@ -828,7 +832,7 @@ export default class HTMLView extends LiveSchema {
 				src.remove();
 				return res;
 			} );
-
+   
 		const keyframes = [];
 
 		const literal = cutliterals( node );
@@ -859,10 +863,10 @@ export default class HTMLView extends LiveSchema {
 			literal,        //string template precompiled literal
 			lazyscroll,			//height for children element, or autodetect if true
 		};
-
+		
 		const res = src.acid !== -1 && src.lift( [ uvk, prop ], src ) ||
 			new HTMLView( [ uvk, prop ], src );
-
+		
 		//[...node.childNodes].map( next => setup( next, res.prop ));
 
 		res.append(...[...node.children].reduce((acc, next) =>
@@ -873,20 +877,20 @@ export default class HTMLView extends LiveSchema {
 
 		res.prop.node = document.createDocumentFragment();
 		res.prop.node.append( ...node.childNodes );
-
+		
 		/*[...styles].map( style => {
 			style.textContent = style.textContent.replace(/:scope/g, `[data-scope-acid-${res.acid}]`);
 		} );*/
-
+		
 		/*styles.length && [...res.prop.node.children]
 			.map( node => {
 				node.setAttribute(`data-scope-acid-${res.acid}`, "");
 			} );*/
-
+		
 		return res;
-
+		
 	}
-
+	
 	mergeProperties( name, value ) {
 		if(name === "stream") {
 			return this.prop.stream;
@@ -946,6 +950,24 @@ export default class HTMLView extends LiveSchema {
 
 }
 
+const UNSCOPABLES_PROPS = { eval: true, __intl: true, __literals: true };
+const STD_PROXY_CONFIG = {
+	has() {
+		return true;
+	},
+	get(target, prop) {
+		if (prop === Symbol.unscopables) {
+			return UNSCOPABLES_PROPS;
+		}
+		const vl = target[prop];
+		if (vl !== undefined) {
+			return vl;
+		} else {
+			throw 1;
+		}
+	}
+};
+
 function cutliterals (node) {
 	let literal = null;
 	if(!node.childElementCount && node.textContent.search(/^`.*`$/) > -1) {
@@ -965,38 +987,11 @@ function cutliterals (node) {
 				/intl\.([a-z-0-9A-Z_]+)/,
 				(_, lit) => '__intl["' + lit + '"]'
 			);
-		const fn = new Function("argv", `with(argv) return ${raw}`);
-		const operator = (data, literals, intl, ) => {
-			return fn(new Proxy(data, {
-				has() {
-					return true;
-				},
-				get(target, prop) {
-					if (prop === Symbol.unscopables) {
-						return false;
-					}
-					else if(prop === "eval") {
-						return eval;
-					}
-					else if(prop === "__intl") {
-						return intl;
-					}
-					else if(prop === "__literals") {
-						return literals;
-					}
-					const vl = target[prop];
-					if (vl !== undefined) {
-						return vl;
-					} else {
-						throw "exit";
-					}
-				}
-			}));
-		}
-		literal = {
-			litterals: literals,
-			operator,
+		const fn = new Function("argv", "eval", "__intl", "__literals", `with(argv) return ${raw}`);
+		const operator = (data, literals, intl) => {
+			return fn(new Proxy(data, STD_PROXY_CONFIG), eval, intl, literals);
 		};
+		literal = { literals, operator };
 	}
 	return literal;
 }
@@ -1076,14 +1071,14 @@ function parseKeyFrames( { node } ) {
 						node.getAttribute("offset"),
 						spreading(
 							node.getAttribute("prop"),
-							EMPTY_OBJECT,
+							null,
 							EMPTY_FUNCTION,
 							parseKeyProps,
 						),
 					];
 				} );
 			node.remove();
-			return [ action, spreading(node.getAttribute("prop")), ...keys ];
+			return [ action, spreading(node.getAttribute("prop"), null), ...keys ];
 		} );
 	}
 	return res;

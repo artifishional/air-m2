@@ -83,9 +83,12 @@ export class Layer extends BaseLayer {
 
 	sweep( sweep, emt ) {
 		if(this.checkModelNecessity( )) {
-			sweep.add(this.schema.model.layer._obtain(["#intl"]).at(
-				intl => this.targets.map(target => target.transition(intl))
-			));
+			//todo perf hack
+			if(this.targets[0].type === "data") {
+				sweep.add(this.schema.model.layer._obtain(["#intl"]).at(
+					intl => this.targets.map(target => target.transition(intl))
+				));
+			}
 			this.handler = this.schema.model.layer._obtain([], this.schema.model.vars).at((data) => {
 				!this.state.stage && this.complete(emt);
 				let state, action = "default";

@@ -210,15 +210,21 @@ export default class ActiveNodeTarget {
                             if(isNaN(+value)) {
                                 return formatter.format(0).replace( "0", value );
                             }
+                            // patch on chrome at ~78
+                            // UAH currency symbol is not displayed
+                            // while it works correctly in the firefox
+                            if(intl.currency === "uah" && options.style === "currency") {
+                                return formatter.format(value).replace("грн.", "₴");
+                            }
                             return formatter.format(value);
                         };
                         return acc;
                     } , {} );
             }
         }
-        if(this.literal && this.literal.litterals.length) {
+        if(this.literal && this.literal.literals.length) {
             const language = this.resources.filter( ({type}) => type === "language");
-            this.genLiterals = this.literal.litterals.map(
+            this.genLiterals = this.literal.literals.map(
                 name => language
                     .map( ({ content }) => content )
                     .flat()
