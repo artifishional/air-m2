@@ -1,4 +1,4 @@
-import {NODE_TYPES} from "air-m2/src/view-vertex/html-view/def"
+import {NODE_TYPES} from "./def"
 
 export default class PlaceHolderContainer {
 

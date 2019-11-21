@@ -20,7 +20,7 @@ import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
 import LazyActiveNodeTarget from "./lazy-active-node-target"
 import { ModelVertex } from "../../model-vertex"
-import spreading from "air-m2/src/view-vertex/html-view/spreading";
+import spreading from "./spreading";
 
 let UNIQUE_VIEW_KEY = 0;
 let UNIQUE_IMAGE_KEY = 0;
@@ -102,7 +102,7 @@ export default class HTMLView extends LiveSchema {
 		if (container.type === 'lazy-node') {
 			return new LazyActiveNodeTarget(this, node, resources, container);
 		} else {
-			return new ActiveNodeTarget(this, node, resources);
+			return new ActiveNodeTarget(this, node, resources, container);
 		}
 	}
 
@@ -196,6 +196,7 @@ export default class HTMLView extends LiveSchema {
           const overscan = 1;
 
           let prev = { first, last, childs };
+          let raf;
 
           const render = () => {
 
@@ -265,9 +266,9 @@ export default class HTMLView extends LiveSchema {
             } catch (e) {
               childs = [];
             }
-
             emt([{ elements: childs.length }]);
-            render();
+						cancelAnimationFrame(raf);
+						raf = requestAnimationFrame(render);
           });
 
           hook.add(({ action, data }) => {
@@ -277,7 +278,8 @@ export default class HTMLView extends LiveSchema {
                 first = Math.floor(offset / +lazyscroll);
                 last = Math.ceil((offset + height) / +lazyscroll);
               }
-              render();
+							cancelAnimationFrame(raf);
+							raf = requestAnimationFrame(render);
             } else if (action === 'setElementHeight') {
               lazyscroll = data.height;
             }

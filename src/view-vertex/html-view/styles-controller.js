@@ -1,4 +1,4 @@
-import resource from "air-m2/src/loader/resource"
+import resource from "../../loader/resource"
 
 export default new class {
 	

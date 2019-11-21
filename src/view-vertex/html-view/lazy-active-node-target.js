@@ -3,11 +3,12 @@ import { equal } from '../../utils';
 
 export default class LazyActiveNodeTarget extends ActiveNodeTarget {
 
-  constructor (src, node, resources) {
-    super(src, node, resources);
+  constructor (src, node, resources, container) {
+    super(src, node, resources, container);
 
     this.lazyscroll = src.prop.lazyscroll;
     this.stream = src.lazyscrollControlStream;
+    this.container = container;
 
     const observer = new MutationObserver((mutations) => {
       const addedNodes = [];
@@ -50,31 +51,34 @@ export default class LazyActiveNodeTarget extends ActiveNodeTarget {
   bindLazyscroll () {
     const { node, stream } = this;
     this.prevSize = { height: node.offsetHeight, width: node.offsetWidth };
+    let prevElements;
     this.hook = stream.at(([{ elements }]) => {
-      if (this.lazyscroll !== true) {
-        node.firstElementChild.style.height = +this.lazyscroll * elements + 'px';
-        if (!this.inited) {
-          this.scroll(node.offsetHeight, node.scrollTop);
-          this.inited = true;
-        }
-      } else {
-        const observer = new MutationObserver((list) => {
-          const el = node.firstElementChild.firstElementChild;
-          const style = window.getComputedStyle(el);
-          if (el && el.offsetHeight) {
-            const height = el.offsetHeight + parseInt(style.marginBottom) + parseInt(style.marginTop);
-            if (height) {
-              this.hook({
-                action: 'setElementHeight',
-                data: { height }
-              });
-              node.firstElementChild.style.height = +height * elements + 'px';
-            }
+      if (!equal(elements, prevElements)) {
+        if (this.lazyscroll !== true) {
+          node.firstElementChild.style.height = +this.lazyscroll * elements + 'px';
+          if (!this.inited) {
             this.scroll(node.offsetHeight, node.scrollTop);
-            observer.disconnect();
+            this.inited = true;
           }
-        });
-        observer.observe(node.firstElementChild, { childList: true });
+        } else {
+          const observer = new MutationObserver((list) => {
+            const el = node.firstElementChild.firstElementChild;
+            const style = window.getComputedStyle(el);
+            if (el && el.offsetHeight) {
+              const height = el.offsetHeight + parseInt(style.marginBottom) + parseInt(style.marginTop);
+              if (height) {
+                this.hook({
+                  action: 'setElementHeight',
+                  data: { height }
+                });
+                node.firstElementChild.style.height = +height * elements + 'px';
+              }
+              this.scroll(node.offsetHeight, node.scrollTop);
+              observer.disconnect();
+            }
+          });
+          observer.observe(node.firstElementChild, { childList: true });
+        }
       }
     });
 
@@ -84,8 +88,6 @@ export default class LazyActiveNodeTarget extends ActiveNodeTarget {
   }
 
   unbindLazyscroll () {
-    // this.hook({ dissolve: true });
-    // this.hook = null;
     this.inited = false;
     this.node.removeEventListener('scroll', this.scrollHandler.bind(this));
     window.removeEventListener('resize', this.resizeHandler.bind(this));
