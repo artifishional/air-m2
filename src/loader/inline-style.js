@@ -3,14 +3,6 @@ import FontFaceObserver from 'fontfaceobserver';
 
 const FONT_LOADING_TIMEOUT = 30000;
 
-function FileReader (blob) {
-	return new Promise((resolver) => {
-		const reader = new globalThis.FileReader();
-		reader.readAsDataURL(blob);
-		reader.onloadend = resolver;
-	});
-}
-
 function createPrioritySystemStyle (priority) {
 	while (PRIORITY.length < priority + 1) {
 		const style = document.createElement('style');
@@ -25,13 +17,16 @@ function inject (style, priority) {
 	PRIORITY[priority].after(style);
 }
 
+const IMGPreloaderSheet = document.createElement("style");
+const IMGSStore = new Set();
 const PRIORITY = [];
 
 export default ({ acid, priority, style, path, revision, ...args }) => {
 
 	return stream((emt, { sweep }) => {
-
+		const imgStorePrevSize = IMGSStore.size;
 		if (!PRIORITY[0]) {
+			document.head.append(IMGPreloaderSheet);
 			const zero = document.createElement('style');
 			zero.setAttribute('data-priority', '0');
 			document.head.append(zero);
@@ -96,21 +91,33 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 				if (revision) {
 					url.searchParams.append('revision', revision);
 				}
-				return fetch(url, {
-					mode: 'cors',
-					method: 'GET'
-				})
-					.then(r => r.blob())
-					.then(FileReader)
-					.then(({ target: { result: base64 } }) => {
-						while (~rawCommonCSSContent.indexOf(placeholder)) {
-							rawCommonCSSContent = rawCommonCSSContent.replace(placeholder, base64);
-						}
-					});
+				const rawURL = url.pathname + url.search;
+				while (~rawCommonCSSContent.indexOf(placeholder)) {
+					rawCommonCSSContent = rawCommonCSSContent.replace(placeholder, rawURL);
+				}
+				return new Promise( resolve => {
+					if(IMGSStore.has(rawURL)) {
+						resolve();
+					}
+					else {
+						IMGSStore.add(rawURL);
+						const img = new Image();
+						img.onload = resolve;
+						img.src = rawURL;
+					}
+				} );
 			}
 		});
-
-		promises.push(...fonts.map((font) => new FontFaceObserver(font).load(null, FONT_LOADING_TIMEOUT)))
+		if(imgStorePrevSize !== IMGSStore.size) {
+			IMGPreloaderSheet.textContent = `
+				body:after {
+				display:none;
+				content: url(${ [...IMGSStore].join(") url(")});
+			}`;
+		}
+		promises.push(...fonts.map((font) =>
+			new FontFaceObserver(font).load(null, FONT_LOADING_TIMEOUT))
+		);
 
 		Promise.all(promises).then(() => {
 			commonStyle.textContent = rawCommonCSSContent;
