@@ -80,12 +80,12 @@ export default class PlaceHolderContainer {
         const { target, begin = target.firstChild, end = target.lastChild  } = this;
 
         const res = [];
-        let cur = begin;
+        let cur = begin.nextSibling;
         while (cur !== end) {
             if(
                 cur.nodeType === NODE_TYPES.ELEMENT_NODE &&
                 cur.nodeName.toUpperCase() !== "SLOT" ||
-                cur.nodeType === NODE_TYPES.TEXT_NODE &&
+                cur.nodeType === NODE_TYPES.TEXT_NODE && cur.nodeValue &&
                 (this.owner.prop.literal || cur.textContent.match(/{.+}/g))
             ) {
                 res.push(cur);
