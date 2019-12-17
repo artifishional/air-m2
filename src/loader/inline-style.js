@@ -1,19 +1,14 @@
-import csstree from "css-tree";
+import { stream } from 'air-stream';
+import FontFaceObserver from 'fontfaceobserver';
 
-function FileReader(blob) {
-	return new Promise( (resolver) => {
-		const reader = new globalThis.FileReader();
-		reader.readAsDataURL(blob);
-		reader.onloadend = resolver;
-	} );
-}
+const FONT_LOADING_TIMEOUT = 30000;
 
-function createPrioritySystemStyle(priority) {
-	while(PRIORITY.length < priority+1) {
-		const style = document.createElement("style");
+function createPrioritySystemStyle (priority) {
+	while (PRIORITY.length < priority + 1) {
+		const style = document.createElement('style');
 		PRIORITY.push(style);
-		style.setAttribute("data-priority", `${PRIORITY.length-1}`);
-		PRIORITY[PRIORITY.length-2].before(style);
+		style.setAttribute('data-priority', `${PRIORITY.length - 1}`);
+		PRIORITY[PRIORITY.length - 2].before(style);
 	}
 }
 
@@ -22,124 +17,110 @@ function inject(style, priority) {
 	PRIORITY[priority].after(style);
 }
 
+const IMGPreloaderSheet = document.createElement("style");
+const IMGSStore = new Set();
 const PRIORITY = [];
 
 export default (resourceloader, {path}, { acid, priority, style, revision, ...args }) => {
 
-	return new Promise(resolve => {
-
-		if(!PRIORITY[0]) {
-			const zero = document.createElement("style");
-			zero.setAttribute("data-priority", "0");
+	return stream((emt, { sweep }) => {
+		const imgStorePrevSize = IMGSStore.size;
+		if (!PRIORITY[0]) {
+			document.head.append(IMGPreloaderSheet);
+			const zero = document.createElement('style');
+			zero.setAttribute('data-priority', '0');
 			document.head.append(zero);
 			PRIORITY[0] = zero;
 		}
 
-		style.textContent = style.textContent.replace(/:scope/g, `[data-scope-acid-${acid}]`);
-
-		let isActive = true;
-
-		let fontFaceStyle = null;
-		const commonStyle = document.createElement("style");
-		commonStyle.textContent = "";
-
-		let rawFontCSSContent = "";
-		let rawCommonCSSContent = "";
-
-		let fontStyle = null;
-
-		const ast = csstree.parse(style.textContent);
-
-		const dataForLoading = [];
 		const fonts = [];
-
-		csstree.walk(ast, function(node) {
-			if (this.atrule && this.atrule.name === 'font-face') {
-				if (node.type === "Declaration" && node.property === 'font-family') {
-					const values = node.value && node.value.children && node.value.children
-						.toArray()
-						.map(({value}) => value.replace(/"/g, ""));
-					if (values) {
-						fonts.push({
-							type: 'font',
-							resource: values,
-							target: null
-						})
+		let fontFaceStyle = null;
+		let rawFontCSSContent = '';
+		const fontRegex = /@font-face\s*{[^}]+}/gm;
+		const fontFaceMatches = style.textContent.matchAll(fontRegex);
+		if (fontFaceMatches) {
+			for (const [fontFaceMatch] of fontFaceMatches) {
+				const fontFamilyMatch = fontFaceMatch.match(/font-family:\s*['"]([^'"]+)['"]/);
+				if (fontFamilyMatch) {
+					if (fonts.indexOf(fontFamilyMatch[1]) === -1) {
+						fonts.push(fontFamilyMatch[1]);
 					}
-				} else if (node.type === "Declaration" && node.property === 'src') {
-					node.value && node.value.children && node.value.children
-						.toArray()
-						.filter(({type}) => type === 'Url')
-						.map(({value}) => {
-							let url = "./m2units/" + path + value.value.replace(/"/g, "");
-							if (revision) {
-								if (url.indexOf('?') > -1) {
-									url = `${url}&rev=${revision}`
-								} else {
-									url = `${url}?rev=${revision}`
-								}
-							}
-							value.value = url;
-						})
-				}
-			} else if ((this.rule || this.atrule && this.atrule.name === 'media') && node.type === 'Url') {
-				const value = node.value.value;
-				if (value.indexOf("data:") === -1) {
-					dataForLoading.push({
-						type: 'image',
-						resource: value,
-						target: node.value
-					})
+
+					rawFontCSSContent += fontFaceMatch.replace(/url\(['"]?([^\'")]+)['"]?\)/gm, (_, resource) => {
+						const url = new URL(
+							'm2units/' + path + resource,
+							window.location.origin + window.location.pathname
+						);
+						if (revision) {
+							url.searchParams.append('revision', revision);
+						}
+						return `url("${url}")`;
+					});
 				}
 			}
-		});
+			style.textContent = style.textContent.replace(fontRegex, '');
 
-		const promises = dataForLoading.map(({type, resource, target}) => {
+			fontFaceStyle = document.createElement('style');
+			fontFaceStyle.textContent = rawFontCSSContent;
+			document.head.appendChild(fontFaceStyle);
+		}
+
+		const dataForLoading = [];
+		let rawCommonCSSContent = '';
+		const commonStyle = document.createElement('style');
+		commonStyle.textContent = '';
+		rawCommonCSSContent = style.textContent.replace(/:scope/g, `[data-scope-acid-${acid}]`);
+		const imageRegex = /\/\*\s<image\surl=\"([^"]+)">\s\*\//gm;
+		const matches = rawCommonCSSContent.matchAll(imageRegex);
+		if (matches) {
+			for (const match of matches) {
+				dataForLoading.push({
+					type: 'image',
+					placeholder: match[0],
+					resource: match[1]
+				});
+			}
+		}
+
+		const promises = dataForLoading.map(({ type, placeholder, resource }) => {
 			if (type === 'image') {
+				const url = new URL(
+					'm2units/' + path + resource.replace(/"/g, ''),
+					window.location.origin + window.location.pathname
+				);
+				if (revision) {
+					url.searchParams.append('revision', revision);
+				}
+				const rawURL = url.pathname + url.search;
+				while (~rawCommonCSSContent.indexOf(placeholder)) {
+					rawCommonCSSContent = rawCommonCSSContent.replace(placeholder, rawURL);
+				}
 				return resourceloader(resourceloader, {path}, {url: resource.replace(/"/g, ""), type: 'img', dataURL: true})
 					.then(({image}) => {
 							target.value = image;
 						});
 			}
 		});
+		if(imgStorePrevSize !== IMGSStore.size) {
+			IMGPreloaderSheet.textContent = `
+				body:after {
+				display:none;
+				content: url(${ [...IMGSStore].join(") url(")});
+			}`;
+		}
+		promises.push(...fonts.map((font) =>
+			new FontFaceObserver(font).load(null, FONT_LOADING_TIMEOUT))
+		);
 
 		Promise.all(promises).then(() => {
-			for (const node of ast.children.toArray()) {
-				const {type, name} = node;
-				if (type === "Atrule" && name === "font-face") {
-					rawFontCSSContent += csstree.generate(node);
-				} else {
-					rawCommonCSSContent += csstree.generate(node);
-				}
-			}
 			commonStyle.textContent = rawCommonCSSContent;
-			if (rawFontCSSContent) {
-				fontFaceStyle = document.createElement("style");
-				fontFaceStyle.textContent = rawFontCSSContent;
-				document.head.appendChild(fontFaceStyle);
-			}
-			Promise.all(
-				fonts.reduce((acc, {resource}) => {
-					const fontPromises = resource.map((res) => {
-						return resourceloader(resourceloader, {path}, {family: res, type: 'font'});
-					});
-					return [
-						...acc,
-						...fontPromises
-					]
-				}, [])
-			).then(() => {
-				if (isActive) {
-					inject(commonStyle, priority);
-					resolve({type: "inline-style", style: commonStyle, ...args});
-				}
-			})
+			inject(commonStyle, priority);
+			emt({ type: 'inline-style', style: commonStyle, ...args });
 		});
 
 		// sweep.add(() => {
-		// 	isActive = false;
 		// 	commonStyle.remove();
-		// 	fontStyle && fontStyle.remove();
+		// 	fontFaceStyle && fontFaceStyle.remove();
 		// });
 	});
 }

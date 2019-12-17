@@ -810,6 +810,24 @@ export default class HTMLView extends LiveSchema {
 
 }
 
+const UNSCOPABLES_PROPS = { eval: true, __intl: true, __literals: true };
+const STD_PROXY_CONFIG = {
+	has() {
+		return true;
+	},
+	get(target, prop) {
+		if (prop === Symbol.unscopables) {
+			return UNSCOPABLES_PROPS;
+		}
+		const vl = target[prop];
+		if (vl !== undefined) {
+			return vl;
+		} else {
+			throw 1;
+		}
+	}
+};
+
 HTMLView.resourceloader = resourceloader;
 
 function cutliterals (node) {
@@ -831,38 +849,11 @@ function cutliterals (node) {
 				/intl\.([a-z-0-9A-Z_]+)/,
 				(_, lit) => '__intl["' + lit + '"]'
 			);
-		const fn = new Function("argv", `with(argv) return ${raw}`);
-		const operator = (data, literals, intl, ) => {
-			return fn(new Proxy(data, {
-				has() {
-					return true;
-				},
-				get(target, prop) {
-					if (prop === Symbol.unscopables) {
-						return false;
-					}
-					else if(prop === "eval") {
-						return eval;
-					}
-					else if(prop === "__intl") {
-						return intl;
-					}
-					else if(prop === "__literals") {
-						return literals;
-					}
-					const vl = target[prop];
-					if (vl !== undefined) {
-						return vl;
-					} else {
-						throw "exit";
-					}
-				}
-			}));
-		}
-		literal = {
-			litterals: literals,
-			operator,
+		const fn = new Function("argv", "eval", "__intl", "__literals", `with(argv) return ${raw}`);
+		const operator = (data, literals, intl) => {
+			return fn(new Proxy(data, STD_PROXY_CONFIG), eval, intl, literals);
 		};
+		literal = { literals, operator };
 	}
 	return literal;
 }

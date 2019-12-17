@@ -12,7 +12,6 @@
     "air-anime": "https://github.com/artifishional/air-anime.git",
     "air-schema": "git+ssh://git@github.com/One1L/air-schema.git#jsdom-test",
     "air-stream": "git+ssh://git@github.com/One1L/air-stream.git#res-loader-refactor",
-    "css-tree": "^1.0.0-alpha.29",
     "fontfaceobserver": "^2.1.0",
     "howler": "^2.0.15",
     "image-preloader": "^1.1.1",

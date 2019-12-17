@@ -18,6 +18,7 @@ export default class LiveSchema extends Schema {
         // todo разобраться с src
         this.src = this.parent = src;
         this.isready = !use.length;
+        this.options = prop.options || {};
         this.entities = [];
         this._stream = null;
     }
@@ -174,7 +175,7 @@ export default class LiveSchema extends Schema {
         }
         return stream( (emt, { over }) =>
             this._get( route ).then( vertex => {
-                over.add(vertex.entity(signature, $).on(emt));
+                over.add(vertex.entity(signature, $).on(emt, vertex.options));
             })
         );
     }
