@@ -88,7 +88,7 @@ export default (resourceloader, {path}, { acid, priority, style, revision, ...ar
 				while (~rawCommonCSSContent.indexOf(placeholder)) {
 					rawCommonCSSContent = rawCommonCSSContent.replace(placeholder, rawURL);
 				}
-				return resourceloader(resourceloader, {path}, {url: resource});
+				return resourceloader(resourceloader, {path}, {url: resource, type: 'img'});
 			}
 		});
 		promises.push(...fonts.map((font) =>

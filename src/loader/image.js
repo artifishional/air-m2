@@ -20,7 +20,7 @@ export default (resourceloader, {path}, { origin, url, revision, ...args }) => n
   else {
     IMGSStore.add(rawURL);
     const image = new Image();
-    [...origin.attributes].map( ({ name, value }) => {
+    origin && [...origin.attributes].map( ({ name, value }) => {
       if(name === "srcset") {
         console.warn("'srcset' img property currently is not supported");
       }
