@@ -11,6 +11,7 @@ export default (resourceloader, {path}, { origin, url, revision, ...args }) => n
   if (revision) {
     url.searchParams.append('revision', revision);
   }
+
   const rawURL = url.pathname + url.search;
   if(IMGSStore.has(rawURL)) {
     const image = new Image();
