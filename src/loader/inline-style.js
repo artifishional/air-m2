@@ -16,15 +16,10 @@ function inject (style, priority) {
 	PRIORITY[priority].after(style);
 }
 
-const IMGPreloaderSheet = document.createElement("style");
-const IMGSStore = new Set();
 const PRIORITY = [];
 
 export default (resourceloader, {path}, { acid, priority, style, revision, ...args }) => {
-
-		const imgStorePrevSize = IMGSStore.size;
 		if (!PRIORITY[0]) {
-			document.head.append(IMGPreloaderSheet);
 			const zero = document.createElement('style');
 			zero.setAttribute('data-priority', '0');
 			document.head.append(zero);

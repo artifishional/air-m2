@@ -33,7 +33,6 @@ export default class Loader {
                         emt({data: module});
                     } );
                     */
-
                     resourceloader(resourceloader, {path: _path + '/'}, {url: schtypes[schtype], type: 'script'}).then(({module}) => {
                         return { data: module, pack: { path: _path + "/" } };
                     } );
