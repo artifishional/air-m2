@@ -220,7 +220,7 @@ export default class ActiveNodeTarget {
                                 return formatter.format(value).replace("грн.", "₴");
                             }
                             else if(intl.currency === "000" && options.style === "currency") {
-                                return formatter.format(value).replace("$", "ß");
+                                return formatter.format(value).replace("$", "BB");
                             }
                             return formatter.format(value);
                         };
