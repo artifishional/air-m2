@@ -203,7 +203,9 @@ export default class ActiveNodeTarget {
                 this.formatters[intl.locale] = formattersRes.content.slice(1)
                     .reduce( (acc, [ name, options ]) => {
                         const formatter =
-                            new Intl.NumberFormat(intl.locale, { currency: intl.currency, ... options });
+                            new Intl.NumberFormat(intl.locale, {
+                                currency: intl.currency === "000" ? "usd" : intl.currency, ... options
+                            });
                         acc[name] = (value) => {
                             if(value === undefined) {
                                 return "";
@@ -216,6 +218,9 @@ export default class ActiveNodeTarget {
                             // while it works correctly in the firefox
                             if(intl.currency === "uah" && options.style === "currency") {
                                 return formatter.format(value).replace("грн.", "₴");
+                            }
+                            else if(intl.currency === "000" && options.style === "currency") {
+                                return formatter.format(value).replace("$", "ß");
                             }
                             return formatter.format(value);
                         };
