@@ -18,24 +18,59 @@ import { NODE_TYPES } from "./def"
 import { Layer, BaseLayer } from "./layer"
 import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
+import LazyActiveNodeTarget from "./lazy-active-node-target"
 import { ModelVertex } from "../../model-vertex"
-import spreading from "air-m2/src/view-vertex/html-view/spreading";
+import spreading from "./spreading";
 
 let UNIQUE_VIEW_KEY = 0;
 let UNIQUE_IMAGE_KEY = 0;
 
+const CACHE_LIFETIME = 5000;
+
 class Cached {
 
-	constructor({ constructor }) {
+	constructor ({ constructor }) {
 		this.__cache = [];
 		this.constructor = constructor;
+		// this.timer = setInterval(this.clearCache.bind(this), CACHE_LIFETIME);
 	}
 
-	createIfNotExist( data, signature ) {
-		let exist = this.__cache.find( ({ signature: x }) => signatureEquals(signature, x) );
-		if(!exist) {
-			exist = { signature, cell: this.constructor(data, data) };
+	clearCache () {
+		this.__cache.map((element, idx) => {
+			if (window.performance.now() > element.lastAccessTime + CACHE_LIFETIME) {
+				if (element.hook) {
+					element.hook({ dissolve: true });
+					this.__cache.splice(idx, 1);
+				}
+			}
+		});
+	}
+
+	clear () {
+		this.__cache.map((element, idx) => {
+			if (element.hook) {
+				element.hook({ dissolve: true });
+				this.__cache.splice(idx, 1);
+			}
+		});
+	}
+
+	pushHook (hook, signature) {
+		let exist = this.__cache.find(({ signature: x }) => signatureEquals(signature, x));
+		if (exist) {
+			exist.hook = hook
+		} else {
+			throw `element does not exist`
+		}
+	}
+
+	createIfNotExist (data, signature) {
+		let exist = this.__cache.find(({ signature: x }) => signatureEquals(signature, x));
+		if (!exist) {
+			exist = { signature, cell: this.constructor(data, data), lastAccessTime: window.performance.now() };
 			this.__cache.push(exist);
+		} else {
+			exist.lastAccessTime = window.performance.now();
 		}
 		return exist.cell;
 	}
@@ -63,9 +98,14 @@ export default class HTMLView extends LiveSchema {
 		return new HTMLView( ["$", { use: [{ path, schtype: "html" }] }] );
 	}
 
-	createActiveNodeTarget(node, resources) {
-		return new ActiveNodeTarget(this, node, resources);
+	createActiveNodeTarget (node, resources, container) {
+		if (container.type === 'lazy-node') {
+			return new LazyActiveNodeTarget(this, node, resources, container);
+		} else {
+			return new ActiveNodeTarget(this, node, resources, container);
+		}
 	}
+
 
 	findByLabel(label) {
 		if(this.layers.some(({ prop: { label: x } }) => x === label)) {
@@ -149,55 +189,150 @@ export default class HTMLView extends LiveSchema {
 			over.add(() => cache.clear());
 
 			const store = [];
-			
-			sweep.add(modelstream.at( ([ state ]) => {
-				
-				let childs;
+			let lazyscroll = this.parent.prop.lazyscroll;
+      if (lazyscroll) {
+        this.parent.lazyscrollControlStream = stream((emt, { sweep, hook }) => {
+          let first = 0, last = 1, childs = [];
+          const overscan = 1;
 
-				try {
-					childs = getfrompath(state, this.prop.kit.getter);
-				}
-				catch (e) {
-					childs = [];
-				}
-				
-				let domTreePlacment = container.begin;
-				
-				const deleted = [ ...store];
+          let prev = { first, last, childs };
+          let raf;
 
-				childs.map( child => {
-					const signature = calcsignature(child, this.prop.kit.prop);
-					const exist = store.find( ({ signature: $ }) => signatureEquals(signature, $ ) );
-					if(!exist) {
-						const box = new PlaceHolderContainer(this, { type: "item" });
-						domTreePlacment.after(box.target);
-						domTreePlacment = box.end;
-						cache.createIfNotExist( child, signature )
-							.at( ([ { stage, container } ]) => {
-								container.remove();
-								if(stage === 1) {
-									box.append( container.target );
-								}
-							});
-						store.push( { signature, box } );
+          const render = () => {
+
+            if (childs === undefined) {
+              childs = []
+            }
+
+            if (!equal(prev, { first, last, childs })) {
+
+              prev = { first, last, childs };
+
+              let domTreePlacment = container.begin;
+              const deleted = [...store];
+
+              childs.map((child, i) => {
+                const signature = calcsignature(child, this.prop.kit.prop);
+                const exist = store.find(({ signature: $ }) => signatureEquals(signature, $));
+
+                if (i >= first - overscan && i < last + overscan) {
+                  const elementHeight = lazyscroll === true ? 0 : +lazyscroll;
+                  if (!exist) {
+                    const box = new PlaceHolderContainer(this, { type: 'item' });
+                    domTreePlacment.after(box.target);
+                    domTreePlacment = box.end;
+
+                    if (lazyscroll === true && i > 0) {
+                      return;
+                    }
+
+                    const hook = cache.createIfNotExist(child, signature)
+                      .at(([{ stage, container }]) => {
+                        container.remove();
+                        container.target.firstElementChild.style.top = i * elementHeight + 'px';
+                        container.target.firstElementChild.style.position = 'absolute';
+                        if (stage === 1) {
+                          box.append(container.target);
+                        }
+                      });
+                    cache.pushHook(hook, signature);
+                    store.push({ signature, box });
+                  } else {
+                    removeElementFromArray(deleted, exist);
+                    exist.box.restore();
+                    if (exist.box.target.firstElementChild) {
+                      exist.box.target.firstElementChild.style.top = i * elementHeight + 'px';
+                      exist.box.target.firstElementChild.style.position = 'absolute';
+                    }
+                    domTreePlacment.after(exist.box.target);
+                    domTreePlacment = exist.box.end;
+                  }
+                }
+              });
+
+              deleted.map(item => item.box.restore());
+
+              store.map((element, idx) => {
+                if (!childs.some((child) => signatureEquals(calcsignature(child, this.prop.kit.prop), element.signature))) {
+                  store.splice(idx, 1);
+                }
+              });
+            }
+          };
+
+          modelstream.at(([state]) => {
+            try {
+              childs = getfrompath(state, this.prop.kit.getter);
+            } catch (e) {
+              childs = [];
+            }
+            emt([{ elements: childs.length }]);
+						cancelAnimationFrame(raf);
+						raf = requestAnimationFrame(render);
+          });
+
+          hook.add(({ action, data }) => {
+            if (action === 'scroll') {
+              const { height, offset } = data;
+              if (height !== 0) {
+                first = Math.floor(offset / +lazyscroll);
+                last = Math.ceil((offset + height) / +lazyscroll);
+              }
+							cancelAnimationFrame(raf);
+							raf = requestAnimationFrame(render);
+            } else if (action === 'setElementHeight') {
+              lazyscroll = data.height;
+            }
+          });
+
+        });
+      } else {
+				sweep.add(modelstream.at(([state]) => {
+
+					let childs;
+
+					try {
+						childs = getfrompath(state, this.prop.kit.getter);
+					} catch (e) {
+						childs = [];
 					}
-					else {
-						removeElementFromArray(deleted, exist);
-						if(exist.box.begin !== domTreePlacment.nextSibling) {
-							exist.box.restore();
-							domTreePlacment.after(exist.box.target);
+
+					let domTreePlacment = container.begin;
+
+					const deleted = [...store];
+
+					childs.map(child => {
+						const signature = calcsignature(child, this.prop.kit.prop);
+						const exist = store.find(({ signature: $ }) => signatureEquals(signature, $));
+						if (!exist) {
+							const box = new PlaceHolderContainer(this, { type: "item" });
+							domTreePlacment.after(box.target);
+							domTreePlacment = box.end;
+							cache.createIfNotExist(child, signature)
+								.at(([{ stage, container }]) => {
+									container.remove();
+									if (stage === 1) {
+										box.append(container.target);
+									}
+								});
+							store.push({ signature, box });
+						} else {
+							removeElementFromArray(deleted, exist);
+							if (exist.box.begin !== domTreePlacment.nextSibling) {
+								exist.box.restore();
+								domTreePlacment.after(exist.box.target);
+							}
+							domTreePlacment = exist.box.end;
 						}
-						domTreePlacment = exist.box.end;
-					}
-				} );
-				
-				deleted.map( item => {
-					const deleted = store.indexOf(item);
-					store.splice(deleted, 1);
-					item.box.restore();
-				} );
-			} ));
+					});
 
+					deleted.map(item => {
+						const deleted = store.indexOf(item);
+						store.splice(deleted, 1);
+						item.box.restore();
+					});
+				}));
+			}
 
 		} );
 
@@ -423,7 +558,8 @@ export default class HTMLView extends LiveSchema {
 					return StylesController.get(style, this.acid, priority, this.prop.pack)
 				})
 			] ).at( ( resources ) => {
-				const container = new PlaceHolderContainer( this, { type: "node" } );
+				const type = this.prop.lazyscroll ? 'lazy-node' : 'node';
+				const container = new PlaceHolderContainer(this, { type });
 				container.append(this.prop.node.cloneNode(true));
 				const imgs = resources.filter(({type}) => type === "img");
 				[...container.target.querySelectorAll(`slot[img]`)]
@@ -666,7 +802,9 @@ export default class HTMLView extends LiveSchema {
 				return true;
 			}
 		} );
-		
+
+		const lazyscroll = node.getAttribute('lazyscroll') || node.hasAttribute('lazyscroll');
+
 		const streamplug = [...node.children]
 			.filter(byTagName("script"))
 			.filter(byAttr("data-source-type", "stream-source"))
@@ -725,6 +863,7 @@ export default class HTMLView extends LiveSchema {
 			stream,         //link to model stream todo obsolete io
 			resources,      //related resources
 			literal,        //string template precompiled literal
+			lazyscroll,			//height for children element, or autodetect if true
 		};
 		
 		const res = src.acid !== -1 && src.lift( [ uvk, prop ], src ) ||
@@ -810,7 +949,7 @@ export default class HTMLView extends LiveSchema {
 			return super.mergeProperties( name, value );
 		}
 	}
-	
+
 }
 
 const UNSCOPABLES_PROPS = { eval: true, __intl: true, __literals: true };

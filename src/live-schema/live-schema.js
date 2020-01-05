@@ -13,6 +13,7 @@ export default class LiveSchema extends Schema {
     ) {
         super( [ key, { id, ...prop, use, pack, }, ...item ], {}, { acid } );
         this.src = this.parent = src;
+        this.options = prop.options || {};
         this.isready = !use.length;
         this.entities = [];
         this._stream = null;
@@ -170,7 +171,7 @@ export default class LiveSchema extends Schema {
         }
         return stream( (emt, { over }) =>
             this._get( route ).then( vertex => {
-                over.add(vertex.entity(signature, $).on(emt));
+                over.add(vertex.entity(signature, $).on(emt, vertex.options));
             })
         );
     }

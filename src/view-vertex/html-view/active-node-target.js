@@ -1,6 +1,5 @@
-import {NODE_TYPES} from "./def"
-import { getfrompath } from "../../utils"
-
+import { NODE_TYPES } from './def';
+import { getfrompath } from '../../utils';
 
 class NumberFormat {
 
@@ -172,8 +171,9 @@ function templater(vl, intl = null, argv, resources) {
 
 export default class ActiveNodeTarget {
 
-    constructor(src, node, resources) {
+    constructor(src, node, resources, container) {
         this.literal = src.prop.literal;
+        this.container = container;
         this.resources = resources;
         this.node = node;
         this.formatters = {};
