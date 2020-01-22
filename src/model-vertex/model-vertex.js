@@ -32,13 +32,13 @@ export default class ModelVertex extends LiveSchema {
 
 	constructor([ key, { source = () => stream( emt => `empty point ${key}` ), ...prop }, ...item], src) {
 		super([ key, { source, ...prop }, ...item], src);
+		this.resourceloader = src.resourceloader;
 	}
 
 	static createApplicationRoot( { path = ENTRY_UNIT, resourceloader = ModelVertex.resourceloader } ) {
-		return new ModelVertex( [ "$", {},
-			[ "error", { id: "error", source: error } ],
-			[ "main", { use: [{ path }]} ],
-		], { resourceloader }, );
+		const model = new ModelVertex( [ "$", {}, ], { resourceloader }, );
+		model.append([ "error", { id: "error", source: error } ], [ "main", { use: [{ path }]} ],);
+		return model;
 	}
 	
 	static observe(src, cb) {
