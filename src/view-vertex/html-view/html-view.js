@@ -1,6 +1,6 @@
 import {BOOLEAN, EMPTY_FUNCTION, EMPTY_OBJECT} from "../../def"
 import { ENTRY_UNIT, VIEW_PLUGINS } from '../../globals';
-import { stream, combine, keyF, sync } from "air-stream"
+import { stream, combine, keyF, sync, fromPromise } from "air-stream"
 import StylesController from "./styles-controller"
 import {
 	equal,
@@ -13,12 +13,12 @@ import {
 import events from "../events"
 import JSON5 from "json5"
 import { LiveSchema } from "../../live-schema"
-import resource from "../../loader/resource"
 import { NODE_TYPES } from "./def"
 import { Layer, BaseLayer } from "./layer"
 import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
 import { ModelVertex } from "../../model-vertex"
+import resourceloader from "../../loader/resource-loader"
 import spreading from "air-m2/src/view-vertex/html-view/spreading";
 
 let UNIQUE_VIEW_KEY = 0;
@@ -46,6 +46,9 @@ export default class HTMLView extends LiveSchema {
 
 	constructor( args, src, { acid } = {} ) {
 		super( args, src, { acid } );
+
+		this.resourceloader = src.resourceloader;
+
 		this.prop.preload = this.prop.preload !== undefined ? this.prop.preload : true;
 		this.prop.stream = this.prop.stream || "";
 		this.prop.resources = this.prop.resources || [];
@@ -59,8 +62,8 @@ export default class HTMLView extends LiveSchema {
 		this.prop.node = this.prop.node || document.createDocumentFragment();
 	}
 
-	static createApplicationRoot( { path = ENTRY_UNIT } ) {
-		return new HTMLView( ["$", { use: [{ path, schtype: "html" }] }] );
+	static createApplicationRoot( { path = ENTRY_UNIT, resourceloader = HTMLView.resourceloader } ) {
+		return new HTMLView( ["$", { use: [{ path, schtype: "html" }] }], { resourceloader }, );
 	}
 
 	createActiveNodeTarget(node, resources) {
@@ -126,7 +129,7 @@ export default class HTMLView extends LiveSchema {
 						})
 							.filter(Boolean)
 							.distinct(equal)
-					}]);
+					}], {resourceloader: this.resourceloader});
 					
 					let sign;
 					if(typeof signature !== "object") {
@@ -250,7 +253,7 @@ export default class HTMLView extends LiveSchema {
 							vars = routeNormalizer(stream)[1];
 						}
 						layer = streamplug.reduce( (acc, source) => {
-							const res = new ModelVertex(["$$", { glassy: true, source }]);
+							const res = new ModelVertex(["$$", { glassy: true, source }], {resourceloader: this.resourceloader});
 							res.parent = acc;
 							return res;
 						}, layer);
@@ -420,7 +423,7 @@ export default class HTMLView extends LiveSchema {
 				...this.prop.resources,
 				...this.prop.styles.map( (style, priority) => {
 					priority = +(style.getAttribute("priority") || priority);
-					return StylesController.get(style, this.acid, priority, this.prop.pack)
+					return StylesController.get(style, this.acid, priority, this.prop.pack, this.resourceloader)
 				})
 			] ).at( ( resources ) => {
 				const container = new PlaceHolderContainer( this, { type: "node" } );
@@ -437,7 +440,7 @@ export default class HTMLView extends LiveSchema {
 			}));
 		});
 	}
-	
+
 	teeFSignatureCheck( layers ) {
 		return this.layers.every( ({ acid, prop: { teeF } }) => teeF ? teeF(layers.get(acid)) : true );
 	}
@@ -447,7 +450,7 @@ export default class HTMLView extends LiveSchema {
 			return this.createNextLayers( args, manager );
 		}
 		const { layers, parentViewLayers } = manager;
-		
+
 		const teeFLayers = this.layers
 			.filter( ({ prop: { teeF } }) => teeF )
 			.map( ({ acid }) => acid );
@@ -575,22 +578,22 @@ export default class HTMLView extends LiveSchema {
 			.map(x => x._obtain( [], args, { layers, parentViewLayers } ))
 		);
 	}
-	
+
 	parse(node, src, { pack } ) {
 		return this.constructor.parse( node, src, { pack } );
 	}
-	
-	static parse( node, src, { pack, type = "unit" } ) {
 
+	static parse( node, src, { pack, type = "unit" } ) {
 		let uvk = `${++UNIQUE_VIEW_KEY}`;
-		
+
 		if(!(node instanceof Element)) {
-			return new HTMLView( ["", {}], src, { createEntity: node } );
+			return new HTMLView( [""], src, { createEntity: node } );
 		}
-		
+
+
 		const comments = document.createTreeWalker(node, NodeFilter.SHOW_COMMENT);
 		while(comments.nextNode()) comments.currentNode.remove();
-		
+
 		//TODO: (improvement required)
 		// currently clones the entire contents and then
 		// removes it from the parent element to solve the shared units problem
@@ -602,7 +605,7 @@ export default class HTMLView extends LiveSchema {
 		const { path = "./", key: pkey = uvk } = (src || {}).prop || {};
 
 		let key = node.getAttribute("key");
-		
+
 		if(key !== null) {
 			if(/[`"'{}\]\[]/.test(key)) {
 				key = JSON5.parse(key);
@@ -612,7 +615,7 @@ export default class HTMLView extends LiveSchema {
 		else {
 			key = pkey;
 		}
-		
+
 		const handlers = [ ...node.attributes ]
 			.filter( ({ name }) => events.includes(name) || name.indexOf("on:") === 0 )
 			.map( ({ name, value }) => ({
@@ -631,34 +634,38 @@ export default class HTMLView extends LiveSchema {
 
 		const use = pathParser( node.getAttribute("use") || "" );
 
-        const resources =
-            [ ...(src.acid !== -1 && src.prop.resources || []), ...JSON5
-                .parse(node.getAttribute("resources") || "[]")
-                .map( x => resource(pack, x) )
-            ];
+		const resources =
+			[ ...(src.acid !== -1 && src.prop.resources || []), ...JSON5
+				.parse(node.getAttribute("resources") || "[]")
+				.map( x => fromPromise(src.resourceloader(src.resourceloader, pack, x)) )
+			];
 
 		const styles = [...node.children].filter(byTagName("STYLE"));
-		
+
 		styles.map( style => {
 			//todo hack
 			style.pack = pack;
 			style.remove();
 		} );
-		//resources.push(...styles.map( style => resource(pack, { type: "inline-style", style }) ));
+		//resources.push(...styles.map( style => src.resourceloader(src.resourceloader, pack, { type: "inline-style", style }) ));
 
 		const sounds = [...node.children].filter(byTagName("SOUND"));
-		resources.push(...sounds.map( sound => resource(pack, { type: "sound", name: sound.getAttribute("name") || "", rel: sound.getAttribute("rel") || ""}) ));
-		
-		const teeF = cutteeF(node) || cuttee(node, key);
+		resources.push(...sounds.map( sound =>
+        fromPromise(src.resourceloader(src.resourceloader, pack, {
+                type: "sound", name: sound.getAttribute("name") || "", rel: sound.getAttribute("rel") || ""
+            }) ))
+        );
+
+        const teeF = cutteeF(node) || cuttee(node, key);
 		const kit = cutkit(node, key);
-        const preload =
+		const preload =
 			!["", "true"].includes(node.getAttribute("nopreload")) &&
 			!["", "true"].includes(node.getAttribute("lazy"));
-        
-        const useOwnerProps = node.parentNode.tagName.toUpperCase() === "UNIT";
+
+		const useOwnerProps = node.parentNode.tagName.toUpperCase() === "UNIT";
 		node.remove();
-        
-        const controlled = [ ...node.childNodes ].some( node => {
+
+		const controlled = [ ...node.childNodes ].some( node => {
 			if(node.nodeType === 1 && !["UNIT", "PLUG", "STYLE"].includes(node.tagName.toUpperCase())) {
 				return true;
 			}
@@ -666,37 +673,27 @@ export default class HTMLView extends LiveSchema {
 				return true;
 			}
 		} );
-		
+
 		const streamplug = [...node.children]
 			.filter(byTagName("script"))
 			.filter(byAttr("data-source-type", "stream-source"))
 			.map( plug => {
-				const src = document.createElement("script");
-				VIEW_PLUGINS.set(src, null);
-				src.textContent = plug.textContent;
-				document.head.append( src );
-				const res = VIEW_PLUGINS.get(src).default;
-				VIEW_PLUGINS.delete(src);
+				const mdl =
+					src.resourceloader(src.resourceloader, {}, {scriptContent: plug.textContent, type: 'script'}).default;
 				plug.remove();
-				src.remove();
-				return res;
+				return mdl;
 			} );
-		
+
 		const plug = [...node.children]
 			.filter(byTagName("script"))
 			.filter(byAttr("data-source-type", "view-source"))
 			.map( plug => {
-				const src = document.createElement("script");
-				VIEW_PLUGINS.set(src, null);
-				src.textContent = plug.textContent;
-				document.head.append( src );
-				const res = VIEW_PLUGINS.get(src).default;
-				VIEW_PLUGINS.delete(src);
+				const mdl =
+					src.resourceloader(src.resourceloader, {}, {scriptContent: plug.textContent, type: 'script'}).default;
 				plug.remove();
-				src.remove();
-				return res;
+				return mdl;
 			} );
-   
+
 		const keyframes = [];
 
 		const literal = cutliterals( node );
@@ -726,10 +723,10 @@ export default class HTMLView extends LiveSchema {
 			resources,      //related resources
 			literal,        //string template precompiled literal
 		};
-		
+
 		const res = src.acid !== -1 && src.lift( [ uvk, prop ], src ) ||
 			new HTMLView( [ uvk, prop ], src );
-		
+
 		//[...node.childNodes].map( next => setup( next, res.prop ));
 
 		res.append(...[...node.children].reduce((acc, next) =>
@@ -740,20 +737,20 @@ export default class HTMLView extends LiveSchema {
 
 		res.prop.node = document.createDocumentFragment();
 		res.prop.node.append( ...node.childNodes );
-		
+
 		/*[...styles].map( style => {
 			style.textContent = style.textContent.replace(/:scope/g, `[data-scope-acid-${res.acid}]`);
 		} );*/
-		
+
 		/*styles.length && [...res.prop.node.children]
 			.map( node => {
 				node.setAttribute(`data-scope-acid-${res.acid}`, "");
 			} );*/
-		
+
 		return res;
-		
+
 	}
-	
+
 	mergeProperties( name, value ) {
 		if(name === "stream") {
 			return this.prop.stream;
@@ -810,7 +807,7 @@ export default class HTMLView extends LiveSchema {
 			return super.mergeProperties( name, value );
 		}
 	}
-	
+
 }
 
 const UNSCOPABLES_PROPS = { eval: true, __intl: true, __literals: true };
@@ -830,6 +827,8 @@ const STD_PROXY_CONFIG = {
 		}
 	}
 };
+
+HTMLView.resourceloader = resourceloader;
 
 function cutliterals (node) {
 	let literal = null;
@@ -1043,8 +1042,11 @@ function parseChildren(next, { resources, path, key }, src) {
 		const key = UNIQUE_IMAGE_KEY ++;
 		const _slot = img( key );
 		next.replaceWith( _slot );
-		resources.push(
-			resource(src.prop.pack, { key, origin: next, type: "img", url: next.getAttribute("src") })
+    resources.push(
+      fromPromise(src.resourceloader(src.resourceloader,
+			  src.prop.pack, { key, origin: next, type: "img", url: next.getAttribute("src") }
+			  )
+      )
 		);
 		return [];
 	}

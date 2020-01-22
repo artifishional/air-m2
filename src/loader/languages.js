@@ -1,13 +1,11 @@
-import stream from "./xhr"
+export default (resourceloader, {path}, {url}) => {
+  return resourceloader(resourceloader, {path}, {url, type: 'content'})
+    .then((content) => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(content, "application/xml");
 
-export default ({url, revision}) => stream({path: url, revision, content: { type: "application/xml" }})
-    .map( xhr => {
-
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(xhr.responseText, "application/xml");
-
-        const content = [ ...doc.querySelector("languages").children]
-            .reduce((acc, next) => {
+      content = [ ...doc.querySelector("languages").children]
+          .reduce((acc, next) => {
 
             const lang = next.tagName;
 
@@ -28,5 +26,6 @@ export default ({url, revision}) => stream({path: url, revision, content: { type
 
         }, [ ]);
 
-        return { type: "language", content };
-    } );
+      return { type: "language", content };
+    })
+};

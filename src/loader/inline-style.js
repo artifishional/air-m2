@@ -1,4 +1,3 @@
-import { stream } from 'air-stream';
 import FontFaceObserver from 'fontfaceobserver';
 
 const FONT_LOADING_TIMEOUT = 30000;
@@ -17,16 +16,10 @@ function inject (style, priority) {
 	PRIORITY[priority].after(style);
 }
 
-const IMGPreloaderSheet = document.createElement("style");
-const IMGSStore = new Set();
 const PRIORITY = [];
 
-export default ({ acid, priority, style, path, revision, ...args }) => {
-
-	return stream((emt, { sweep }) => {
-		const imgStorePrevSize = IMGSStore.size;
+export default (resourceloader, {path}, { acid, priority, style, revision, ...args }) => {
 		if (!PRIORITY[0]) {
-			document.head.append(IMGPreloaderSheet);
 			const zero = document.createElement('style');
 			zero.setAttribute('data-priority', '0');
 			document.head.append(zero);
@@ -95,39 +88,21 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 				while (~rawCommonCSSContent.indexOf(placeholder)) {
 					rawCommonCSSContent = rawCommonCSSContent.replace(placeholder, rawURL);
 				}
-				return new Promise( resolve => {
-					if(IMGSStore.has(rawURL)) {
-						resolve();
-					}
-					else {
-						IMGSStore.add(rawURL);
-						const img = new Image();
-						img.onload = resolve;
-						img.src = rawURL;
-					}
-				} );
+				return resourceloader(resourceloader, {path}, {url: resource, type: 'img'});
 			}
 		});
-		if(imgStorePrevSize !== IMGSStore.size) {
-			IMGPreloaderSheet.textContent = `
-				body:after {
-				display:none;
-				content: url(${ [...IMGSStore].join(") url(")});
-			}`;
-		}
 		promises.push(...fonts.map((font) =>
 			new FontFaceObserver(font).load(null, FONT_LOADING_TIMEOUT))
 		);
 
-		Promise.all(promises).then(() => {
+		return Promise.all(promises).then(() => {
 			commonStyle.textContent = rawCommonCSSContent;
 			inject(commonStyle, priority);
-			emt({ type: 'inline-style', style: commonStyle, ...args });
+			return { type: 'inline-style', style: commonStyle, ...args };
 		});
 
-		sweep.add(() => {
-			commonStyle.remove();
-			fontFaceStyle && fontFaceStyle.remove();
-		});
-	});
+		// sweep.add(() => {
+		// 	commonStyle.remove();
+		// 	fontFaceStyle && fontFaceStyle.remove();
+		// });
 }

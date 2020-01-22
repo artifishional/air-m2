@@ -1,7 +1,6 @@
-import stream from "./xhr"
-
-export default ({url, revision}) => stream({path: url, revision, content: { type: "application/json" }})
-    .map( xhr => {
-        const json = JSON.parse(xhr.responseText);
-        return { type: "intl", content: json };
-    } );
+export default (resourceloader, {path}, {url}) => {
+  return resourceloader(resourceloader, {path}, {url, type: 'json'})
+    .then(({content}) => {
+      return { type: "intl", content };
+    })
+};

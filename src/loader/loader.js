@@ -1,12 +1,9 @@
-import { stream } from "air-stream"
-import include from "./script_like_promise"
-import html from "./html"
-import { REVISION as revision } from '../globals'
+import { REVISION as revision, PORT as port } from '../globals'
 
 const schtypes = {
-    "js": "/index.js",
-    "json": "/index.json",
-    "html": "/index.html",
+    "js": "index.js",
+    "json": "index.json",
+    "html": "index.html",
 };
 
 export default class Loader {
@@ -16,7 +13,7 @@ export default class Loader {
         this.modules = [];
     }
 
-    obtain( { path: _path, schtype = "js" } ) {
+    obtain( { path: _path, schtype = "js" }, resourceloader ) {
         if(!_path) throw "'path' param is required";
         const path = _path + schtypes[schtype];
         const exist = this.modules.find( ({ path: _path }) => path === _path );
@@ -26,8 +23,8 @@ export default class Loader {
         else {
             let module = null;
             if (schtype === "html") {
-                module = html({path: `${this.rpath}${path}`, revision})
-                    .then( html => ({ data: html.content, pack: { path: _path + "/" } }) )
+                module = resourceloader(resourceloader, {path: _path + '/'}, {url: schtypes[schtype], type: 'html'})
+                  .then( html => ({ data: html.content, pack: { path: _path + "/" } }) );
             }
             else {
                 module =
@@ -36,10 +33,7 @@ export default class Loader {
                         emt({data: module});
                     } );
                     */
-
-
-
-                    include({path: `${this.rpath}${path}`, revision}).then(({module}) => {
+                    resourceloader(resourceloader, {path: _path + '/'}, {url: schtypes[schtype], type: 'script'}).then(({module}) => {
                         return { data: module, pack: { path: _path + "/" } };
                     } );
 
