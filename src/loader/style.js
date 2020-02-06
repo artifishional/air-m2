@@ -1,11 +1,8 @@
-export default ({path}, {urlOrigin, url, revision, ...args}) => new Promise(resolve => {
-    url = new URL(`${urlOrigin}/m2units/${path}${url}`).href;
-    const style = document.createElement("link");
-    style.setAttribute("rel", "stylesheet");
-    style.setAttribute("href", revision ? `${url}?rev=${revision}` : url);
-    document.head.append(style);
-    style.onload = () => {
-        style.remove();
-        resolve({url, type: "style", style, ...args});
-    };
-})
+export default (resourceloader, {path}, {urlOrigin, url, revision, ...args}) =>
+    resourceloader(resourceloader, {path}, {...args, urlOrigin, url, revision, type: 'content'})
+    .then(styleContent => {
+        url = new URL(`${urlOrigin}/m2units/${path}${url}`).href;
+        const style = document.createElement('script');
+        style.textContent = styleContent;
+        return {url, type: "style", style, ...args};
+    })

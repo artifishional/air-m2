@@ -25,7 +25,7 @@ export default function (resourceloader, { path }, { type, ...args }) {
   } else if (type === "font") {
     return fontLoader({path}, { type, urlOrigin, revision, ...args });
   } else if (type === "style") {
-    return styleLoader({path}, { type, urlOrigin, revision, ...args });
+    return styleLoader(resourceloader, {path}, { type, urlOrigin, revision, ...args });
   } else if (type === "formatters") {
     return intlLoader(resourceloader, {path}, { type, urlOrigin, revision, ...args });
   } else if (type === "languages") {
