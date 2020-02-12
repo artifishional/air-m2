@@ -2,7 +2,7 @@ import Observer from "fontfaceobserver"
 const FONT_LOADING_TIMEOUT = 30000;
 
 //todo need cache
-export default (resourceloader, {path}, {url, revision, family, size, ...args}) => new Promise(() => {
+export default (resourceloader, {path}, {url, revision, family, size, ...args}) => new Promise(resolve => {
     const style = document.createElement("style");
     style.textContent =
         `@font-face { 
@@ -12,7 +12,7 @@ export default (resourceloader, {path}, {url, revision, family, size, ...args}) 
     document.head.appendChild(style);
     new Observer(family)
         .load(null, FONT_LOADING_TIMEOUT)
-        .then( () => ({
+        .then( () => resolve({
             type: "font", font: { fontFamily: family, fontSize: size, ...args }
         }) )
 });

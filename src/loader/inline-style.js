@@ -16,10 +16,14 @@ function inject (style, priority) {
 	PRIORITY[priority].after(style);
 }
 
+const IMGPreloaderSheet = document.createElement("style");
+const IMGSStore = new Set();
 const PRIORITY = [];
 
 export default (resourceloader, {path}, { acid, priority, style, revision, ...args }) => {
+		const imgStorePrevSize = IMGSStore.size;
 		if (!PRIORITY[0]) {
+			document.head.append(IMGPreloaderSheet);
 			const zero = document.createElement('style');
 			zero.setAttribute('data-priority', '0');
 			document.head.append(zero);
@@ -88,9 +92,20 @@ export default (resourceloader, {path}, { acid, priority, style, revision, ...ar
 				while (~rawCommonCSSContent.indexOf(placeholder)) {
 					rawCommonCSSContent = rawCommonCSSContent.replace(placeholder, rawURL);
 				}
-				return resourceloader(resourceloader, {path}, {url: resource, type: 'img'});
+				if(IMGSStore.has(rawURL)) {
+					return Promise.resolve();
+				} else {
+					return resourceloader(resourceloader, {path}, {url: resource, type: 'img'})
+				}
 			}
 		});
+		if(imgStorePrevSize !== IMGSStore.size) {
+			IMGPreloaderSheet.textContent = `
+				body:after {
+				display:none;
+				content: url(${ [...IMGSStore].join(") url(")});
+			}`;
+		}
 		promises.push(...fonts.map((font) =>
 			new FontFaceObserver(font).load(null, FONT_LOADING_TIMEOUT))
 		);
@@ -101,6 +116,7 @@ export default (resourceloader, {path}, { acid, priority, style, revision, ...ar
 			return { type: 'inline-style', style: commonStyle, ...args };
 		});
 
+		// todo
 		// sweep.add(() => {
 		// 	commonStyle.remove();
 		// 	fontFaceStyle && fontFaceStyle.remove();

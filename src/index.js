@@ -2,7 +2,6 @@ import "./polyfills"
 export * from "air-stream"
 export * from "./live-schema"
 export * from "./loader"
-export {default as resourceloader} from './loader/resource-loader';
 export * from "./model-vertex"
 export * from "./view-vertex"
 export * from "./error"

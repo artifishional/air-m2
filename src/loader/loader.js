@@ -1,9 +1,7 @@
-import { REVISION as revision, PORT as port } from '../globals'
-
 const schtypes = {
-    "js": "index.js",
-    "json": "index.json",
-    "html": "index.html",
+    "js": "/index.js",
+    "json": "/index.json",
+    "html": "/index.html",
 };
 
 export default class Loader {

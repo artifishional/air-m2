@@ -1,6 +1,4 @@
-export default (resourceloader, {path}, {url}) => new Promise(resolve => {
-  return resourceloader(resourceloader, {path}, {url, type: 'content'})
+export default (resourceloader, {path}, {url}) => resourceloader(resourceloader, {path}, {url, type: 'content'})
     .then(raw => {
-      resolve({ content: JSON.parse(raw) });
-    })
-});
+      return { content: JSON.parse(raw) };
+    });

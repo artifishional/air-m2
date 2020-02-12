@@ -1,5 +1,4 @@
-export default (resourceloader, {path}, {url}) => {
-  return resourceloader(resourceloader, {path}, {url, type: 'content'})
+export default (resourceloader, {path}, {url}) => resourceloader(resourceloader, {path}, {url, type: 'content'})
     .then((content) => {
       const parser = new DOMParser();
       const doc = parser.parseFromString(content, "application/xml");
@@ -27,5 +26,4 @@ export default (resourceloader, {path}, {url}) => {
         }, [ ]);
 
       return { type: "language", content };
-    })
-};
+    });
