@@ -584,12 +584,12 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	static parse( node, src, { pack, type = "unit" } ) {
+
 		let uvk = `${++UNIQUE_VIEW_KEY}`;
 
 		if(!(node instanceof Element)) {
 			return new HTMLView( [""], src, { createEntity: node } );
 		}
-
 
 		const comments = document.createTreeWalker(node, NodeFilter.SHOW_COMMENT);
 		while(comments.nextNode()) comments.currentNode.remove();
@@ -658,14 +658,14 @@ export default class HTMLView extends LiveSchema {
 
         const teeF = cutteeF(node) || cuttee(node, key);
 		const kit = cutkit(node, key);
-		const preload =
+        const preload =
 			!["", "true"].includes(node.getAttribute("nopreload")) &&
 			!["", "true"].includes(node.getAttribute("lazy"));
 
-		const useOwnerProps = node.parentNode.tagName.toUpperCase() === "UNIT";
+        const useOwnerProps = node.parentNode.tagName.toUpperCase() === "UNIT";
 		node.remove();
 
-		const controlled = [ ...node.childNodes ].some( node => {
+        const controlled = [ ...node.childNodes ].some( node => {
 			if(node.nodeType === 1 && !["UNIT", "PLUG", "STYLE"].includes(node.tagName.toUpperCase())) {
 				return true;
 			}

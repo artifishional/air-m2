@@ -1,11 +1,11 @@
 import {NODE_TYPES} from "air-m2/src/view-vertex/html-view/def"
 
-const {document} = window;
-
 export default class PlaceHolderContainer {
 
     constructor( owner, { type } ) {
         this.owner = owner;
+        // https://github.com/jsdom/jsdom/issues/2274
+        // this.target = new DocumentFragment();
         this.target = document.createDocumentFragment();
         this.begin = this.createSystemBoundNode("˄", type);
         this.end = this.createSystemBoundNode("˅", type);

@@ -1,6 +1,7 @@
 import Observer from "fontfaceobserver"
 const FONT_LOADING_TIMEOUT = 30000;
 
+//todo need cache
 export default (resourceloader, {path}, {url, revision, family, size, ...args}) => new Promise(() => {
     const style = document.createElement("style");
     style.textContent =
