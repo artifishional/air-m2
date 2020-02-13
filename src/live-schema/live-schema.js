@@ -146,7 +146,7 @@ export default class LiveSchema extends Schema {
             return this.stream;
         }
     }
-
+	
 	createEntity() { throw "io" }
 
     findEntity(signature) {

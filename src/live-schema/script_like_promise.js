@@ -1,18 +1,9 @@
-function executeModule(scriptContent, reject) {
-    const script = document.createElement("script");
-    script.addEventListener("error", reject);
-    document.head.appendChild(script);
-    script.textContent = scriptContent;
-    script.remove();
-    return window.__m2unit__;
-}
-
-export default function (resourceloader, {path}, {url, scriptContent}) {
-    if (scriptContent) {
-        return executeModule(scriptContent, () => {});
-    }
-    return new Promise(async (resolve, reject) => {
-        scriptContent = await resourceloader(resourceloader, {path}, {url, type: 'content'});
-        resolve({module: executeModule(scriptContent, reject)});
+export default (resourceloader, {path}, {url, ...args}) =>
+  resourceloader(resourceloader, {path}, {url, ...args, type: 'content'})
+    .then(scriptContent => {
+      const script = document.createElement('script');
+      script.textContent = scriptContent;
+      document.body.appendChild(script);
+      script.remove();
+      return {module: window.__m2unit__, script};
     });
-}
