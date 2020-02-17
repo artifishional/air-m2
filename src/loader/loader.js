@@ -18,7 +18,7 @@ export default class Loader {
 
     obtain( { path: _path, schtype = "js" } ) {
         if(!_path) throw "'path' param is required";
-        const path = _path + schtypes[schtype];
+        const path = (_path + schtypes[schtype]).replace(/\.\//g, '');
         const exist = this.modules.find( ({ path: _path }) => path === _path );
         if(exist) {
             return exist.module;
