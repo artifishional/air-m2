@@ -576,17 +576,38 @@ export default class HTMLView extends LiveSchema {
 		);
 	}
 	
-	parse(node, src, { pack } ) {
-		return this.constructor.parse( node, src, { pack } );
+	parse(node, src, pkj ) {
+		return this.constructor.parse( node, src, pkj );
 	}
 	
 	static parse( node, src, { pack, type = "unit" } ) {
 
-		let uvk = `${++UNIQUE_VIEW_KEY}`;
-		
 		if(!(node instanceof Element)) {
 			return new HTMLView( ["", {}], src, { createEntity: node } );
 		}
+
+		class CachedNodeVertex {
+
+			constructor (prop, item) {
+				this.prop = prop;
+				this.item = item;
+			}
+
+			static parse( node, src, { pack, type = "unit" } ) {
+
+
+
+				return new CachedNodeVertex();
+			}
+
+		}
+
+		if(!pack.cache.proto) {
+			pack.cache.proto = new CachedNodeVertex();
+
+		}
+
+		let uvk = `${++UNIQUE_VIEW_KEY}`;
 		
 		const comments = document.createTreeWalker(node, NodeFilter.SHOW_COMMENT);
 		while(comments.nextNode()) comments.currentNode.remove();
@@ -749,7 +770,7 @@ export default class HTMLView extends LiveSchema {
 			.map( node => {
 				node.setAttribute(`data-scope-acid-${res.acid}`, "");
 			} );*/
-		
+
 		return res;
 		
 	}

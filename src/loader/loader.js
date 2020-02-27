@@ -27,7 +27,7 @@ export default class Loader {
             let module = null;
             if (schtype === "html") {
                 module = html({path: `${this.rpath}${path}`, revision})
-                    .then( html => ({ data: html.content, pack: { path: _path + "/" } }) )
+                    .then( html => ({ data: html.content, pack: { cache: {}, path: _path + "/" } }) )
             }
             else {
                 module =
@@ -40,7 +40,7 @@ export default class Loader {
 
 
                     include({path: `${this.rpath}${path}`, revision}).then(({module}) => {
-                        return { data: module, pack: { path: _path + "/" } };
+                        return { data: module, pack: { cache: {}, path: _path + "/" } };
                     } );
 
                     /*
