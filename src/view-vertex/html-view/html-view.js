@@ -616,8 +616,8 @@ export default class HTMLView extends LiveSchema {
 			const teeF = vertex.prop.teeF || cuttee(vertex.prop.rawTee, key);
 			const prop = {
 				...vertex.prop,
-				rawTee: "",
-				rawKey: "",
+				rawTee: null,
+				rawKey: null,
 				key,            //inherited or inner key
 				teeF,			      //switch mode (advanced)
 				resources,
@@ -626,9 +626,13 @@ export default class HTMLView extends LiveSchema {
 				type,           // view node type [node -> unit, switcher -> tee]
 				pack,           // current package
 				node,           // xml target node
-			}
+			};
 			const res = src.acid !== -1 && src.lift([uvk, prop], src) ||
 				new HTMLView([uvk, prop], src);
+			if(!vertex.prop.template && src.prop) {
+				const slot = src.prop.node.querySelector('slot[acid="-"]');
+				slot && slot.setAttribute("acid", res.acid);
+			}
 			return res;
 		});
 		return res;

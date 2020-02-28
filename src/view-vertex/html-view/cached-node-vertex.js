@@ -55,8 +55,6 @@ export default class CachedNodeVertex {
       !["", "true"].includes(node.getAttribute("nopreload")) &&
       !["", "true"].includes(node.getAttribute("lazy"));
   
-    node.remove();
-  
     const controlled = [ ...node.childNodes ].some( node => {
       if(node.nodeType === 1 && !["UNIT", "PLUG", "STYLE"].includes(node.tagName.toUpperCase())) {
         return true;
@@ -130,7 +128,6 @@ export default class CachedNodeVertex {
     res.append(...[...node.children].reduce((acc, next) =>
         [...acc, ...this.parseChildren( next, res.prop, res )]
       , []));
-  
     keyframes.push(...this.parseKeyFrames( { node } ));
   
     $node.append(...node.childNodes);
@@ -229,31 +226,32 @@ export default class CachedNodeVertex {
   
   // the workaround is tied to the querySelectorAll,
   // since it is used to extract replacement slots
-  static parseChildren(next, { resources, path, key }, src) {
+  static parseChildren(next, prop) {
     if(is( next, "unit" )) {
-      const parser = this.parse(next, src, { pack: src.prop.pack });
-      const _slot = slot( parser );
-      parser.prop.template ? next.remove() : next.replaceWith( _slot );
-      return [ parser ];
-    }
-    else if(is( next, "plug" )) {
-      const parser = this.parse(next, src, {
-        key, path, type: "custom", pack: src.prop.pack
-      });
-      const _slot = slot( parser );
-      parser.prop.template ? next.remove() : next.replaceWith( _slot );
+      const parser = this.parse(next);
+      const _slot = slot();
+      if(parser.prop.template) {
+        next.remove();
+      }
+      else {
+        next.replaceWith( _slot );
+      }
       return [ parser ];
     }
     else if (next.tagName === "IMG") {
       const idx = UNIQUE_IMAGE_IDX ++;
       const _slot = img(idx);
       next.replaceWith( _slot );
-      resources.push({key: idx, origin: next, type: "img", url: next.getAttribute("src")});
+      prop.resources.push({
+        key: idx,
+        origin: next,
+        type: "img",
+        url: next.getAttribute("src"),
+      });
       return [];
     }
-    else if(next.tagName === "STYLE") { }
     return [...next.children].reduce( (acc, node) =>
-        [...acc, ...this.parseChildren(node, { resources, path, key }, src)]
+        [...acc, ...this.parseChildren(node, prop)]
       , []);
   }
   
@@ -275,9 +273,9 @@ function cutkit(node) {
   }
 }
 
-function slot({acid}) {
+function slot() {
   const res = document.createElement("slot");
-  res.setAttribute("acid", acid);
+  res.setAttribute("acid", "-");
   return res;
 }
 
