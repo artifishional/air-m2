@@ -17,7 +17,6 @@ export default class CachedNodeVertex {
   map(src, transform) {
     const res = transform(src, this);
     res.append(...this.item.map((item) => item.map(res, transform)));
-    debugger;
     return res;
   }
   
@@ -249,7 +248,7 @@ export default class CachedNodeVertex {
       const idx = UNIQUE_IMAGE_IDX ++;
       const _slot = img(idx);
       next.replaceWith( _slot );
-      resources.push({key, origin: next, type: "img", url: next.getAttribute("src")});
+      resources.push({key: idx, origin: next, type: "img", url: next.getAttribute("src")});
       return [];
     }
     else if(next.tagName === "STYLE") { }
