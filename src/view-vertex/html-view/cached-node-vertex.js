@@ -1,11 +1,12 @@
 import events from "../events";
-import {VIEW_PLUGINS} from "../../globals";
 import spreading from "./spreading";
-import {EMPTY_FUNCTION} from "../../def";
+import {BOOLEAN, EMPTY_FUNCTION} from "../../def";
 import JSON5 from 'json5';
+import {signature as signatureEquals} from "air-m2/src/utils";
 
 
-let UNIQUE_IMAGE_IDX = 0;
+let UNIQUE_IMAGE_IDX = 1;
+let UNIQUE_STYLE_IDX = 1;
 
 export default class CachedNodeVertex {
   
@@ -41,16 +42,20 @@ export default class CachedNodeVertex {
   
     const use = this.pathParser( node.getAttribute("use") || "" );
     
-    const styles = [...node.children].filter(byTagName("STYLE"));
-    styles.map(style => style.remove());
+    const styles = [...node.children]
+      .filter(byTagName("STYLE"))
+      .map(style => {
+        style.remove();
+        return { style, idx: UNIQUE_STYLE_IDX ++ }
+      });
   
     const sounds = [...node.children].filter(byTagName("SOUND"));
     resources.push(...sounds.map( sound => (
       { type: "sound", name: sound.getAttribute("name") || "", rel: sound.getAttribute("rel") || ""}
     )));
   
-    const teeF = cutteeF(node);
-    const kit = cutkit(node);
+    const teeF = this.cutteeF(node) || this.cuttee(node);
+    const kit = this.cutkit(node);
     const preload =
       !["", "true"].includes(node.getAttribute("nopreload")) &&
       !["", "true"].includes(node.getAttribute("lazy"));
@@ -68,43 +73,29 @@ export default class CachedNodeVertex {
       .filter(byTagName("script"))
       .filter(byAttr("data-source-type", "stream-source"))
       .map( plug => {
-        const src = document.createElement("script");
-        VIEW_PLUGINS.set(src, null);
-        src.textContent = plug.textContent;
-        document.head.append( src );
-        const res = VIEW_PLUGINS.get(src).default;
-        VIEW_PLUGINS.delete(src);
         plug.remove();
-        src.remove();
-        return res;
+        eval.call(window, plug.textContent);
+        return window.__m2unit___.default;
       } );
   
     const plug = [...node.children]
       .filter(byTagName("script"))
       .filter(byAttr("data-source-type", "view-source"))
       .map( plug => {
-        const src = document.createElement("script");
-        VIEW_PLUGINS.set(src, null);
-        src.textContent = plug.textContent;
-        document.head.append( src );
-        const res = VIEW_PLUGINS.get(src).default;
-        VIEW_PLUGINS.delete(src);
         plug.remove();
-        src.remove();
-        return res;
+        eval.call(window, plug.textContent);
+        return window.__m2unit___.default;
       } );
   
     const keyframes = [];
   
-    const literal = cutliterals(node);
+    const literal = this.cutliterals(node);
   
     const $node = document.createDocumentFragment();
-    const rawTee = node.getAttribute("tee");
     const rawKey = node.getAttribute("key");
     
     const res = new CachedNodeVertex({
       rawKey,
-      rawTee,
       teeF,			      //switch mode (advanced)
       node: $node,    // xml target node
       label,			    //debug layer label
@@ -229,7 +220,7 @@ export default class CachedNodeVertex {
   static parseChildren(next, prop) {
     if(is( next, "unit" )) {
       const parser = this.parse(next);
-      const _slot = slot();
+      const _slot = this.createslot();
       if(parser.prop.template) {
         next.remove();
       }
@@ -255,29 +246,84 @@ export default class CachedNodeVertex {
       , []);
   }
   
+  static cutliterals (node) {
+    let literal = null;
+    if(!node.childElementCount && node.textContent.search(/^`.*`$/) > -1) {
+      let i = -1;
+      let literals = [];
+      const raw = node
+        .textContent
+        .replace(
+          /lang\.([a-z-0-9A-Z_]+)/,
+          (_, lit) => {
+            i ++ ;
+            literals[i] = lit;
+            return 'eval("`" + __literals[' + i + '] + "`")'
+          }
+        )
+        .replace(
+          /intl\.([a-z-0-9A-Z_]+)/,
+          (_, lit) => '__intl["' + lit + '"]'
+        );
+      const fn = new Function("argv", "eval", "__intl", "__literals", `with(argv) return ${raw}`);
+      const operator = (data, literals, intl) => {
+        return fn(new Proxy(data, STD_PROXY_CONFIG), eval, intl, literals);
+      };
+      literal = { literals, operator };
+    }
+    return literal;
+  }
+  
+  static cutteeF(node) {
+    return spreading(node.getAttribute("tee()"), null, null);
+  }
+  
+  static cuttee(node) {
+    let rawTee = node.getAttribute("tee")
+    if(rawTee === null) {
+      return null;
+    }
+    else if(rawTee === "") {
+      return (data, key) => signatureEquals(key, data);
+    }
+    else if(rawTee[0] === "{") {
+      
+      //autocomplete { value } boolean
+      rawTee = rawTee.replace(/{\s*([a-zA-Z0-9]+|"[\-!&$?*a-zA-Z0-9]+")\s*}/g, (_, vl) => {
+        return "{" +  vl + ":$bool" + "}"
+      });
+      
+      const tee = new Function("$bool", "return" + rawTee)(BOOLEAN);
+      return data => signatureEquals(tee, data);
+    }
+    else {
+      return data => signatureEquals(rawTee, data);
+    }
+  }
+  
+  static cutkit(node) {
+    const raw = node.getAttribute("kit");
+    if(raw === null) {
+      return null;
+    }
+    else if(raw === "") {
+      return { getter: null, prop: [] };
+    }
+    else {
+      const [_, getter = "", rawSignature = ""] = raw.match(REG_GETTER_KIT);
+      return { getter, prop: rawSignature.split(",").filter(Boolean) };
+    }
+  }
+  
+  static createslot() {
+    const res = document.createElement("slot");
+    res.setAttribute("acid", "-");
+    return res;
+  }
+  
 }
 
 const REG_GETTER_KIT = /(?:\(([a-zA-Z0-9.\-\[\]]+)\))?(?:{([a-zA-Z0-9.\-\[\],]+)})?/;
-
-function cutkit(node) {
-  const raw = node.getAttribute("kit");
-  if(raw === null) {
-    return null;
-  }
-  else if(raw === "") {
-    return { getter: null, prop: [] };
-  }
-  else {
-    const [_, getter = "", rawSignature = ""] = raw.match(REG_GETTER_KIT);
-    return { getter, prop: rawSignature.split(",").filter(Boolean) };
-  }
-}
-
-function slot() {
-  const res = document.createElement("slot");
-  res.setAttribute("acid", "-");
-  return res;
-}
 
 function img(idx) {
   const res = document.createElement("slot");
@@ -324,35 +370,3 @@ const STD_PROXY_CONFIG = {
     }
   }
 };
-
-function cutliterals (node) {
-  let literal = null;
-  if(!node.childElementCount && node.textContent.search(/^`.*`$/) > -1) {
-    let i = -1;
-    let literals = [];
-    const raw = node
-      .textContent
-      .replace(
-        /lang\.([a-z-0-9A-Z_]+)/,
-        (_, lit) => {
-          i ++ ;
-          literals[i] = lit;
-          return 'eval("`" + __literals[' + i + '] + "`")'
-        }
-      )
-      .replace(
-        /intl\.([a-z-0-9A-Z_]+)/,
-        (_, lit) => '__intl["' + lit + '"]'
-      );
-    const fn = new Function("argv", "eval", "__intl", "__literals", `with(argv) return ${raw}`);
-    const operator = (data, literals, intl) => {
-      return fn(new Proxy(data, STD_PROXY_CONFIG), eval, intl, literals);
-    };
-    literal = { literals, operator };
-  }
-  return literal;
-}
-
-function cutteeF(node) {
-  return spreading(node.getAttribute("tee()"), null, null);
-}

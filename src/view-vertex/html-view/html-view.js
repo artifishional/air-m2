@@ -378,11 +378,11 @@ export default class HTMLView extends LiveSchema {
 				
 				if(targets.length) {
 					
-					if(this.prop.styles.length) {
-						targets.map(({node}) =>
-							node.setAttribute(`data-scope-acid-${this.acid}`, "")
-						);
-					}
+					this.prop.styles.forEach( ({idx}) => {
+						targets.forEach(({node}) => {
+							node.setAttribute(`data-style-acid-${idx}`, "");
+						});
+					} );
 					
 					rlayers.push( ...currentCommonViewLayers.map( ({ layer, schema }) => {
 						return layer.createLayer(
@@ -415,9 +415,9 @@ export default class HTMLView extends LiveSchema {
 		return stream( (emt, { sweep }) => {
 			sweep.add(combine( [
 				...this.prop.resources,
-				...this.prop.styles.map( (style, priority) => {
+				...this.prop.styles.map( ({style, idx}, priority) => {
 					priority = +(style.getAttribute("priority") || priority);
-					return StylesController.get(style, this.acid, priority, this.prop.pack)
+					return StylesController.get(style, idx, priority, this.prop.pack)
 				})
 			] ).at( ( resources ) => {
 				const container = new PlaceHolderContainer( this, { type: "node" } );
@@ -436,7 +436,7 @@ export default class HTMLView extends LiveSchema {
 	}
 	
 	teeFSignatureCheck( layers ) {
-		return this.layers.every( ({ acid, prop: { teeF } }) => teeF ? teeF(layers.get(acid)) : true );
+		return this.layers.every( ({ acid, prop: { teeF } }) => teeF ? teeF(layers.get(acid), this.key) : true );
 	}
 
 	createTeeEntity( args, manager ) {
@@ -604,22 +604,19 @@ export default class HTMLView extends LiveSchema {
 				...vertex.prop.resources.map(x => resource(pack, x)),
 			];
 			/* TODO HACK */
-			vertex.prop.styles.map( style => {
+			vertex.prop.styles.forEach( ({style}) => {
 				style.pack = pack;
-				style.remove();
 			} );
 			/* TODO HACK */
 			const node = vertex.prop.node.cloneNode(true);
 			const stream = vertex.prop.stream
 				.replace("$key", JSON.stringify(key))
 				.replace(/(\/|^)"([^\/]+)"(\/|$)/g, '$1$2$3');
-			const teeF = vertex.prop.teeF || cuttee(vertex.prop.rawTee, key);
 			const prop = {
 				...vertex.prop,
 				rawTee: null,
 				rawKey: null,
 				key,            //inherited or inner key
-				teeF,			      //switch mode (advanced)
 				resources,
 				stream,
 				path,           // absolute path
@@ -695,26 +692,4 @@ export default class HTMLView extends LiveSchema {
 		}
 	}
 	
-}
-
-function cuttee(rawTee, key) {
-	if(rawTee === null) {
-		return null;
-	}
-	else if(rawTee === "") {
-		return data => signatureEquals(key, data);
-	}
-	else if(rawTee[0] === "{") {
-
-		//autocomplete { value } boolean
-		rawTee = rawTee.replace(/{\s*([a-zA-Z0-9]+|"[\-!&$?*a-zA-Z0-9]+")\s*}/g, (_, vl) => {
-			return "{" +  vl + ":$bool" + "}"
-		});
-
-		const tee = new Function("$bool", "return" + rawTee)(BOOLEAN);
-		return data => signatureEquals(tee, data);
-	}
-	else {
-		return data => signatureEquals(rawTee, data);
-	}
 }

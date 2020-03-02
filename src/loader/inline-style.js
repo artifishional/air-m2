@@ -14,6 +14,9 @@ function createPrioritySystemStyle (priority) {
 
 function inject (style, priority) {
 	createPrioritySystemStyle(priority);
+	
+
+	
 	PRIORITY[priority].after(style);
 }
 
@@ -59,17 +62,18 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 				}
 			}
 			style.textContent = style.textContent.replace(fontRegex, '');
-
-			fontFaceStyle = document.createElement('style');
-			fontFaceStyle.textContent = rawFontCSSContent;
-			document.head.appendChild(fontFaceStyle);
+			if(rawFontCSSContent) {
+				fontFaceStyle = document.createElement('style');
+				fontFaceStyle.textContent = rawFontCSSContent;
+				document.head.appendChild(fontFaceStyle);
+			}
 		}
 
 		const dataForLoading = [];
 		let rawCommonCSSContent = '';
 		const commonStyle = document.createElement('style');
 		commonStyle.textContent = '';
-		rawCommonCSSContent = style.textContent.replace(/:scope/g, `[data-scope-acid-${acid}]`);
+		rawCommonCSSContent = style.textContent.replace(/:scope/g, `[data-style-acid-${acid}]`);
 		const imageRegex = /\/\*\s<image\surl=\"([^"]+)">\s\*\//gm;
 		const matches = rawCommonCSSContent.matchAll(imageRegex);
 		if (matches) {

@@ -1,39 +1,24 @@
 import { VIEW_PLUGINS } from "../globals"
 
-class ModuleLoadEvent extends Event {
-
-    constructor({ module, script }) {
-        super("m2SourceModuleLoad");
-        this.module = module;
-        this.script = script;
-    }
-
-}
-
 Object.defineProperty(window, "__m2unit__", {
     set(module) {
         const script = document.currentScript;
-        if(VIEW_PLUGINS.has(script)) {
-            VIEW_PLUGINS.set( script, module );
+        this.__m2unit___ = module;
+        if(WAITERS.has(script)) {
+            WAITERS.get(script)({module});
+            WAITERS.delete(script);
         }
-        window.dispatchEvent(new ModuleLoadEvent({ module, script }));
     }
 });
+
+const WAITERS = new Map();
 
 export default function ({path, revision}) {
     if(/.\.js$/g.test(path)) {
         return new Promise((resolve, reject) => {
             const script = document.createElement("script");
+            WAITERS.set(script, resolve);
             script.src = revision ? `${path}?rev=${revision}` : path;
-            let hn = null;
-            //script.addEventListener("load", resolve);
-            window.addEventListener("m2SourceModuleLoad", hn = (event) => {
-                if(event.script === script) {
-                    script.remove();
-                    window.removeEventListener("m2SourceModuleLoad", hn);
-                    resolve( event );
-                }
-            });
             script.addEventListener("error", reject);
             document.head.appendChild(script);
         });
