@@ -1,14 +1,15 @@
 import { routeNormalizer, routeNormalizer2 } from '../../src/utils';
+import { EMPTY_OBJECT } from "../../src/def";
 
 const routes = [
   {
     message: 'Parse empty route',
     path: '',
-    expected: { route: [] }
+    expected: [[], EMPTY_OBJECT]
   },
   {
     path: '.[a=1]',
-    expected: { a: 1, route: [] }
+    expected: [[], {a: 1}]
   },
   {
     path: './{name: abc, kind: 10}',
@@ -28,31 +29,31 @@ const routes = [
   },
   {
     path: './cat-a',
-    expected: { route: ['cat-a'] }
+    expected: [['cat-a'], EMPTY_OBJECT]
   },
   {
     path: './cat-a[kind=10]',
-    expected: { kind: 10, route: ['cat-a'] }
+    expected: [['cat-a'], {kind: 10}]
   },
   {
     path: './cat-a[a=1][kind=10]',
-    expected: {"a": 1, "kind": 10, "route": ["cat-a"]}
+    expected: [["cat-a"], {"a": 1, "kind": 10}]
   },
   {
     path: './cat-a[a=1]some[kind=10]',
-    expected: {"a": 1, "kind": 10, "route": ["cat-asome"]}
+    expected: [["cat-asome"], {"a": 1, "kind": 10}]
   },
   {
     path: './.component-id',
-    expected: { route: ['.component-id'] }
+    expected: [['.component-id'], EMPTY_OBJECT]
   },
   {
     path: './#component-id',
-    expected: { route: ['#component-id'] }
+    expected: [['#component-id'], EMPTY_OBJECT]
   },
   {
     path: './@component-key',
-    expected: { route: ['@component-key'] }
+    expected: [['@component-key'], EMPTY_OBJECT]
   },
   {
     path: './{name: abc, kind: 10}',
@@ -60,27 +61,30 @@ const routes = [
   },
   {
     path: './{name: "abc", kind: 10}',
-    expected: { route: [ { kind: 10, name: "abc" } ] }
+    expected: [[ { kind: 10, name: "abc" } ], EMPTY_OBJECT]
   },
   {
     path: './foo[a=1,b=2]/[b=3]bar',
-    expected: {"a": 1, "b": 3, "route": ["foo", "bar"]}
+    expected: [["foo", "bar"], {"a": 1, "b": 3}]
   },
   {
     path: '../foo[a=1,b=2]/bar',
-    expected: { a: 1, b: 2, route: ['..', 'foo', 'bar'] }
+    expected: [['..', 'foo', 'bar'], { a: 1, b: 2}]
   },
   {
     path: './foo[a=1,b=2]/bar[b=3]',
-    expected: { a: 1, b: 3, route: ['foo', 'bar'] }
+    expected: [['foo', 'bar'], { a: 1, b: 3}]
   },
   {
     path: './{name:123,b:22}/foo[a=1]/bar[b={x:{y:{z:"abc"}}}]/baz[c=4][d=1.2]',
-    expected: { a: 1, b: { x: { y: { z: 'abc' } } }, c: 4, d: 1.2, route: [ {name: 123, b: 22 }, 'foo', 'bar', 'baz'] }
+    expected: [[{name: 123, b: 22}, 'foo', 'bar', 'baz'], {a: 1, b: {x: {y: {z: 'abc'}}}, c: 4, d: 1.2}]
   },
   {
     path: './{name:123,b:[1,2,3]}/foo[a=1]/bar[a={foo:[1,2,3]},b={x:{y:{z:"abc"}}}]/baz[c=4][d=1.2]',
-    expected: { a: { foo: [1, 2, 3] }, b: { x: { y: { z: 'abc' } } }, c: 4, d: 1.2, route: [ {name: 123, b: [1, 2, 3] }, 'foo', 'bar', 'baz'] }
+    expected: [
+      [{name: 123, b: [1, 2, 3]}, 'foo', 'bar', 'baz'],
+      {a: {foo: [1, 2, 3]}, b: {x: {y: {z: 'abc'}}}, c: 4, d: 1.2}
+    ]
   },
   {
     path: './{name:123,b:[1,2,3]}/foo[route=1]/bar[a={foo:[1,2,3]},b={x:{y:{z:"abc"}}}]/baz[c=4][d=1.2]',
@@ -88,11 +92,17 @@ const routes = [
   },
   {
     path: './{name:123,b:\'dont\\\'parse[1,2,3]\'}/foo[a=1]/bar[a={foo:[1,2,3]},b={x:{y:{z:"abc"}}}]/baz[c=4][d=1.2]',
-    expected: { a: { foo: [1, 2, 3] }, b: { x: { y: { z: 'abc' } } }, c: 4, d: 1.2, route: [ {name: 123, b: 'dont\'parse[1,2,3]' }, 'foo', 'bar', 'baz'] }
+    expected: [
+      [{name: 123, b: 'dont\'parse[1,2,3]'}, 'foo', 'bar', 'baz'],
+      {a: {foo: [1, 2, 3]}, b: {x: {y: {z: 'abc'}}}, c: 4, d: 1.2}
+    ]
   },
   {
     path: './{name:[1,2,3],b:\'dont\\\'parse[1,2,3]\'}/foo[a=1]/bar[a={foo:[1,2,3]},b={x:{y:{z:"abc"}}}]/baz[c=4][d=1.2]',
-    expected: { a: { foo: [1, 2, 3] }, b: { x: { y: { z: 'abc' } } }, c: 4, d: 1.2, route: [ {name: [1, 2, 3], b: 'dont\'parse[1,2,3]' }, 'foo', 'bar', 'baz'] }
+    expected: [
+      [{name: [1, 2, 3], b: 'dont\'parse[1,2,3]'}, 'foo', 'bar', 'baz'],
+      {a: {foo: [1, 2, 3]}, b: {x: {y: {z: 'abc'}}}, c: 4, d: 1.2}
+    ]
   }
 ];
 
