@@ -75,7 +75,7 @@ export default class CachedNodeVertex {
       .map( plug => {
         plug.remove();
         eval.call(window, plug.textContent);
-        return window.__m2unit___.default;
+        return window.__m2unit__.default;
       } );
   
     const plug = [...node.children]
@@ -84,7 +84,7 @@ export default class CachedNodeVertex {
       .map( plug => {
         plug.remove();
         eval.call(window, plug.textContent);
-        return window.__m2unit___.default;
+        return window.__m2unit__.default;
       } );
   
     const keyframes = [];

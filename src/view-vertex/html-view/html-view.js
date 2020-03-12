@@ -605,8 +605,8 @@ export default class HTMLView extends LiveSchema {
 			}
 			const resources = [
 				...(src.acid !== -1 && src.prop.resources || []),
-				...vertex.prop.resources.map(x => src.resourceloader(src.resourceloader, pack, x)),
-			].map(promise => fromPromise(promise));
+				...vertex.prop.resources.map(x => fromPromise(src.resourceloader(src.resourceloader, pack, x))),
+			];
 			/* TODO HACK */
 			vertex.prop.styles.forEach( ({style}) => {
 				style.pack = pack;

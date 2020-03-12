@@ -1,6 +1,6 @@
 export default (resourceloader, {path}, {url}) => resourceloader(resourceloader, {path}, {url, type: 'json'})
     .then(({content}) => {
-      const formatters = JSON.parse(content).slice(1);
+      const formatters = content.slice(1);
       return { type: "intl", content: formatters, precached: new Precached(formatters) };
     });
 
