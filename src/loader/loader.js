@@ -13,7 +13,7 @@ export default class Loader {
 
     obtain( { path: _path, schtype = "js" }, resourceloader ) {
         if(!_path) throw "'path' param is required";
-        const path = _path + schtypes[schtype];
+        const path = (_path + schtypes[schtype]).replace(/\.\//g, '');
         const exist = this.modules.find( ({ path: _path }) => path === _path );
         if(exist) {
             return exist.module;
@@ -22,7 +22,7 @@ export default class Loader {
             let module = null;
             if (schtype === "html") {
                 module = resourceloader(resourceloader, {path: _path + '/'}, {url: schtypes[schtype], type: 'html'})
-                  .then( html => ({ data: html.content, pack: { path: _path + "/" } }) );
+                  .then( html => ({ data: html.content, pack: { cache: {}, path: _path + "/" } }) );
             }
             else {
                 module =
@@ -32,7 +32,7 @@ export default class Loader {
                     } );
                     */
                     resourceloader(resourceloader, {path: _path + '/'}, {url: schtypes[schtype], type: 'script'}).then(({module}) => {
-                        return { data: module, pack: { path: _path + "/" } };
+                        return { data: module, pack: { cache: {}, path: _path + "/" } };
                     } );
 
                     /*

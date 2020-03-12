@@ -199,34 +199,7 @@ export default class ActiveNodeTarget {
         const formattersRes = this.resources.find(({type}) => type === "intl");
         //todo if optional provides formatters
         if(formattersRes) {
-            if(!this.formatters[intl.locale]) {
-                this.formatters[intl.locale] = formattersRes.content.slice(1)
-                    .reduce( (acc, [ name, options ]) => {
-                        const formatter =
-                            new Intl.NumberFormat(intl.locale, {
-                                currency: intl.currency === "000" ? "usd" : intl.currency, ... options
-                            });
-                        acc[name] = (value) => {
-                            if(value === undefined) {
-                                return "";
-                            }
-                            if(isNaN(+value)) {
-                                return formatter.format(0).replace( "0", value );
-                            }
-                            // patch on chrome at ~78
-                            // UAH currency symbol is not displayed
-                            // while it works correctly in the firefox
-                            if(intl.currency === "uah" && options.style === "currency") {
-                                return formatter.format(value).replace("грн.", "₴");
-                            }
-                            else if(intl.currency === "000" && options.style === "currency") {
-                                return formatter.format(value).replace("$", "BB");
-                            }
-                            return formatter.format(value);
-                        };
-                        return acc;
-                    } , {} );
-            }
+            this.formatters = formattersRes.precached.get(intl.locale, intl.currency);
         }
         if(this.literal && this.literal.literals.length) {
             const language = this.resources.filter( ({type}) => type === "language");
@@ -247,7 +220,7 @@ export default class ActiveNodeTarget {
             if(this.literal) {
                 try {
                     this.node.textContent = this.literal.operator(
-                        argv, this.genLiterals, this.formatters[this.intl.locale]
+                        argv, this.genLiterals, this.formatters
                     );
                 }
                 catch (e) {

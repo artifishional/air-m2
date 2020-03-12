@@ -16,3 +16,16 @@ import MobileDetect from "mobile-detect"
 export const $_IS_MOBILE = !["iPad", null].includes(
     new MobileDetect(window.navigator.userAgent).mobile()
 );
+
+// Patch Chrome 80-82 (and Edgium) bug
+// https://bugs.chromium.org/p/chromium/issues/detail?id=1049982
+(function() {
+  const arrayReduce = Array.prototype.reduce;
+  let callback;
+  Object.defineProperty(Array.prototype, 'reduce', {
+    value: function(cb, ...args) {
+      callback = cb;
+      return arrayReduce.call(this, callback, ...args);
+    }
+  });
+})();
