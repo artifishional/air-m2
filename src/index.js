@@ -13,9 +13,12 @@ export const uid = () => __uid++;
 let __uid = 1;
 
 import MobileDetect from "mobile-detect"
-export const $_IS_MOBILE = !["iPad", null].includes(
+export const $_IS_MOBILE =
+  [375, 812].includes(window.screen.width) &&
+  [375, 812].includes(window.screen.height) ||
+  !["iPad", null].includes(
     new MobileDetect(window.navigator.userAgent).mobile()
-);
+  );
 
 // Patch Chrome 80-82 (and Edgium) bug
 // https://bugs.chromium.org/p/chromium/issues/detail?id=1049982
