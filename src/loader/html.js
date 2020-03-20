@@ -4,6 +4,7 @@ export default ({path, revision}) => {
         url.searchParams.append("revision", revision);
     }
     return fetch(url, {
+        credentials: 'same-origin',
         mode: 'cors',
         method: 'GET',
         headers: {'Content-Type': 'text/html'}
