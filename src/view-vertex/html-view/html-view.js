@@ -308,7 +308,10 @@ export default class HTMLView extends LiveSchema {
 				})
 				.filter( Boolean )
 			);
-			
+			const literal = this.layers.find(layer => layer.prop.literal);
+			if(literal) {
+				literal.prop.keyframes = this.layers.map(layer => layer.prop.keyframes).flat();
+			}
 			sweep.add( combine( [
 				...this.layers.map( (layer) => layer.createNodeEntity(  ) ),
 				this.createChildrenEntity( args, { layers, parentViewLayers } ),
@@ -424,7 +427,11 @@ export default class HTMLView extends LiveSchema {
 				})
 			] ).at( ( resources ) => {
 				const container = new PlaceHolderContainer( this, { type: "node" } );
-				container.append(this.prop.node.cloneNode(true));
+				if (
+					this.layers.every(layer => !layer.prop.literal) || this.prop.literal
+				) {
+					container.append(this.prop.node.cloneNode(true));
+				}
 				const imgs = resources.filter(({type}) => type === "img");
 				[...container.target.querySelectorAll(`slot[img]`)]
 					.map((target, i) => {
@@ -791,6 +798,7 @@ export default class HTMLView extends LiveSchema {
 			return [ ...this.prop.tee, ...value];
 		}*/
 		else if([
+			"literal",
 			"label",
 			"streamplug",
 			"plug",
