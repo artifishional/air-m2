@@ -24,7 +24,7 @@ class Precached {
         this.formatters.reduce( (acc, [ name, options ]) => {
           const formatter =
             new Intl.NumberFormat(locale, {
-              currency: currency === "000" ? "usd" : currency, ... options
+              currency: ["000", "001"].includes(currency) ? "usd" : currency, ... options
             });
           acc[name] = (value) => {
             if(value === undefined) {
@@ -41,6 +41,9 @@ class Precached {
             }
             else if(currency === "000" && options.style === "currency") {
               return formatter.format(value).replace("$", "BB");
+            }
+            else if(currency === "001" && options.style === "currency") {
+              return formatter.format(value).replace("$", "G");
             }
             return formatter.format(value);
           };
