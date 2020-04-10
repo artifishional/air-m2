@@ -204,14 +204,15 @@ export default class ActiveNodeTarget {
                     .reduce( (acc, [ name, options ]) => {
                         const formatter =
                             new Intl.NumberFormat(intl.locale, {
-                                currency: intl.currency === "000" ? "usd" : intl.currency, ... options
+                                currency: ["000", "001"].includes(intl.currency) ?
+                                  "usd" : intl.currency, ... options
                             });
                         acc[name] = (value) => {
                             if(value === undefined) {
                                 return "";
                             }
                             if(isNaN(+value)) {
-                                return formatter.format(0).replace( "0", value );
+                                return formatter.format(0).replace("0", value);
                             }
                             // patch on chrome at ~78
                             // UAH currency symbol is not displayed
@@ -221,6 +222,9 @@ export default class ActiveNodeTarget {
                             }
                             else if(intl.currency === "000" && options.style === "currency") {
                                 return formatter.format(value).replace("$", "BB");
+                            }
+                            else if(intl.currency === "001" && options.style === "currency") {
+                                return formatter.format(value).replace("$", "G");
                             }
                             return formatter.format(value);
                         };
