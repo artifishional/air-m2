@@ -488,3 +488,31 @@ the simplest path has the form:
 - ``` "./@component-key" ``` - search by key
 
 Note: when using search by id or key it begins from parent layer and move upward until root layer. So, sometimes you MUST specify exact path to model
+
+
+## Resource loaders
+
+### Formatters
+[NumberFormat](https://developer.mozilla.org/ru/docs/Web/JavaScript/Reference/Global_Objects/NumberFormat)
+```json
+{
+  // intl auto formatters
+  "formatters": {
+      // format name
+      "currency": {
+      // format options
+        "style": "currency",
+        "splitter": ".",
+        "currencyDisplay": "symbol"
+      },
+      // ... 
+  },
+  // custom currencies description 
+  "custom-currency": {
+      {
+         "code": "000",
+         "symbol": "FOX"
+      },
+  } 
+}
+```

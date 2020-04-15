@@ -2,15 +2,31 @@ import stream from "./xhr"
 
 export default ({url, revision}) => stream({path: url, revision, content: { type: "application/json" }})
     .map( xhr => {
-        const formatters = JSON.parse(xhr.responseText).slice(1);
-        return { type: "intl", content: formatters, precached: new Precached(formatters) };
+        const raw = JSON.parse(xhr.responseText).slice(1);
+        let formatters = [];
+        let customCurrency = [];
+        // TODO: obsolete format sup
+        if(Array.isArray(raw)) {
+          formatters = raw
+            .slice(1)
+            .reduce((acc, next) => {
+              acc[next[0]] = next[1];
+              return acc;
+            }, {});
+        }
+        else {
+          ({ formatters, "custom-currency": customCurrency} = raw)
+        }
+        return { type: "intl", content: formatters, precached: new Precached(formatters, customCurrency) };
     } );
 
 
 class Precached {
   
-  constructor(formatters) {
+  constructor(formatters, customCurrency) {
     this.formatters = formatters;
+    this.customCurrency = customCurrency;
+    this.customCurrencyCode = customCurrency.map(({ code }) => code);
     this.cache = new Map();
   }
   
@@ -21,34 +37,39 @@ class Precached {
     if(!this.cache.get(locale).has(currency)) {
       this.cache.get(locale).set(
         currency,
-        this.formatters.reduce( (acc, [ name, options ]) => {
-          const formatter =
-            new Intl.NumberFormat(locale, {
-              currency: ["000", "001"].includes(currency) ? "usd" : currency, ... options
-            });
-          acc[name] = (value) => {
-            if(value === undefined) {
-              return "";
-            }
-            if(isNaN(+value)) {
-              return formatter.format(0).replace( "0", value );
-            }
-            // patch on chrome at ~78
-            // UAH currency symbol is not displayed
-            // while it works correctly in the firefox
-            if(currency === "uah" && options.style === "currency") {
-              return formatter.format(value).replace("грн.", "₴");
-            }
-            else if(currency === "000" && options.style === "currency") {
-              return formatter.format(value).replace("$", "BB");
-            }
-            else if(currency === "001" && options.style === "currency") {
-              return formatter.format(value).replace("$", "G");
-            }
-            return formatter.format(value);
-          };
-          return acc;
-        } , {} )
+        Object.keys(this.formatters)
+          .reduce( (acc, name) => {
+            const options = this.formatters[name];
+            const formatter =
+              new Intl.NumberFormat(locale, {
+                currency: this.customCurrencyCode.includes(currency) ? "usd" : currency, ... options
+              });
+            acc[name] = (value) => {
+              if(value === undefined) {
+                return "";
+              }
+              if(isNaN(+value)) {
+                return formatter.format(0).replace("0", value);
+              }
+              // patch on chrome at ~78
+              // UAH currency symbol is not displayed
+              // while it works correctly in the firefox
+              if(currency === "uah" && options.style === "currency") {
+                return formatter.format(value).replace("грн.", "₴");
+              }
+              else {
+                if(options.style === "currency") {
+                  const idx = this.customCurrencyCode.indexOf(currency);
+                  if(idx > -1) {
+                    const customCurrency = this.customCurrency[idx];
+                    formatter.format(value).replace("$", customCurrency.symbol);
+                  }
+                }
+              }
+              return formatter.format(value);
+            };
+            return acc;
+        }, {})
       );
     }
     return this.cache.get(locale).get(currency);
