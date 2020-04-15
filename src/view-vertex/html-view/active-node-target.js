@@ -204,7 +204,7 @@ export default class ActiveNodeTarget {
                     .reduce( (acc, [ name, options ]) => {
                         const formatter =
                             new Intl.NumberFormat(intl.locale, {
-                                currency: ["000", "001"].includes(intl.currency) ?
+                                currency: ["000", "001", "002"].includes(intl.currency) ?
                                   "usd" : intl.currency, ... options
                             });
                         acc[name] = (value) => {
@@ -225,6 +225,9 @@ export default class ActiveNodeTarget {
                             }
                             else if(intl.currency === "001" && options.style === "currency") {
                                 return formatter.format(value).replace("$", "G");
+                            }
+                            else if(intl.currency === "002" && options.style === "currency") {
+                                return formatter.format(value).replace("$", "C");
                             }
                             return formatter.format(value);
                         };
