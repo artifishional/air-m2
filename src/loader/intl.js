@@ -19,7 +19,7 @@ export default (resourceloader, {path}, {url}) => resourceloader(resourceloader,
 
 class Precached {
 
-  constructor(formatters) {
+  constructor(formatters, customCurrency) {
     this.formatters = formatters;
     this.customCurrency = customCurrency;
     this.customCurrencyCode = customCurrency.map(({ code }) => code);
