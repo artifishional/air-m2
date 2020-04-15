@@ -2,7 +2,7 @@ import stream from "./xhr"
 
 export default ({url, revision}) => stream({path: url, revision, content: { type: "application/json" }})
     .map( xhr => {
-        const raw = JSON.parse(xhr.responseText).slice(1);
+        const raw = JSON.parse(xhr.responseText);
         let formatters = [];
         let customCurrency = [];
         // TODO: obsolete format sup
@@ -18,7 +18,7 @@ export default ({url, revision}) => stream({path: url, revision, content: { type
           ({ formatters, "custom-currency": customCurrency} = raw)
         }
         return { type: "intl", content: formatters, precached: new Precached(formatters, customCurrency) };
-    } );
+    });
 
 
 class Precached {
@@ -62,7 +62,7 @@ class Precached {
                   const idx = this.customCurrencyCode.indexOf(currency);
                   if(idx > -1) {
                     const customCurrency = this.customCurrency[idx];
-                    formatter.format(value).replace("$", customCurrency.symbol);
+                    return formatter.format(value).replace("$", customCurrency.symbol);
                   }
                 }
               }
