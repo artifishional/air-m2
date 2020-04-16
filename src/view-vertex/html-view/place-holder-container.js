@@ -4,7 +4,9 @@ export default class PlaceHolderContainer {
 
     constructor( owner, { type } ) {
         this.owner = owner;
-        this.target = new DocumentFragment();
+        // https://github.com/jsdom/jsdom/issues/2274
+        // this.target = new DocumentFragment();
+        this.target = document.createDocumentFragment();
         this.begin = this.createSystemBoundNode("˄", type);
         this.end = this.createSystemBoundNode("˅", type);
         this.target.append( this.begin, this.end );

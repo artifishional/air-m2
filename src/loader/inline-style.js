@@ -1,4 +1,3 @@
-import { stream } from 'air-stream';
 import FontFaceObserver from 'fontfaceobserver';
 
 const FONT_LOADING_TIMEOUT = 30000;
@@ -24,9 +23,7 @@ const IMGPreloaderSheet = document.createElement("style");
 const IMGSStore = new Set();
 const PRIORITY = [];
 
-export default ({ acid, priority, style, path, revision, ...args }) => {
-
-	return stream((emt, { sweep }) => {
+export default (resourceloader, {path}, { acid, priority, style, revision, ...args }) => {
 		const imgStorePrevSize = IMGSStore.size;
 		if (!PRIORITY[0]) {
 			document.head.append(IMGPreloaderSheet);
@@ -99,17 +96,11 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 				while (~rawCommonCSSContent.indexOf(placeholder)) {
 					rawCommonCSSContent = rawCommonCSSContent.replace(placeholder, rawURL);
 				}
-				return new Promise( resolve => {
-					if(IMGSStore.has(rawURL)) {
-						resolve();
-					}
-					else {
-						IMGSStore.add(rawURL);
-						const img = new Image();
-						img.onload = resolve;
-						img.src = rawURL;
-					}
-				} );
+				if(IMGSStore.has(rawURL)) {
+					return Promise.resolve();
+				} else {
+					return resourceloader(resourceloader, {path}, {url: resource, type: 'img'})
+				}
 			}
 		});
 		if(imgStorePrevSize !== IMGSStore.size) {
@@ -123,15 +114,15 @@ export default ({ acid, priority, style, path, revision, ...args }) => {
 			new FontFaceObserver(font).load(null, FONT_LOADING_TIMEOUT))
 		);
 
-		Promise.all(promises).then(() => {
+		return Promise.all(promises).then(() => {
 			commonStyle.textContent = rawCommonCSSContent;
 			inject(commonStyle, priority);
-			emt({ type: 'inline-style', style: commonStyle, ...args });
+			return { type: 'inline-style', style: commonStyle, ...args };
 		});
 
-		sweep.add(() => {
-			commonStyle.remove();
-			fontFaceStyle && fontFaceStyle.remove();
-		});
-	});
+		// todo
+		// sweep.add(() => {
+		// 	commonStyle.remove();
+		// 	fontFaceStyle && fontFaceStyle.remove();
+		// });
 }

@@ -1,6 +1,6 @@
 import { BOOLEAN } from "../../def"
 import { ENTRY_UNIT } from '../../globals';
-import { stream, combine, keyF, sync } from "air-stream"
+import { stream, combine, keyF, sync, fromPromise } from "air-stream"
 import StylesController from "./styles-controller"
 import {
 	equal,
@@ -11,12 +11,13 @@ import {
 } from "../../utils"
 import JSON5 from "json5"
 import { LiveSchema } from "../../live-schema"
-import resource from "../../loader/resource"
 import { NODE_TYPES } from "./def"
 import { Layer, BaseLayer } from "./layer"
 import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
 import { ModelVertex } from "../../model-vertex"
+import resourceloader from "../../loader/resource-loader"
+import spreading from "air-m2/src/view-vertex/html-view/spreading";
 import CachedNodeVertex from './cached-node-vertex'
 
 let UNIQUE_VIEW_KEY = 0;
@@ -43,6 +44,9 @@ export default class HTMLView extends LiveSchema {
 
 	constructor( args, src, { acid } = {} ) {
 		super( args, src, { acid } );
+
+		this.resourceloader = src.resourceloader;
+
 		this.prop.preload = this.prop.preload !== undefined ? this.prop.preload : true;
 		this.prop.stream = this.prop.stream || "";
 		this.prop.resources = this.prop.resources || [];
@@ -56,8 +60,8 @@ export default class HTMLView extends LiveSchema {
 		this.prop.node = this.prop.node || document.createDocumentFragment();
 	}
 
-	static createApplicationRoot( { path = ENTRY_UNIT } ) {
-		return new HTMLView( ["$", { use: [{ path, schtype: "html" }] }] );
+	static createApplicationRoot( { path = ENTRY_UNIT, resourceloader = HTMLView.resourceloader } ) {
+		return new HTMLView( ["$", { use: [{ path, schtype: "html" }] }], { resourceloader }, );
 	}
 
 	createActiveNodeTarget(node, resources) {
@@ -123,7 +127,7 @@ export default class HTMLView extends LiveSchema {
 						})
 							.filter(Boolean)
 							.distinct(equal)
-					}]);
+					}], {resourceloader: this.resourceloader});
 					
 					let sign;
 					if(typeof signature !== "object") {
@@ -247,7 +251,7 @@ export default class HTMLView extends LiveSchema {
 							vars = routeNormalizer(stream)[1];
 						}
 						layer = streamplug.reduce( (acc, source) => {
-							const res = new ModelVertex(["$$", { glassy: true, source }]);
+							const res = new ModelVertex(["$$", { glassy: true, source }], {resourceloader: this.resourceloader});
 							res.parent = acc;
 							return res;
 						}, layer);
@@ -420,7 +424,7 @@ export default class HTMLView extends LiveSchema {
 				...this.prop.resources,
 				...this.prop.styles.map( ({style, idx}, priority) => {
 					priority = +(style.getAttribute("priority") || priority);
-					return StylesController.get(style, idx, priority, this.prop.pack)
+					return StylesController.get(style, idx, priority, this.prop.pack, this.resourceloader)
 				})
 			] ).at( ( resources ) => {
 				const container = new PlaceHolderContainer( this, { type: "node" } );
@@ -608,7 +612,7 @@ export default class HTMLView extends LiveSchema {
 			}
 			const resources = [
 				...(src.acid !== -1 && src.prop.resources || []),
-				...vertex.prop.resources.map(x => resource(pack, x)),
+				...vertex.prop.resources.map(x => fromPromise(src.resourceloader(src.resourceloader, pack, x))),
 			];
 			/* TODO HACK */
 			vertex.prop.styles.forEach( ({style}) => {
@@ -701,3 +705,5 @@ export default class HTMLView extends LiveSchema {
 	}
 	
 }
+
+HTMLView.resourceloader = resourceloader;

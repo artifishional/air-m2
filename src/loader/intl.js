@@ -1,9 +1,6 @@
-import stream from "./xhr"
-
-export default ({url, revision}) => stream({path: url, revision, content: { type: "application/json" }})
-    .map( xhr => {
-        const raw = JSON.parse(xhr.responseText);
-        let formatters = [];
+export default (resourceloader, {path}, {url}) => resourceloader(resourceloader, {path}, {url, type: 'json'})
+    .then(({content: raw}) => {
+      let formatters = [];
         let customCurrency = [];
         // TODO: obsolete format sup
         if(Array.isArray(raw)) {
@@ -20,16 +17,15 @@ export default ({url, revision}) => stream({path: url, revision, content: { type
         return { type: "intl", content: formatters, precached: new Precached(formatters, customCurrency) };
     });
 
-
 class Precached {
-  
+
   constructor(formatters, customCurrency) {
     this.formatters = formatters;
     this.customCurrency = customCurrency;
     this.customCurrencyCode = customCurrency.map(({ code }) => code);
     this.cache = new Map();
   }
-  
+
   get(locale, currency) {
     if(!this.cache.has(locale)) {
       this.cache.set(locale, new Map());
@@ -74,5 +70,5 @@ class Precached {
     }
     return this.cache.get(locale).get(currency);
   }
-  
+
 }

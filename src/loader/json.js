@@ -1,4 +1,4 @@
-import stream from "./xhr"
-
-export default ({path, revision}) => stream({path, revision, content: { type: "application/json" }})
-    .map( xhr => ({ content: JSON.parse(xhr.responseText) }) );
+export default (resourceloader, {path}, {url}) => resourceloader(resourceloader, {path}, {url, type: 'content'})
+    .then(raw => {
+      return { content: JSON.parse(raw) };
+    });

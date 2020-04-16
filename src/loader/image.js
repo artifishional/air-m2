@@ -1,17 +1,17 @@
-import { stream } from "air-stream"
-
-export default ({ origin, url, revision, ...args }) =>
-    stream(emt => {
-        const image = new Image();
-        [...origin.attributes].map( ({ name, value }) => {
-            if(name === "srcset") {
-              console.warn("'srcset' img property currently is not supported");
-            }
-            else if(name !== "src") {
-              image.setAttribute(name, value);
-            }
-        } );
-        image.src = revision ? `${url}?rev=${revision}` : url
-        image.onload = () => emt( {url, type: "img", image, ...args} );
-    })
-    .first();
+export default (resourceloader, {path}, { origin, revision, urlOrigin, ...args }) => new Promise(resolve => {
+  const image = new Image();
+  origin && [...origin.attributes].map( ({ name, value }) => {
+    if(name === "srcset") {
+      console.warn("'srcset' img property currently is not supported");
+    }
+    else if(name !== "src") {
+      image.setAttribute(name, value);
+    }
+  } );
+  const url = new URL(`${urlOrigin}/m2units/${path}${args.url}`);
+  if (revision) {
+    url.searchParams.append("revision", revision);
+  }
+  image.src = revision ? `${url}?rev=${revision}` : url
+  image.onload = () => resolve( {url, type: "img", image, ...args} );
+});
