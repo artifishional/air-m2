@@ -17,7 +17,6 @@
     "image-preloader": "^1.1.1",
     "json5": "^2.0.1",
     "mobile-detect": "^1.4.3",
-    "pepjs": "^0.5.2",
     "resize-observer-polyfill": "^1.5.1"
   },
   "devDependencies": {
