@@ -10,8 +10,11 @@ export default ( {path}, { url, revision, rel, urlOrigin, ...args } ) => new Pro
     url = new URL(`${urlOrigin}/m2units/${_path.join("/")}/res/sounds/${_rel.join("/")}`).href;
     const sound = new Howl({
         src: [`${url}.mp3${revision ? '?rev=' + revision : ''}`, `${url}.ogg${revision ? '?rev=' + revision : ''}`],
+        unlock: () => {
+            sound.stop();
+        },
         onload: () => {
-            resolve( {url, type: "sound", sound, ...args} );
+            resolve({ url, type: "sound", sound, ...args });
         }
     });
 })

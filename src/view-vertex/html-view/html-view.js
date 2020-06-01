@@ -419,33 +419,29 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	createNodeEntity() {
-		return stream( (emt, { sweep }) => {
-			sweep.add(combine( [
+		return (
+			combine([
 				...this.prop.resources,
-				...this.prop.styles.map( ({style, idx}, priority) => {
+				...this.prop.styles.map((style, priority) => {
 					priority = +(style.getAttribute("priority") || priority);
-					return StylesController.get(style, idx, priority, this.prop.pack, this.resourceloader)
+					return StylesController.get(style, this.acid, priority, this.prop.pack)
 				})
-			] ).at( ( resources ) => {
-				const container = new PlaceHolderContainer( this, { type: "node" } );
-				if (
-					this.layers.every(layer => !layer.prop.literal) || this.prop.literal
-				) {
-					container.append(this.prop.node.cloneNode(true));
-				}
+			])
+			.map((resources) => {
+				const container = new PlaceHolderContainer(this, { type: "node" });
+				container.append(this.prop.node.cloneNode(true));
 				const imgs = resources.filter(({type}) => type === "img");
 				[...container.target.querySelectorAll(`slot[img]`)]
-					.map((target, i) => {
+					.map((target) => {
 						const key = +target.getAttribute("img");
-						const { image } = imgs.find( img => img.key === key );
+						const { image } = imgs.find(img => img.key === key);
 						target.replaceWith(image.cloneNode(true))
 					});
-				emt.kf();
-				emt( { resources, container } );
-			}));
-		});
+				return { resources, container };
+			})
+		);
 	}
-	
+
 	teeFSignatureCheck( layers ) {
 		return this.layers.every( ({ acid, prop: { teeF } }) => teeF ? teeF(layers.get(acid), this.key) : true );
 	}
