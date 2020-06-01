@@ -1,6 +1,6 @@
 import { BOOLEAN } from "../../def"
 import { ENTRY_UNIT } from '../../globals';
-import { stream, combine, keyF, sync, fromPromise } from "air-stream"
+import { stream2 as stream, combine, keyF, sync, fromPromise } from "air-stream"
 import StylesController from "./styles-controller"
 import {
 	equal,
@@ -204,15 +204,15 @@ export default class HTMLView extends LiveSchema {
 
 	}
 
-	createEntity( args, {
+	createEntity(args, {
 		modelschema,
 		parentViewLayers,
-		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] )
+		layers: layers = new Map([[ -1, { layer: modelschema, vars: {} }]])
 	}) {
 		if(!this.prop.useOwnerProps) {
 			parentViewLayers = [];
 		}
-		return stream( (emt, { sweep, over }) => {
+		return stream((onrdy, ctr) => {
 			const clayers = new Map(
 				this.layers.map(
 					({ acid: _acid, src: { acid }, prop: { streamplug, stream } }, i, arr) => {
@@ -247,58 +247,64 @@ export default class HTMLView extends LiveSchema {
 						}
 						else {
 							resultStreamPath = stream;
-							layer = (layers.get(acid) || [...layers][0][1] ).layer;
+							layer = (layers.get(acid) || [...layers][0][1]).layer;
 							vars = routeNormalizer(stream)[1];
 						}
 						layer = streamplug.reduce( (acc, source) => {
-							const res = new ModelVertex(["$$", { glassy: true, source }], {resourceloader: this.resourceloader});
+							const res = new ModelVertex(["$$", { glassy: true, source }], {
+								resourceloader: this.resourceloader
+							});
 							res.parent = acc;
 							return res;
 						}, layer);
 						return [_acid, { layer: layer.get(resultStreamPath), vars }];
 					})
 			);
-			Promise.all( [...clayers].map( ([, { layer } ]) => layer ) )
-				.then( layers => new Map([ ...clayers].map( ([ acid, { vars } ], i) => [
+			Promise.all([...clayers].map(([, { layer }]) => layer))
+				.then( layers => new Map([ ...clayers].map(([acid, { vars }], i) => [
 					acid, { layer: layers[i], vars }
-				] )))
-				.then( layers => {
-					if(this.layers.some( ({ prop: { kit } }) => kit )) {
-						over.add(this.createKitLayer( { $: { layers, parentViewLayers }, ...args } ).on(emt));
+				])))
+				.then(layers => {
+					if(this.layers.some(({ prop: { kit } }) => kit)) {
+						this.createKitLayer({ $: { layers, parentViewLayers }, ...args })
+							.connect((wsp, hook) => {
+								ctr.to(hook);
+								onrdy(wsp);
+							});
 					}
 					else {
-						over.add(this.createTeeEntity( args,  { layers, parentViewLayers } ).on(emt));
+						this.createTeeEntity(args, { layers, parentViewLayers })
+							.connect((wsp, hook) => {
+								ctr.to(hook);
+								onrdy(wsp);
+							});
 					}
-				} );
+				});
 		} );
 	}
 
-	createLayer(owner, { poppet = false, targets, resources }, args ) {
+	createLayer(owner, { poppet = false, targets, resources }, args) {
 		if(poppet) {
-			return new BaseLayer( this, { targets } );
+			return new BaseLayer(this, { targets });
 		}
-		return new Layer( this, owner, { targets, resources }, args );
+		return new Layer(this, owner, { targets, resources }, args);
 	}
 
-	createNextLayers( args, { layers, parentViewLayers = [] } ) {
-		return stream( (emt, { sweep, over }) => {
-
+	createNextLayers(args, { layers, parentViewLayers = [] }) {
+		return stream((onrdy, ctr) => {
 			const container = new PlaceHolderContainer(this, { type: "layers" });
-			
 			let state = {
-				acids: this.layers.map( ({ acid }) => acid ),
+				acids: this.layers.map(({ acid }) => acid),
 				acid: this.acid,
 				stage: 0,
 				container,
 				key: this.key,
 				target: container.target
 			};
-
 			const currentCommonViewLayers = parentViewLayers;
 			parentViewLayers = [ ...parentViewLayers ];
-
 			parentViewLayers.push(...this.layers
-				.map( ( layer ) => {
+				.map((layer) => {
 					if([
 						layer.prop.handlers.length,
 						layer.prop.keyframes.length,
@@ -307,161 +313,154 @@ export default class HTMLView extends LiveSchema {
 						return { schema: { model: layers.get(layer.acid) }, layer };
 					}
 				})
-				.filter( Boolean )
+				.filter(Boolean)
 			);
 			const literal = this.layers.find(layer => layer.prop.literal);
 			if(literal) {
 				literal.prop.keyframes = this.layers.map(layer => layer.prop.keyframes).flat();
 			}
-			sweep.add( combine( [
-				...this.layers.map( (layer) => layer.createNodeEntity(  ) ),
-				this.createChildrenEntity( args, { layers, parentViewLayers } ),
-			] ).at( (comps) => {
-
-
-				const children = comps.pop();
-				container.append(...comps.map( ({ container: { target } }) => target));
-
-
-				let rlayers = [];
-
-				rlayers.push(...this.layers
-					.map( ( layer, i ) => {
-
-						const targets = [
-							...container.targets("sounds", comps[i].resources ),
-							...comps[i].container.targets( "datas", comps[i].resources ),
-							...container.targets("actives", comps[i].resources )
-						];
-
-						if(targets.length) {
-							return layer.createLayer(
-								{ schema: { model: layers.get(layer.acid) } },
-								{ resources: [], targets },
-								args
-							).stream;
+			stream
+				.combine([
+					...this.layers.map((layer) => layer.createNodeEntity()),
+					this.createChildrenEntity(args, { layers, parentViewLayers }),
+				])
+				.connect((wsp, hook) => {
+					ctr.todisconnect(hook);
+					wsp.on((comps) => {
+						const children = comps.pop();
+						container.append(...comps.map(({ container: { target } }) => target));
+						let rlayers = [];
+						rlayers.push(...this.layers
+							.map(( layer, i ) => {
+								const targets = [
+									...container.targets("sounds", comps[i].resources ),
+									...comps[i].container.targets( "datas", comps[i].resources ),
+									...container.targets("actives", comps[i].resources )
+								];
+								if(targets.length) {
+									return layer.createLayer(
+										{ schema: { model: layers.get(layer.acid) } },
+										{ resources: [], targets },
+										args
+									).stream;
+								}
+		
+								return null;
+		
+							})
+							.filter( Boolean )
+						);
+						const slots = container.slots();
+						if(children.length) {
+							if(slots.length) {
+								children.map(([{ target, acids }]) => {
+									const place = slots
+										.filter(({ acid }) => acids.includes(acid))
+										.reduce((exist, { slot }) => {
+											if(!exist) {
+												exist = slot;
+											}
+											else if(
+												exist.parentNode.nodeType !== NODE_TYPES.ELEMENT_NODE &&
+												slot.parentNode.nodeType === NODE_TYPES.ELEMENT_NODE
+											) {
+												exist.remove();
+												exist = slot;
+											}
+											else {
+												slot.remove();
+											}
+											return exist;
+										}, null);
+									place.replaceWith(target);
+								} );
+							}
+							else {
+								container.append(...children.map(([{ target }]) => target));
+							}
 						}
-
-						return null;
-
-					})
-					.filter( Boolean )
-				);
-				
-				const slots = container.slots();
-				if(children.length) {
-					if(slots.length) {
-						children.map( ([{ target, acids }]) => {
-							const place = slots
-								.filter( ({ acid }) => acids.includes(acid) )
-								.reduce(( exist, {slot} ) => {
-									if(!exist) {
-										exist = slot;
-									}
-									else if(
-										exist.parentNode.nodeType !== NODE_TYPES.ELEMENT_NODE &&
-										slot.parentNode.nodeType === NODE_TYPES.ELEMENT_NODE
-									) {
-										exist.remove();
-										exist = slot;
-									}
-									else {
-										slot.remove();
-									}
-									return exist;
-								}, null);
-							place.replaceWith( target );
-						} );
-					}
-					else {
-						container.append( ...children.map( ( [{ target }] ) => target ) );
-					}
-				}
-
-				//todo hack clear unused slots ( when cross template mix to exmpl )
-				slots.map( ({ slot }) => slot.remove() );
-				
-				const targets = [ ...container.targets("actives", [] ) ];
-				
-				if(targets.length) {
-					
-					this.prop.styles.forEach( ({idx}) => {
-						targets.forEach(({node}) => {
-							node.setAttribute(`data-style-acid-${idx}`, "");
+						//todo hack clear unused slots ( when cross template mix to exmpl )
+						slots.map(({ slot }) => slot.remove());
+						const targets = [...container.targets("actives", [])];
+						if(targets.length) {
+							this.prop.styles.forEach(({idx}) => {
+								targets.forEach(({ node }) => {
+									node.setAttribute(`data-style-acid-${idx}`, '');
+								});
+							});
+							rlayers.push(...currentCommonViewLayers.map(({ layer, schema }) => {
+								return layer.createLayer(
+									{ schema },
+									{ resources: [], targets },
+									args
+								).stream;
+							}));
+						}
+						if(!rlayers.length) {
+							rlayers.push(this.createLayer(
+								{ schema: null },
+								{ poppet: true, resources: [], targets: [] },
+								{}
+							).stream);
+						}
+						stream.sync(
+							rlayers,
+							([{ stage: a }], [{ stage: b }]) => a === b,
+							(...layers) => [{ ...state, stage: layers[0][0].stage }]
+						).connect((wsp, hook) => {
+							ctr.to(hook);
+							onrdy(wsp);
 						});
-					} );
-					
-					rlayers.push( ...currentCommonViewLayers.map( ({ layer, schema }) => {
-						return layer.createLayer(
-							{ schema },
-							{ resources: [], targets },
-							args
-						).stream;
-					} ) );
-				}
-				if(!rlayers.length) {
-					rlayers.push(this.createLayer(
-						{ schema: null },
-						{ poppet: true, resources: [], targets: [] },
-						{}
-					).stream);
-				}
-
-				over.add(sync(
-					rlayers,
-					([{ stage: a }], [{ stage: b }]) => a === b,
-					( ...layers ) => [ { ...state, stage: layers[0][0].stage } ]
-				).on( emt ));
-
-
-			}) );
-		} );
+					});
+				});
+		});
 	}
 
 	createNodeEntity() {
-		return (
-			combine([
+		return stream
+			.combine([
 				...this.prop.resources,
-				...this.prop.styles.map((style, priority) => {
+				...this.prop.styles.map(({style, idx}, priority) => {
 					priority = +(style.getAttribute("priority") || priority);
-					return StylesController.get(style, this.acid, priority, this.prop.pack)
+					return StylesController.get(style, idx, priority, this.prop.pack, this.resourceloader)
 				})
 			])
 			.map((resources) => {
 				const container = new PlaceHolderContainer(this, { type: "node" });
-				container.append(this.prop.node.cloneNode(true));
+				if (this.layers.every(layer => !layer.prop.literal) || this.prop.literal) {
+					container.append(this.prop.node.cloneNode(true));
+				}
 				const imgs = resources.filter(({type}) => type === "img");
 				[...container.target.querySelectorAll(`slot[img]`)]
-					.map((target) => {
+					.map((target, i) => {
 						const key = +target.getAttribute("img");
 						const { image } = imgs.find(img => img.key === key);
 						target.replaceWith(image.cloneNode(true))
 					});
 				return { resources, container };
-			})
+			});
+	}
+	
+	teeFSignatureCheck(layers) {
+		return this.layers.every(({ acid, prop: { teeF } }) =>
+			teeF ? teeF(layers.get(acid), this.key) : true
 		);
 	}
 
-	teeFSignatureCheck( layers ) {
-		return this.layers.every( ({ acid, prop: { teeF } }) => teeF ? teeF(layers.get(acid), this.key) : true );
-	}
-
-	createTeeEntity( args, manager ) {
-		if(!this.layers.some( ({ prop: { teeF } }) => teeF ) && this.prop.preload) {
-			return this.createNextLayers( args, manager );
+	createTeeEntity(args, manager) {
+		if(!this.layers.some(({ prop: { teeF } }) => teeF) && this.prop.preload) {
+			return this.createNextLayers(args, manager);
 		}
 		const { layers, parentViewLayers } = manager;
-		
 		const teeFLayers = this.layers
 			.filter( ({ prop: { teeF } }) => teeF )
 			.map( ({ acid }) => acid );
 		const teeFStreamLayers = new Map([...layers].filter( ([acid]) => teeFLayers.includes(acid) ));
-		const modelschema = combine(
+		const modelschema = stream.combine(
 			[...teeFStreamLayers]
 				.map( ([, { layer, vars } ]) => layer.obtain("", vars) ),
 			(...layers) => layers.map( ly => Array.isArray(ly) ? ly[0] : ly )
 		);
-
 		return stream( (emt, { sweep }) => {
 			let state = {
 				acids: this.layers.map( ({ acid }) => acid ),
@@ -573,15 +572,15 @@ export default class HTMLView extends LiveSchema {
 		});
 	}
 
-	createChildrenEntity( args, { layers, parentViewLayers } ) {
-		return combine( this.item
-			.filter( ({ prop: { template } }) => !template )
-			.map(x => x._obtain( [], args, { layers, parentViewLayers } ))
+	createChildrenEntity(args, { layers, parentViewLayers }) {
+		return stream.combine(this.item
+			.filter(({ prop: { template } }) => !template)
+			.map(x => x._obtain([], args, { layers, parentViewLayers }))
 		);
 	}
 	
 	parse(node, src, pkj ) {
-		return this.constructor.parse( node, src, pkj );
+		return this.constructor.parse(node, src, pkj);
 	}
 	
 	static parse( node, src, { pack, type = "unit" } ) {

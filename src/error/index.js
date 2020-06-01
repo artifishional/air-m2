@@ -1,4 +1,4 @@
-import { stream } from "../"
+import { stream2 as stream } from "../"
 
 export class Error {
 
@@ -10,9 +10,9 @@ export class Error {
 
 }
 
-(Error.default = stream( (emt) => {
-    Error.defaultEmitter = emt;
-} )).on(() => {});
+(Error.default = stream.fromCbFunc((cb) => {
+    Error.defaultEmitter = cb;
+})).connect(() => {});
 
 export const error = () => Error.default;
 export const canceled = new Set();
