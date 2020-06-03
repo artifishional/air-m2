@@ -1,4 +1,3 @@
-import { BOOLEAN } from "../../def"
 import { ENTRY_UNIT } from '../../globals';
 import { stream, combine, keyF, sync, fromPromise } from "air-stream"
 import StylesController from "./styles-controller"
@@ -17,7 +16,6 @@ import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
 import { ModelVertex } from "../../model-vertex"
 import resourceloader from "../../loader/resource-loader"
-import spreading from "air-m2/src/view-vertex/html-view/spreading";
 import CachedNodeVertex from './cached-node-vertex'
 
 let UNIQUE_VIEW_KEY = 0;
@@ -422,14 +420,16 @@ export default class HTMLView extends LiveSchema {
 		return (
 			combine([
 				...this.prop.resources,
-				...this.prop.styles.map((style, priority) => {
+				...this.prop.styles.map(({ style, idx }, priority) => {
 					priority = +(style.getAttribute("priority") || priority);
-					return StylesController.get(style, this.acid, priority, this.prop.pack)
+					return StylesController.get(style, idx, priority, this.prop.pack, this.resourceloader)
 				})
 			])
 			.map((resources) => {
-				const container = new PlaceHolderContainer(this, { type: "node" });
-				container.append(this.prop.node.cloneNode(true));
+				const container = new PlaceHolderContainer( this, { type: "node" } );
+				if (this.layers.every(layer => !layer.prop.literal) || this.prop.literal) {
+					container.append(this.prop.node.cloneNode(true));
+				}
 				const imgs = resources.filter(({type}) => type === "img");
 				[...container.target.querySelectorAll(`slot[img]`)]
 					.map((target) => {
