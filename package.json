@@ -11,7 +11,7 @@
   "dependencies": {
     "air-anime": "https://github.com/artifishional/air-anime.git",
     "air-schema": "^0.2.0",
-    "air-stream": "git+ssh://git@github.com/artifishional/air-stream.git#res-loader-refactor",
+    "air-stream": "https://github.com/artifishional/air-stream.git#res-loader-refactor",
     "fontfaceobserver": "^2.1.0",
     "howler": "^2.1.3",
     "image-preloader": "^1.1.1",
