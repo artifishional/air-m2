@@ -8,7 +8,7 @@ export class BaseLayer {
 		return animate( targets, keyframes, this.layer );
 	}
 
-	constructor( layer, { targets } ) {
+	constructor(layer, { targets }) {
 		//todo targets.length === 0 ?
 		this.notObjectTargetType = targets.length && targets[0].type !== "data";
 		this.keyframes = layer.prop.keyframes;
@@ -19,69 +19,61 @@ export class BaseLayer {
 		if(targets.length) {
 			this.animateStream = this.createAnimateStream( this.keyframes, targets );
 		}
-		this.stream = stream( (emt, { sweep, hook }) => {
-			hook.add( ({action}) => {
-				if(action === "fade-in") {
-					//todo patch
-					//target "data" type not allowed when animate fade-in/out
-					if(this.notObjectTargetType && this.animateStream) {
-						this.animateHandler({ data: [{}, { action: "fade-in" }] });
-					}
-					this.state = { ...this.state, stage: 2 };
-					emt.kf();
-					emt( [ this.state ] );
+		this.stream = stream.fromCbFn((cb, ctr) => {
+			ctr.req("fade-in", () => {
+				//todo patch
+				//target "data" type not allowed when animate fade-in/out
+				if(this.notObjectTargetType && this.animateStream) {
+					this.animateHandler({ data: [{}, { action: "fade-in" }] });
 				}
-				else if(action === "fade-out") {
-					if(this.fadeoutexist && this.notObjectTargetType && this.animateStream) {
-						this.animateHandler({ data: [ {}, { action: "fade-out" } ] });
-					}
-					else {
-						this.state = { ...this.state, stage: 1 };
-						emt.kf();
-						emt( [ this.state ] );
-					}
+				this.state = { ...this.state, stage: 2 };
+				cb([this.state ]);
+			});
+			
+			ctr.req("fade-out", () => {
+				if(this.fadeoutexist && this.notObjectTargetType && this.animateStream) {
+					this.animateHandler({ data: [ {}, { action: "fade-out" } ] });
 				}
-			} );
+				else {
+					this.state = { ...this.state, stage: 1 };
+					cb([this.state]);
+				}
+			});
+			
 /*
 			this.loaderTimeoutID = setTimeout( () =>
 				console.warn(`too long loading layer`, this.layer), 5000
 			);*/
-
 			if(this.animateStream) {
-				sweep.add(this.animateHandler = this.animateStream.at( ({ action }) => {
+				ctr.req("disconnect", this.animateHandler = this.animateStream.at(({ action }) => {
 					if(action === "fade-out-complete") {
 						this.state = { ...this.state, stage: 1 };
-						emt.kf();
-						emt( [ this.state ] );
+						cb([this.state]);
 					}
-				} ));
+				}));
 			}
-
-			this.sweep( sweep, emt );
-
-			sweep.add( () => this.clear() );
-		} );
-
+			this.sweep(cb, ctr);
+			ctr.req("disconnect", () => this.clear());
+		});
 	}
 
-	sweep(sweep, emt) {
-		this.complete(emt);
+	sweep(cb, ctr) {
+		this.complete(cb);
 	}
 
 	clear() { }
 
-	complete(emt) {
+	complete(cb) {
 		//clearTimeout(this.loaderTimeoutID);
 		this.state = { ...this.state, stage: 1 };
-		emt.kf();
-		emt([this.state, {action: "complete", data: null}]);
+		cb([this.state, {action: "complete", data: null}]);
 	}
 
 }
 
 export class Layer extends BaseLayer {
 
-	sweep( sweep, emt ) {
+	sweep(sweep, emt) {
 		if(this.checkModelNecessity( )) {
 			//todo perf hack
 			if(this.targets[0].type === "data") {
