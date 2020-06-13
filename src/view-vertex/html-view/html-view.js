@@ -1,6 +1,5 @@
-import { BOOLEAN } from "../../def"
+import { stream2 as stream, keyF, fromPromise } from 'air-stream'
 import { ENTRY_UNIT } from '../../globals';
-import { stream2 as stream, combine, keyF, sync, fromPromise } from "air-stream"
 import StylesController from "./styles-controller"
 import {
 	equal,
@@ -313,7 +312,7 @@ export default class HTMLView extends LiveSchema {
 					literal.prop.keyframes = this.layers.map(layer => layer.prop.keyframes).flat();
 				}
 				return [
-					this.createChildrenEntity(args, {layers, parentViewLayers: currentCommonViewLayers}),
+					this.createChildrenEntity(args, { layers, parentViewLayers: currentCommonViewLayers }),
 					...this.layers.map((layer) => layer.createNodeEntity()),
 				]
 			})
@@ -452,7 +451,7 @@ export default class HTMLView extends LiveSchema {
 				.map( ([, { layer, vars } ]) => layer.obtain("", vars) ),
 			(...layers) => layers.map( ly => Array.isArray(ly) ? ly[0] : ly )
 		);
-		return stream( (emt, { sweep }) => {
+		return stream((onrdy, ctr) => {
 			let state = {
 				acids: this.layers.map( ({ acid }) => acid ),
 				acid: this.acid, key: this.key, stage: 0, active: false, target: null

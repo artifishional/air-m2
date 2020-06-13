@@ -1,4 +1,4 @@
-import { stream } from "air-stream"
+import { stream2 as stream } from "air-stream"
 import animate from "air-anime"
 
 export { anime } from "air-anime"
@@ -19,7 +19,7 @@ export class BaseLayer {
 		if(targets.length) {
 			this.animateStream = this.createAnimateStream( this.keyframes, targets );
 		}
-		this.stream = stream.fromCbFn((cb, ctr) => {
+		this.stream = stream.fromCbFunc((cb, ctr) => {
 			ctr.req("fade-in", () => {
 				//todo patch
 				//target "data" type not allowed when animate fade-in/out
@@ -185,7 +185,7 @@ export class Layer extends BaseLayer {
 		}
 	}
     
-    clear() {
+	clear() {
 		this.layer.prop.handlers.map( ({ name }) => {
 			if(name === "clickoutside") {
 				window.removeEventListener("click", this, false);
