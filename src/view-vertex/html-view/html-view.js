@@ -400,9 +400,12 @@ export default class HTMLView extends LiveSchema {
 				return {state, rlayers};
 			})
 			.combineAllFirst(({rlayers}) => rlayers, ({state}, states) => ({state, states}))
-			.map(({state, states}) => {
-				const stage = Math.min(...states.map(([{stage}]) => stage));
-				return [{...state, stage}];
+			.map(({ state, states }) => {
+				const firstChildStage = states[0][0].stage;
+				if (states.some(([{ stage }]) => stage !== firstChildStage)) {
+					return [{ ...state, stage: -1 }];
+				}
+				return [{ ...state, stage: firstChildStage }];
 			});
 	}
 
@@ -436,130 +439,71 @@ export default class HTMLView extends LiveSchema {
 			teeF ? teeF(layers.get(acid), this.key) : true
 		);
 	}
-
+	
+	
+	/**
+	 * stage 0 - rdy
+	 * stage 1 - fade-in start
+	 * stage 2 - fade-out start
+	 * stage 0 - fade-out complete
+	 * stage -1 - not synced
+	 */
 	createTeeEntity(args, manager) {
-		if(!this.layers.some(({ prop: { teeF } }) => teeF) && this.prop.preload) {
+		const acids = this.layers.map( ({ acid }) => acid );
+		const { key, acid } = this;
+		if (!this.layers.some(({ prop: { teeF } }) => teeF) && this.prop.preload) {
 			return this.createNextLayers(args, manager);
 		}
 		const { layers, parentViewLayers } = manager;
 		const teeFLayers = this.layers
-			.filter( ({ prop: { teeF } }) => teeF )
-			.map( ({ acid }) => acid );
-		const teeFStreamLayers = new Map([...layers].filter( ([acid]) => teeFLayers.includes(acid) ));
+			.filter(({ prop: { teeF } }) => teeF)
+			.map(({ acid }) => acid);
+		const teeFStreamLayers = new Map([...layers]
+			.filter(([acid]) => teeFLayers.includes(acid)));
 		const modelschema = stream.combine(
 			[...teeFStreamLayers]
-				.map( ([, { layer, vars } ]) => layer.obtain("", vars) ),
-			(...layers) => layers.map( ly => Array.isArray(ly) ? ly[0] : ly )
+				.map(([, { layer, vars }]) => layer.obtain("", vars)),
+			(...layers) => layers.map((ly) => Array.isArray(ly) ? ly[0] : ly)
 		);
-		return stream((onrdy, ctr) => {
-			let state = {
-				acids: this.layers.map( ({ acid }) => acid ),
-				acid: this.acid, key: this.key, stage: 0, active: false, target: null
-			};
-			let childHook = null;
-			let loaderHook = null;
-
-			let loaderContainer = null;
-			const container = new PlaceHolderContainer( this, { type: "entity" } );
-			state.target = container.target;
-			state.container = container;
-
-			//todo temporary solution
-			let connected = false;
-			const connect = () => {
-				if(connected) {
-					return ;
+		const view = this.createNextLayers(args, { layers, parentViewLayers });
+		const handler = stream.handle();
+		return stream.extendedCombine([
+			stream.fromCbFunc((cb) => {
+				const container = new PlaceHolderContainer(this, { type: "entity" });
+				cb({ container, target: container.target });
+			}),
+			handler.reduce((acc, { req }) => {
+				if (req === 'fade-in') {
+					return { stage: 1 };
+				} else if(req === 'fade-out') {
+					return { stage: 0 };
 				}
-				connected = true;
-				if(!loaderHook && !this.prop.preload) {
-					sweep.add( loaderHook = this.obtain( "@loader", {}, { layers } )
-						.at( ([ { stage, container: inner, target } ]) => {
-							if(state.stage === 0 && stage > 0) {
-								loaderContainer = inner;
-								state = { ...state, load: true, stage: 1, };
-								container.append( target );
-								emt.kf();
-								emt( [ state ] );
-							}
-						} )
-					);
-				}
-				sweep.add( childHook = view
-					.connectable( (data) => {
-						if(data !== keyF) {
-							if(state.load) {
-								state = { ...state, load: false };
-								loaderContainer.restore();
-							}
-							const [ { stage, container: inner } ] = data;
-							_inner = inner;
-							if(state.stage === 0) {
-								state = { ...state, stage: 1 };
-								emt.kf();
-								emt( [ state ] );
-							}
-							if( stage === 1 ) {
-								if(state.active) {
-									childHook({action: "fade-in"});
-									container.begin.after( _inner.target );
-								}
-								else {
-									_inner && _inner.restore();
-									if(!this.prop.preload) {
-										childHook && sweep.force( childHook );
-										childHook = null;
-									}
-								}
-							}
-						}
-					} )
-				);
-				childHook.connect();
-			};
-
-			let _inner = null;
-			const view = this.createNextLayers( args, { layers, parentViewLayers } );
-			sweep.add( modelschema.at( (data) => {
-
-				const active = this.teeFSignatureCheck(
-					new Map([ ...teeFStreamLayers ].map( ([ acid ], i) => [acid, data[i]]) )
-				);
-
-				if(!active && !this.prop.preload) {
-					loaderContainer && loaderContainer.remove();
-					state = { ...state, stage: 1 };
-					emt.kf();
-					emt( [ state ] );
-				}
-
-				if(state.stage === 0) {
-					if(this.prop.preload) {
-						connect();
+			}, { local: { stage: 0 } }),
+			modelschema.map((data) => {
+				return { tee: this.teeFSignatureCheck(
+					new Map([ ...teeFStreamLayers ].map(([ acid ], i) => [acid, data[i]]))
+				) };
+			}),
+			view,
+		], ([{ container, target }, { stage }, { tee }, [view]]) => {
+			let transition = '';
+			if (tee && view.stage === 1) {
+				container.append(view.target);
+				transition = 'fade-in';
+			} else if(!tee && view.stage === 2) {
+				transition = 'fade-out';
+			} else if (!tee && view.stage === 1) {
+				view.container.restore();
+			}
+			return [{ container, target, stage, transition, acid, acids, key }];
+		}, {
+				tuner: (tuner, [{ transition }]) => {
+					if (transition) {
+						tuner.get(3).hook(transition);
 					}
 				}
-
-				if(active !== state.active) {
-					state = { ...state, active };
-					if(active) {
-						if(!childHook) {
-							connect();
-						}
-						else {
-							if(state.stage === 1) {
-								childHook({action: "fade-in"});
-								container.begin.after( _inner.target );
-							}
-						}
-					}
-					else {
-						if(childHook) {
-							childHook({action: "fade-out"});
-						}
-					}
-				}
-			} ) );
-
-		});
+		})
+			.controller(handler);
 	}
 
 	createChildrenEntity(args, { layers, parentViewLayers }) {

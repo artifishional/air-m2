@@ -16,7 +16,10 @@ export class BaseLayer {
 		this.layer = layer;
 		this.targets = targets;
 		this.state = { stage: 0 };
-		if(targets.length) {
+		if(targets.length && (
+			targets.find(({ type }) => type !== 'active') ||
+			this.keyframes.length
+		)) {
 			this.animateStream = this.createAnimateStream( this.keyframes, targets );
 		}
 		this.stream = stream.fromCbFunc((cb, ctr) => {
@@ -26,8 +29,8 @@ export class BaseLayer {
 				if(this.notObjectTargetType && this.animateStream) {
 					this.animateHandler({ data: [{}, { action: "fade-in" }] });
 				}
-				this.state = { ...this.state, stage: 2 };
-				cb([this.state ]);
+				//this.state = { ...this.state, stage: 1 };
+				//cb([this.state ]);
 			});
 			
 			ctr.req("fade-out", () => {
@@ -35,7 +38,7 @@ export class BaseLayer {
 					this.animateHandler({ data: [ {}, { action: "fade-out" } ] });
 				}
 				else {
-					this.state = { ...this.state, stage: 1 };
+					this.state = { ...this.state, stage: 2 };
 					cb([this.state]);
 				}
 			});
@@ -45,9 +48,9 @@ export class BaseLayer {
 				console.warn(`too long loading layer`, this.layer), 5000
 			);*/
 			if(this.animateStream) {
-				ctr.req("disconnect", this.animateHandler = this.animateStream.at(({ action }) => {
+				ctr.req('disconnect', this.animateHandler = this.animateStream.at(({ action }) => {
 					if(action === "fade-out-complete") {
-						this.state = { ...this.state, stage: 1 };
+						this.state = { ...this.state, stage: 2 };
 						cb([this.state]);
 					}
 				}));
@@ -73,16 +76,16 @@ export class BaseLayer {
 
 export class Layer extends BaseLayer {
 
-	sweep(sweep, emt) {
+	sweep(cb, ctr) {
 		if(this.checkModelNecessity( )) {
 			//todo perf hack
 			if(this.targets[0].type === "data") {
-				sweep.add(this.schema.model.layer._obtain(["#intl"]).at(
+				ctr.req('disconnect', this.schema.model.layer._obtain(["#intl"]).at(
 					intl => this.targets.map(target => target.transition(intl))
 				));
 			}
 			this.handler = this.schema.model.layer._obtain([], this.schema.model.vars).at((data) => {
-				!this.state.stage && this.complete(emt);
+				!this.state.stage && this.complete(cb);
 				let state, action = "default";
 				if (Array.isArray(data) && data.length < 3) {
 					[state, action = "default"] = data;
@@ -91,10 +94,10 @@ export class Layer extends BaseLayer {
 				}
 				this.animateHandler({data: [state, action]});
 			});
-			sweep.add(this.handler);
+			ctr.req(this.handler);
 		}
 		else {
-			this.complete(emt);
+			this.complete(cb);
 		}
 	}
 

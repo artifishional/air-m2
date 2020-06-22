@@ -1,9 +1,10 @@
 import { LiveSchema } from "../live-schema"
 import { ObservableCollection } from "../observable-collection"
-import { stream } from "air-stream"
+import { stream2 as stream } from "air-stream"
 import { error } from "../error"
 import { ENTRY_UNIT } from '../globals';
 import resourceloader from "../loader/resource-loader";
+import { EMPTY } from '../def';
 
 function frommodule(module, _key = "main") {
 	return [ _key,
@@ -28,9 +29,16 @@ function frommodule(module, _key = "main") {
 
 const observers = new Map();
 
+const EMPTY_STREAM = stream.fromCbFunc((cb) => {
+	cb([EMPTY])
+})
+	.store();
+
+const EMPTY_STREAM_CR = () => EMPTY_STREAM;
+
 export default class ModelVertex extends LiveSchema {
 
-	constructor([ key, { source = () => stream( emt => `empty point ${key}` ), ...prop }, ...item], src) {
+	constructor([ key, { source = EMPTY_STREAM_CR, ...prop }, ...item], src) {
 		super([ key, { source, ...prop }, ...item], src);
 		this.resourceloader = src.resourceloader;
 	}
