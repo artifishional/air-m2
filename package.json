@@ -9,7 +9,7 @@
     "minor": "npm version minor && npm publish && git push origin"
   },
   "dependencies": {
-    "air-anime": "https://github.com/artifishional/air-anime.git",
+    "air-anime": "https://github.com/artifishional/air-anime.git#s2s",
     "air-schema": "^0.2.0",
     "air-stream": "git+ssh://git@github.com/artifishional/air-stream.git#s2s",
     "fontfaceobserver": "^2.1.0",
