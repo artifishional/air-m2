@@ -1,6 +1,13 @@
 import { stream2 as stream } from "air-stream"
 import animate from "air-anime"
 
+/**
+ * stage 0 - rdy
+ * stage 1 - fade-in start
+ * stage 2 - fade-out satrt
+ * stage 0 - fade-out completed
+ */
+
 export { anime } from "air-anime"
 export class BaseLayer {
 
@@ -27,18 +34,20 @@ export class BaseLayer {
 				//todo patch
 				//target "data" type not allowed when animate fade-in/out
 				if(this.notObjectTargetType && this.animateStream) {
-					this.animateHandler({ data: [{}, { action: "fade-in" }] });
+					this.animateHandler('fade-in', {});
 				}
-				//this.state = { ...this.state, stage: 1 };
-				//cb([this.state ]);
+				this.state = { ...this.state, stage: 1 };
+				cb([this.state]);
 			});
 			
 			ctr.req("fade-out", () => {
 				if(this.fadeoutexist && this.notObjectTargetType && this.animateStream) {
-					this.animateHandler({ data: [ {}, { action: "fade-out" } ] });
+					this.state = { ...this.state, stage: 2 };
+					cb([this.state]);
+					this.animateHandler('fade-out', {});
 				}
 				else {
-					this.state = { ...this.state, stage: 2 };
+					this.state = { ...this.state, stage: 0 };
 					cb([this.state]);
 				}
 			});
@@ -48,15 +57,17 @@ export class BaseLayer {
 				console.warn(`too long loading layer`, this.layer), 5000
 			);*/
 			if(this.animateStream) {
-				ctr.req('disconnect', this.animateHandler = this.animateStream.at(({ action }) => {
-					if(action === "fade-out-complete") {
-						this.state = { ...this.state, stage: 2 };
-						cb([this.state]);
-					}
-				}));
+				ctr.req('disconnect', this.animateHandler =
+					this.animateStream.get(({ value: { action } }) => {
+						if (action === "fade-out-complete") {
+							this.state = { ...this.state, stage: 0 };
+							cb([this.state]);
+						}
+					})
+				);
 			}
-			this.sweep(cb, ctr);
 			ctr.req("disconnect", () => this.clear());
+			this.sweep(cb, ctr);
 		});
 	}
 
@@ -68,7 +79,7 @@ export class BaseLayer {
 
 	complete(cb) {
 		//clearTimeout(this.loaderTimeoutID);
-		this.state = { ...this.state, stage: 1 };
+		this.state = { ...this.state, stage: 0 };
 		cb([this.state, {action: "complete", data: null}]);
 	}
 
@@ -86,13 +97,8 @@ export class Layer extends BaseLayer {
 			}
 			this.handler = this.schema.model.layer._obtain([], this.schema.model.vars).at((data) => {
 				!this.state.stage && this.complete(cb);
-				let state, action = "default";
-				if (Array.isArray(data) && data.length < 3) {
-					[state, action = "default"] = data;
-				} else {
-					state = data;
-				}
-				this.animateHandler({data: [state, action]});
+				const [state, action = "default"] = data;
+				this.animateHandler(action, state);
 			});
 			ctr.req(this.handler);
 		}

@@ -102,7 +102,7 @@ export default class HTMLView extends LiveSchema {
 			const container = new PlaceHolderContainer( this, { type: "kit" } );
 			
 			emt( [ {
-				stage: 1,
+				stage: 0,
 				container,
 				target: container.target,
 				acids: this.layers.map( ({ acid }) => acid ),
@@ -441,13 +441,6 @@ export default class HTMLView extends LiveSchema {
 	}
 	
 	
-	/**
-	 * stage 0 - rdy
-	 * stage 1 - fade-in start
-	 * stage 2 - fade-out start
-	 * stage 0 - fade-out complete
-	 * stage -1 - not synced
-	 */
 	createTeeEntity(args, manager) {
 		const acids = this.layers.map( ({ acid }) => acid );
 		const { key, acid } = this;
@@ -481,18 +474,18 @@ export default class HTMLView extends LiveSchema {
 			}, { local: { stage: 0 } }),
 			modelschema.map((data) => {
 				return { tee: this.teeFSignatureCheck(
-					new Map([ ...teeFStreamLayers ].map(([ acid ], i) => [acid, data[i]]))
+					new Map([ ...teeFStreamLayers ].map(([ acid ], i) => [acid, data[i][0]]))
 				) };
 			}),
 			view,
 		], ([{ container, target }, { stage }, { tee }, [view]]) => {
 			let transition = '';
-			if (tee && view.stage === 1) {
+			if (tee && (view.stage === 0 || view.stage === 2)) {
 				container.append(view.target);
 				transition = 'fade-in';
-			} else if(!tee && view.stage === 2) {
+			} else if(!tee && view.stage === 1) {
 				transition = 'fade-out';
-			} else if (!tee && view.stage === 1) {
+			} else if (!tee && view.stage === 0) {
 				view.container.restore();
 			}
 			return [{ container, target, stage, transition, acid, acids, key }];
