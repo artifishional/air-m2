@@ -442,11 +442,11 @@ export default class HTMLView extends LiveSchema {
 	
 	
 	createTeeEntity(args, manager) {
-		const acids = this.layers.map( ({ acid }) => acid );
-		const { key, acid } = this;
 		if (!this.layers.some(({ prop: { teeF } }) => teeF) && this.prop.preload) {
 			return this.createNextLayers(args, manager);
 		}
+		const acids = this.layers.map(({ acid }) => acid);
+		const { key, acid } = this;
 		const { layers, parentViewLayers } = manager;
 		const teeFLayers = this.layers
 			.filter(({ prop: { teeF } }) => teeF)
