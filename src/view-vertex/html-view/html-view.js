@@ -440,11 +440,76 @@ export default class HTMLView extends LiveSchema {
 		);
 	}
 	
+	createLazyTeeEntity(args, manager) {
+		const acids = this.layers.map(({ acid }) => acid);
+		const { key, acid } = this;
+		const { layers, parentViewLayers } = manager;
+		const teeFLayers = this.layers
+			.filter(({ prop: { teeF } }) => teeF)
+			.map(({ acid }) => acid);
+		const teeFStreamLayers = new Map([...layers]
+			.filter(([acid]) => teeFLayers.includes(acid)));
+		const modelschema = stream.combine(
+			[...teeFStreamLayers]
+				.map(([, { layer, vars }]) => layer.obtain("", vars)),
+			(...layers) => layers.map((ly) => Array.isArray(ly) ? ly[0] : ly)
+		);
+		const view = this.createNextLayers(args, { layers, parentViewLayers });
+		const loader = this.obtain("@loader", { }, { layers });
+		const handler = stream.handle();
+		return stream.extendedCombine([
+			stream.fromCbFunc((cb) => {
+				const container = new PlaceHolderContainer(this, { type: "entity" });
+				cb({ container, target: container.target });
+			}).store(),
+			handler.reduce((acc, { req }) => {
+				if (req === 'fade-in') {
+					return { stage: 1 };
+				} else if(req === 'fade-out') {
+					return { stage: 0 };
+				}
+			}, { local: { stage: 0 } }),
+			modelschema.map((data) => {
+				return { tee: this.teeFSignatureCheck(
+						new Map([ ...teeFStreamLayers ].map(([ acid ], i) => [acid, data[i][0]]))
+					) };
+			}),
+			loader,
+		], ([{ container, target }, { stage }, { tee }, [loader], [view] = []]) => {
+			const transition = { loader: null, view: null };
+			// loader fade-in
+			if (!view && tee && (loader.stage === 0 || loader.stage === 2)) {
+				container.append(loader.target);
+				transition.loader = 'fade-in';
+			} else if (view && tee && loader.stage === 1) {
+				transition.loader = 'fade-out';
+			} else if(!tee || view && loader.stage === 0) {
+				loader.container.restore();
+			}
+			if (loader.stage === 0 && tee && view && (view.stage === 0 || view.stage === 2)) {
+				container.append(view.target);
+				transition.view = 'fade-in';
+			} else if(!tee && view && view.stage === 1) {
+				transition.view = 'fade-out';
+			} else if (!tee && view && view.stage === 0) {
+				view.container.restore();
+			}
+			return [{ container, target, stage, transition, acid, acids, key, tee }];
+		}, {
+			tuner: (tuner, [{ transition, tee }]) => {
+				tuner.setup([[view, { on: tee }]]);
+				if (transition.loader) {
+					tuner.get(3).hook(transition.loader);
+				}
+				if (transition.view) {
+					tuner.get(4).hook(transition.view);
+				}
+			}
+		})
+			.controller(handler);
+	}
 	
-	createTeeEntity(args, manager) {
-		if (!this.layers.some(({ prop: { teeF } }) => teeF) && this.prop.preload) {
-			return this.createNextLayers(args, manager);
-		}
+	createStaticTeeEntity(args, manager) {
 		const acids = this.layers.map(({ acid }) => acid);
 		const { key, acid } = this;
 		const { layers, parentViewLayers } = manager;
@@ -490,13 +555,24 @@ export default class HTMLView extends LiveSchema {
 			}
 			return [{ container, target, stage, transition, acid, acids, key }];
 		}, {
-				tuner: (tuner, [{ transition }]) => {
-					if (transition) {
-						tuner.get(3).hook(transition);
-					}
+			tuner: (tuner, [{ transition }]) => {
+				if (transition) {
+					tuner.get(3).hook(transition);
 				}
+			}
 		})
 			.controller(handler);
+	}
+	
+	createTeeEntity(args, manager) {
+		if (!this.layers.some(({ prop: { teeF } }) => teeF) && this.prop.preload) {
+			return this.createNextLayers(args, manager);
+		}
+		if (this.prop.preload) {
+			return this.createStaticTeeEntity(args, manager);
+		} else {
+			return this.createLazyTeeEntity(args, manager);
+		}
 	}
 
 	createChildrenEntity(args, { layers, parentViewLayers }) {

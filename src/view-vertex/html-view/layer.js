@@ -95,11 +95,13 @@ export class Layer extends BaseLayer {
 					intl => this.targets.map(target => target.transition(intl))
 				));
 			}
-			this.handler = this.schema.model.layer._obtain([], this.schema.model.vars).at((data) => {
-				!this.state.stage && this.complete(cb);
-				const [state, action = "default"] = data;
-				this.animateHandler(action, state);
-			});
+			this.handler = this.schema.model.layer.
+				_obtain([], this.schema.model.vars)
+				.get(({ value: data }) => {
+					!this.state.stage && this.complete(cb);
+					const [state, action = 'default'] = data;
+					this.animateHandler(action, state);
+				});
 			ctr.req(this.handler);
 		}
 		else {
