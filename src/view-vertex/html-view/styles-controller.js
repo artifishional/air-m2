@@ -1,4 +1,4 @@
-import {fromPromise} from 'air-stream';
+import { stream2 as stream } from 'air-stream';
 
 export default new class {
 	
@@ -12,7 +12,7 @@ export default new class {
 				resource: resourceloader(resourceloader, style.pack, { type: "inline-style", style, acid, priority })
 			} );
 		}
-		return fromPromise(this.cache.get(style).resource);
+		return stream.fromPromise(this.cache.get(style).resource);
 	}
 	
 }

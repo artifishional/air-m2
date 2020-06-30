@@ -16,8 +16,8 @@ import PlaceHolderContainer from "./place-holder-container"
 import ActiveNodeTarget from "./active-node-target"
 import { ModelVertex } from "../../model-vertex"
 import resourceloader from "../../loader/resource-loader"
-import spreading from "air-m2/src/view-vertex/html-view/spreading";
 import CachedNodeVertex from './cached-node-vertex'
+import { EMPTY } from 'air-stream/src/stream2/signals';
 
 let UNIQUE_VIEW_KEY = 0;
 
@@ -88,7 +88,6 @@ export default class HTMLView extends LiveSchema {
 		signature: parentContainerSignature = null,
 		...args
 	} ) {
-		
 		function removeElementFromArray(arr, elem) {
 			const indexOf = arr.indexOf(elem);
 			if(indexOf === -1) {
@@ -96,38 +95,29 @@ export default class HTMLView extends LiveSchema {
 			}
 			return arr.splice(indexOf, 1)[0];
 		}
-		
-		return stream( ( emt, { sweep, over }) => {
-			
+		return stream.fromCbFunc((cb, ctr) => {
 			const container = new PlaceHolderContainer( this, { type: "kit" } );
-			
-			emt( [ {
+			cb([{
 				stage: 0,
 				container,
 				target: container.target,
 				acids: this.layers.map( ({ acid }) => acid ),
-			} ] );
-
+			} ]);
 			//todo need layers sup
 			const modelvertex = layers.get(this.acid) || layers.get(-1);
 			const modelstream = modelvertex.layer.obtain("", modelvertex.vars);
-			
 			const cache = new Cached( {
 				constructor: (data) => {
-					
 					const signature = calcsignature(data, this.prop.kit.prop);
-					
 					const modelvertex = new ModelVertex(["$$", {
 						glassy: true,
 						source: () => modelstream.map(([state]) => {
 							const childs = getfrompath(state, this.prop.kit.getter);
 							const res = childs.find( child => signatureEquals(signature, child) );
-							return res !== undefined ? [res] : null;
+							return res !== undefined ? [res] : EMPTY;
 						})
-							.filter(Boolean)
 							.distinct(equal)
 					}], {resourceloader: this.resourceloader});
-					
 					let sign;
 					if(typeof signature !== "object") {
 						sign = { default: signature };
@@ -135,36 +125,26 @@ export default class HTMLView extends LiveSchema {
 					else {
 						sign = signature;
 					}
-
 					modelvertex.parent = (layers.get(this.acid) || layers.get(-1)).layer;
 					const _layers = new Map([ ...layers, [this.acid, { layer: modelvertex, vars: {} } ]]);
 					return this.createTeeEntity(
 						{ signature: {...sign, $: parentContainerSignature }, ...args },
 						{ layers: _layers, parentViewLayers }
 					);
-					
 				}
-			} );
-			
-			over.add(() => cache.clear());
-
+			});
+			ctr.todisconnect(() => cache.clear());
 			const store = [];
-			
-			sweep.add(modelstream.at( ([ state ]) => {
-				
+			ctr.todisconnect(modelstream.get(({ value: [state] }) => {
 				let childs;
-
 				try {
 					childs = getfrompath(state, this.prop.kit.getter);
 				}
 				catch (e) {
 					childs = [];
 				}
-				
 				let domTreePlacment = container.begin;
-				
 				const deleted = [ ...store];
-
 				childs.map( child => {
 					const signature = calcsignature(child, this.prop.kit.prop);
 					const exist = store.find( ({ signature: $ }) => signatureEquals(signature, $ ) );
@@ -173,11 +153,9 @@ export default class HTMLView extends LiveSchema {
 						domTreePlacment.after(box.target);
 						domTreePlacment = box.end;
 						cache.createIfNotExist( child, signature )
-							.at( ([ { stage, container } ]) => {
-								container.remove();
-								if(stage === 1) {
-									box.append( container.target );
-								}
+							.get(({ value: [{ container }] }) => {
+								//container.remove();
+								box.append(container.target);
 							});
 						store.push( { signature, box } );
 					}
@@ -189,18 +167,14 @@ export default class HTMLView extends LiveSchema {
 						}
 						domTreePlacment = exist.box.end;
 					}
-				} );
-				
+				});
 				deleted.map( item => {
 					const deleted = store.indexOf(item);
 					store.splice(deleted, 1);
 					item.box.restore();
-				} );
-			} ));
-
-
-		} );
-
+				});
+			}));
+		});
 	}
 
 	createEntity(args, {
@@ -282,14 +256,15 @@ export default class HTMLView extends LiveSchema {
 		} );
 	}
 
-	createLayer(owner, { poppet = false, targets, resources }, args) {
-		if(poppet) {
-			return new BaseLayer(this, { targets });
+	createLayer(owner, material, args) {
+		if(material) {
+			return new Layer(this, owner, material, args);
 		}
-		return new Layer(this, owner, { targets, resources }, args);
+		return new BaseLayer(this);
 	}
 	
 	createNextLayers(args, { layers, parentViewLayers = [] }) {
+		let init = false;
 		// TODO not completed
 		return stream
 			.fromFn(() => {
@@ -299,6 +274,7 @@ export default class HTMLView extends LiveSchema {
 						.map((layer) => {
 							if ([
 								layer.prop.handlers.length,
+								layer.prop.keyframes.length,
 								layer.prop.keyframes.length,
 								layer.prop.plug.length,
 							].some(Boolean)) {
@@ -318,8 +294,17 @@ export default class HTMLView extends LiveSchema {
 			})
 			.combineAllFirst()
 			.map(([children, ...comps]) => {
+				let rlayers = [];
+				let state = null;
+				// TODO:
+				//  hack when stage changed the new layer created
+				// stage needs a separeted stream
+				if (init) {
+					return {state, rlayers};
+				}
+				init = true;
 				const container = new PlaceHolderContainer(this, {type: "layers"});
-				const state = {
+				state = {
 					acids: this.layers.map(({acid}) => acid),
 					acid: this.acid,
 					stage: 0,
@@ -328,7 +313,6 @@ export default class HTMLView extends LiveSchema {
 					target: container.target
 				};
 				container.append(...comps.map(({container: {target}}) => target));
-				let rlayers = [];
 				rlayers.push(...this.layers
 					.map((layer, i) => {
 						const targets = [
@@ -391,11 +375,7 @@ export default class HTMLView extends LiveSchema {
 					}));
 				}
 				if (!rlayers.length) {
-					rlayers.push(this.createLayer(
-						{schema: null},
-						{poppet: true, resources: [], targets: []},
-						{}
-					).stream);
+					rlayers.push(this.createLayer().stream);
 				}
 				return {state, rlayers};
 			})

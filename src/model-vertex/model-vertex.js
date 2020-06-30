@@ -17,6 +17,9 @@ function frommodule(module, _key = "main") {
 			if(key === "*") {
 				return module[key];
 			}
+			if (Array.isArray(module[key])) {
+				return module[key];
+			}
 			if(typeof module[key] === "function") {
 				return [ key, { source: module[key] } ];
 			}
@@ -70,18 +73,17 @@ export default class ModelVertex extends LiveSchema {
 		} );
 	}
 
-	merge( data ) {
-		//protection of duplication of original layers
-		super.merge( data );
+	merge(data) {
+		// protection of duplication of original layers
+		super.merge(data);
 		this.layers.map( layer => layer.entities = this.entities );
 	}
 
-	parse( module, src ) {
+	parse(module, src) {
 		let exist = null;
-	    if(Array.isArray(module)) {
+	    if (Array.isArray(module)) {
 		    exist = module;
-        }
-	    else {
+	    } else {
 		    exist = module.default;
 		    if(!Array.isArray(exist) && typeof exist === "object") {
 			    exist = frommodule(exist);
@@ -101,7 +103,7 @@ export default class ModelVertex extends LiveSchema {
 		return res;
 	}
 
-	createEntity( signature ) {
+	createEntity(signature) {
 		return this.prop.source({
 			obtain: (route, signature) => this.obtain(route, signature),
 			schema: this,

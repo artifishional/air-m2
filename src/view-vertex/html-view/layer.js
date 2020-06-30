@@ -15,8 +15,7 @@ export class BaseLayer {
 		return animate( targets, keyframes, this.layer );
 	}
 
-	constructor(layer, { targets }) {
-		//todo targets.length === 0 ?
+	constructor(layer, { targets = [] } = { }) {
 		this.notObjectTargetType = targets.length && targets[0].type !== "data";
 		this.keyframes = layer.prop.keyframes;
 		this.fadeoutexist = this.keyframes.some(([ name ]) => name === "fade-out");
@@ -91,8 +90,10 @@ export class Layer extends BaseLayer {
 		if(this.checkModelNecessity( )) {
 			//todo perf hack
 			if(this.targets[0].type === "data") {
-				ctr.req('disconnect', this.schema.model.layer._obtain(["#intl"]).at(
-					intl => this.targets.map(target => target.transition(intl))
+				ctr.req('disconnect', this.schema.model.layer
+					._obtain(["#intl"])
+					.get(({ value: intl }) =>
+						this.targets.map(target => target.transition(intl))
 				));
 			}
 			this.handler = this.schema.model.layer.
