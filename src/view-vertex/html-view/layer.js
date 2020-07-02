@@ -21,7 +21,7 @@ export class BaseLayer {
 		this.fadeoutexist = this.keyframes.some(([ name ]) => name === "fade-out");
 		this.layer = layer;
 		this.targets = targets;
-		this.state = { stage: 0 };
+		this.state = 0;
 		if(targets.length && (
 			targets.find(({ type }) => type !== 'active') ||
 			this.keyframes.length
@@ -35,19 +35,19 @@ export class BaseLayer {
 				if(this.notObjectTargetType && this.animateStream) {
 					this.animateHandler('fade-in', {});
 				}
-				this.state = { ...this.state, stage: 1 };
-				cb([this.state]);
+				this.state = 1;
+				cb(this.state);
 			});
 			
 			ctr.req("fade-out", () => {
 				if(this.fadeoutexist && this.notObjectTargetType && this.animateStream) {
-					this.state = { ...this.state, stage: 2 };
-					cb([this.state]);
+					this.state = 2;
+					cb(this.state);
 					this.animateHandler('fade-out', {});
 				}
 				else {
-					this.state = { ...this.state, stage: 0 };
-					cb([this.state]);
+					this.state = 0;
+					cb(this.state);
 				}
 			});
 			
@@ -59,8 +59,8 @@ export class BaseLayer {
 				ctr.req('disconnect', this.animateHandler =
 					this.animateStream.get(({ value: { action } }) => {
 						if (action === "fade-out-complete") {
-							this.state = { ...this.state, stage: 0 };
-							cb([this.state]);
+							this.state = 0;
+							cb(this.state);
 						}
 					})
 				);
@@ -78,8 +78,8 @@ export class BaseLayer {
 
 	complete(cb) {
 		//clearTimeout(this.loaderTimeoutID);
-		this.state = { ...this.state, stage: 0 };
-		cb([this.state, {action: "complete", data: null}]);
+		this.state = 0;
+		cb(this.state);
 	}
 
 }
@@ -99,7 +99,7 @@ export class Layer extends BaseLayer {
 			this.handler = this.schema.model.layer.
 				_obtain([], this.schema.model.vars)
 				.get(({ value: data }) => {
-					!this.state.stage && this.complete(cb);
+					!this.state && this.complete(cb);
 					const [state, action = 'default'] = data;
 					this.animateHandler(action, state);
 				});

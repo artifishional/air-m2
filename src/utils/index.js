@@ -160,6 +160,15 @@ export function schemasNormalizer([key, ...elems]) {
     ];
 }
 
+const counter = new Map();
+export function count(label) {
+  if (!counter.has(label)) {
+    counter.set(label, 0);
+  }
+  counter.set(label, counter.get(label) + 1);
+  return counter.get(label);
+}
+
 export function searchBySignature(sign, arr, sprop = "key") {
     return arr.find(({[sprop]: key}) => {
         return typeof sign === "string" ?
