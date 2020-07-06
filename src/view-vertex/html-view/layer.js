@@ -34,7 +34,7 @@ export class BaseLayer {
 				//target "data" type not allowed when animate fade-in/out
 				if(this.notObjectTargetType && this.animateStream) {
 					this.animateHandler('fade-in', {});
-				}
+			}
 				this.state = 1;
 				cb(this.state);
 			});
@@ -87,7 +87,7 @@ export class BaseLayer {
 export class Layer extends BaseLayer {
 
 	sweep(cb, ctr) {
-		if(this.checkModelNecessity( )) {
+		if(this.model) {
 			//todo perf hack
 			if(this.targets[0].type === "data") {
 				ctr.req('disconnect', this.schema.model.layer
@@ -96,8 +96,7 @@ export class Layer extends BaseLayer {
 						this.targets.map(target => target.transition(intl))
 				));
 			}
-			this.handler = this.schema.model.layer.
-				_obtain([], this.schema.model.vars)
+			this.handler = this.model
 				.get(({ value: data }) => {
 					!this.state && this.complete(cb);
 					const [state, action = 'default'] = data;
@@ -117,8 +116,8 @@ export class Layer extends BaseLayer {
 		this.signature = signature;
 
 		this.loaderTimeoutID = null;
-        this.schema = schema;
-        this.resources = resources;
+    this.schema = schema;
+    this.resources = resources;
 
 		this.layer.prop.handlers.map( ({ name }) => {
 			if(name === "clickoutside") {
@@ -136,7 +135,11 @@ export class Layer extends BaseLayer {
 					.map( ({ node }) => node.addEventListener(name, this, false) )
 			}
 		});
-
+		if(this.checkModelNecessity()) {
+			this.model = this.schema.model.layer._obtain([], this.schema.model.vars);
+		} else {
+			this.model = null;
+		}
 		this.stream = this.layer.prop.plug.reduce( (acc, plug) => {
 			return plug( {
 				obtain: (path = "", vars = {}) =>

@@ -198,6 +198,16 @@ export function equal(a, b) {
     }
 }
 
+export function removeElementFromArray(arr, elem) {
+  const indexOf = arr.indexOf(elem);
+  /* <debug> */
+  if(indexOf === -1) {
+    throw 'Element not found';
+  }
+  /* </debug> */
+  return arr.splice(indexOf, 1)[0];
+}
+
 export function signature(sign, target) {
 
     if(sign === BOOLEAN) {
