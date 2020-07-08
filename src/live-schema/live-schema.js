@@ -21,6 +21,10 @@ export default class LiveSchema extends Schema {
     this._stream = null;
   }
   
+  toJSON() {
+    return 'LiveSchema';
+  }
+  
   get stream() {
     if (this.leadlayer !== this) {
       return this.leadlayer.stream;

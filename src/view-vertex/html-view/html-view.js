@@ -82,6 +82,10 @@ export default class HTMLView extends LiveSchema {
 		}
 		return null;
 	}
+	
+	toJSON() {
+		return 'HTMLView';
+	}
 
 	createKitLayer( { $: { modelschema,
 		parentViewLayers,
@@ -144,18 +148,17 @@ export default class HTMLView extends LiveSchema {
 				childs.map(child => {
 					const signature = calcsignature(child, this.prop.kit.prop);
 					const exist = store.find( ({ signature: $ }) => signatureEquals(signature, $ ) );
-					if(!exist) {
+					if (!exist) {
 						const box = new PlaceHolderContainer(this, { type: "item" });
 						domTreePlacment.after(box.target);
 						domTreePlacment = box.end;
+						store.push({ signature, box });
 						cache.createIfNotExist( child, signature )
 							.get(({ value: [{ container }] }) => {
 								container.restore();
 								box.append(container.target);
 							});
-						store.push( { signature, box } );
-					}
-					else {
+					} else {
 						removeElementFromArray(deleted, exist);
 						if(exist.box.begin !== domTreePlacment.nextSibling) {
 							exist.box.restore();
@@ -166,7 +169,7 @@ export default class HTMLView extends LiveSchema {
 				});
 				deleted.map( item => {
 					const deleted = store.indexOf(item);
-					store.splice(deleted, 1);
+					//store.splice(deleted, 1);
 					item.box.restore();
 				});
 			}));

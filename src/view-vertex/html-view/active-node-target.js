@@ -190,6 +190,10 @@ export default class ActiveNodeTarget {
         this.intl = null;
         this.argv = null;
     }
+    
+    toJSON() {
+        return 'ActiveNodeTarget';
+    }
 
     transition(intl) {
         //todo perf hack

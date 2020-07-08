@@ -23,6 +23,10 @@ export default class PlaceHolderContainer {
         this._dirty = true;
         this.begin.after(...nodes);
     }
+    
+    toJSON() {
+        return 'PlaceHolderContainer';
+    }
 
     createSystemBoundNode( point, species ) {
 	    /*<@debug>*/
