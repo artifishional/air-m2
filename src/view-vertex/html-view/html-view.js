@@ -88,20 +88,12 @@ export default class HTMLView extends LiveSchema {
 	}
 
 	createKitLayer( { $: { modelschema,
-		parentViewLayers,
 		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) },
 		signature: parentContainerSignature = null,
 		...args
 	} ) {
 		return stream.fromCbFunc((cb, ctr) => {
 			const container = new PlaceHolderContainer(this, { type: "kit" });
-			cb([{
-				stages: [],
-				solids: [],
-				container,
-				target: container.target,
-				acids: this.layers.map(({ acid }) => acid),
-			}]);
 			//todo need layers sup
 			const modelvertex = layers.get(this.acid) || layers.get(-1);
 			const modelstream = modelvertex.layer.obtain("", modelvertex.vars);
@@ -126,11 +118,10 @@ export default class HTMLView extends LiveSchema {
 					}
 					modelvertex.parent = (layers.get(this.acid) || layers.get(-1)).layer;
 					const _layers = new Map([ ...layers, [this.acid, { layer: modelvertex, vars: {} } ]]);
-					const res = this.createTeeEntity(
+          return this.createTeeEntity(
 						{ signature: {...sign, $: parentContainerSignature }, ...args },
-						{ layers: _layers, parentViewLayers }
+						{ layers: _layers }
 					);
-					return res;
 				}
 			});
 			ctr.todisconnect(() => cache.clear());
@@ -173,17 +164,19 @@ export default class HTMLView extends LiveSchema {
 					item.box.restore();
 				});
 			}));
+			cb([{
+				stages: [],
+				container,
+				target: container.target,
+				acids: this.layers.map(({ acid }) => acid),
+			}]);
 		});
 	}
 
 	createEntity(args, {
 		modelschema,
-		parentViewLayers,
 		layers: layers = new Map([[ -1, { layer: modelschema, vars: {} }]])
 	}) {
-		if(!this.prop.useOwnerProps) {
-			parentViewLayers = [];
-		}
 		return stream((onrdy, ctr) => {
 			const clayers = new Map(
 				this.layers.map(
@@ -238,14 +231,14 @@ export default class HTMLView extends LiveSchema {
 				])))
 				.then(layers => {
 					if(this.layers.some(({ prop: { kit } }) => kit)) {
-						this.createKitLayer({ $: { layers, parentViewLayers }, ...args })
+						this.createKitLayer({ $: { layers }, ...args })
 							.connect((wsp, hook) => {
 								ctr.to(hook);
 								onrdy(wsp);
 							});
 					}
 					else {
-						this.createTeeEntity(args, { layers, parentViewLayers })
+						this.createTeeEntity(args, { layers })
 							.connect((wsp, hook) => {
 								ctr.to(hook);
 								onrdy(wsp);
@@ -262,12 +255,10 @@ export default class HTMLView extends LiveSchema {
 		return new BaseLayer(this);
 	}
 	
-	createNextLayers(args, { layers, parentViewLayers = [] }) {
-		parentViewLayers = [];
+	createNextLayers(args, { layers }) {
 		return stream
 			.fromFn(() => {
 				const currentCommonViewLayers = [
-					...parentViewLayers,
 					...this.layers
 						.map((layer) => {
 							if ([
@@ -286,7 +277,7 @@ export default class HTMLView extends LiveSchema {
 					literal.prop.keyframes = this.layers.map(layer => layer.prop.keyframes).flat();
 				}
 				return [
-					this.createChildrenEntity(args, { layers, parentViewLayers: currentCommonViewLayers }),
+					this.createChildrenEntity(args, { layers }),
 					...this.layers.map((layer) => layer.createNodeEntity()),
 				]
 			})
@@ -355,20 +346,10 @@ export default class HTMLView extends LiveSchema {
 							node.setAttribute(`data-style-acid-${idx}`, "");
 						});
 					});
-					rlayers.push(...parentViewLayers.map(({layer, schema}) => {
-						return layer.createLayer(
-							{schema},
-							{resources: [], targets},
-							args
-						);
-					}));
 				}
-				let stage = null;
 				const childrenStages = children.map(([{ stages }]) => stages).flat();
-				const childrenSolids = children.map(([{ solids }]) => solids).flat();
 				return [{ ...state,
 					stages: [...childrenStages, ...rlayers.map(({ stream }) => stream).filter(Boolean)],
-					solids: [...childrenSolids, ...rlayers.map(({ model }) => model).filter(Boolean)],
 				}];
 			});
 	}
@@ -471,14 +452,12 @@ export default class HTMLView extends LiveSchema {
 				return HTMLView.staticStage0stream;
 			}
 		});
-		const viewSolid = view.gripFirst(([{ solids }]) => stream.abuse(solids));
 		return stream.extendedCombine([
 			container,
 			model,
 			view,
-			viewSolid,
 			viewStage,
-		], ([container, { tee }, [view], _, viewStageVl = 0]) => {
+		], ([container, tee, [view], viewStageVl]) => {
 			let transition = '';
 			if (tee && (viewStageVl === 0 || viewStageVl === 2)) {
 				container.append(view.target);
@@ -488,12 +467,11 @@ export default class HTMLView extends LiveSchema {
 			} else if (!tee && viewStageVl === 0) {
 				view.container.restore();
 			}
-			return { container, transition, on: tee || viewStageVl };
+			return { transition };
 		}, {
-			tuner: (tuner, { transition, on }) => {
-				tuner.setup([[viewStage, { on }]]);
+			tuner: (tuner, { transition }) => {
 				if (transition) {
-					tuner.get(4).hook(transition);
+					tuner.get(3).hook(transition);
 				}
 			}
 		});
@@ -503,7 +481,7 @@ export default class HTMLView extends LiveSchema {
 		if (!this.layers.some(({ prop: { teeF } }) => teeF) && this.prop.preload) {
 			return this.createNextLayers(args, manager);
 		}
-		const { layers, parentViewLayers } = manager;
+		const { layers } = manager;
 		const container = stream.fromFn(() => {
 			return new PlaceHolderContainer(this, { type: "entity" });
 		});
@@ -512,15 +490,15 @@ export default class HTMLView extends LiveSchema {
 			.map(({ acid }) => acid);
 		const teeFStreamLayers = new Map([...layers]
 			.filter(([acid]) => teeFLayers.includes(acid)));
-		const view = this.createNextLayers(args, { layers, parentViewLayers });
+		const view = this.createNextLayers(args, { layers });
 		const model = stream.combine(
 			[...teeFStreamLayers]
 				.map(([, { layer, vars }]) => layer.obtain("", vars)),
 			(...layers) => layers.map((ly) => Array.isArray(ly) ? ly[0] : ly)
 		).map((data) => {
-			return { tee: this.teeFSignatureCheck(
-					new Map([...teeFStreamLayers].map(([ acid ], i) => [acid, data[i][0]]))
-				) };
+			return this.teeFSignatureCheck(
+				new Map([...teeFStreamLayers].map(([ acid ], i) => [acid, data[i][0]]))
+			);
 		});
 		let res;
 		if (this.prop.preload) {
@@ -528,8 +506,9 @@ export default class HTMLView extends LiveSchema {
 		} else {
 			res = this.lazyTeeEntityStrategy(container, view, model);
 		}
-		return res.distinct(() => true)
-			.map(({ container }) => {
+		return container
+			.controller(res)
+			.map((container) => {
 				const acids = this.layers.map(({ acid }) => acid);
 				const { key, acid } = this;
 				return [{
@@ -539,15 +518,14 @@ export default class HTMLView extends LiveSchema {
 					container,
 					target: container.target,
 					stages: [],
-					solids: [],
 				}];
 			});
 	}
 
-	createChildrenEntity(args, { layers, parentViewLayers }) {
+	createChildrenEntity(args, { layers }) {
 		return stream.combine(this.item
 			.filter(({ prop: { template } }) => !template)
-			.map(x => x._obtain([], args, { layers, parentViewLayers }))
+			.map(x => x._obtain([], args, { layers }))
 		);
 	}
 	
@@ -564,7 +542,7 @@ export default class HTMLView extends LiveSchema {
 			while(comments.nextNode()) comments.currentNode.remove();
 			pack.cache.proto = CachedNodeVertex.parse(node, src, {pack, type});
 		}
-		const res = pack.cache.proto.map(src, (src, vertex) => {
+		return pack.cache.proto.map(src, (src, vertex) => {
 			let uvk = `${++UNIQUE_VIEW_KEY}`;
 			const { path = "./", key: pkey = uvk } = (src || {}).prop || {};
 			let key = vertex.prop.rawKey;
@@ -610,7 +588,6 @@ export default class HTMLView extends LiveSchema {
 			}
 			return res;
 		});
-		return res;
 	}
 	
 	mergeProperties( name, value ) {
