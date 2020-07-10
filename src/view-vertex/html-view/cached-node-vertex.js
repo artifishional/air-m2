@@ -307,11 +307,17 @@ export default class CachedNodeVertex {
       return null;
     }
     else if(raw === "") {
-      return { getter: null, prop: [] };
+      return {
+        prop: [],
+        pick: null,
+      };
     }
     else {
       const [_, getter = "", rawSignature = ""] = raw.match(REG_GETTER_KIT);
-      return { getter, prop: rawSignature.split(",").filter(Boolean) };
+      return {
+        prop: rawSignature.split(",").filter(Boolean),
+        pick: new Function(`argv`, `return argv.${getter}`),
+      };
     }
   }
   

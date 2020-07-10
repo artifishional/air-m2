@@ -228,17 +228,29 @@ export function signature(sign, target) {
     }
 }
 
+export function pickFromPath(argv, picker) {
+  let res;
+  if (picker) {
+    res = picker(argv);
+  } else {
+    res = argv;
+  }
+  if (res === undefined) {
+    throw new Error('Unable to get data');
+  }
+  return res;
+}
+
 export function getfrompath(argv, path) {
-    let res;
-	if(path) {
+  let res;
+	if (path) {
 		res = new Function(`argv`, `return argv.${path}`)(argv);
-	}
-	else {
+	} else {
 		res = argv;
 	}
-	if(res === undefined) {
-	    throw "unable to get data";
-    }
+	if (res === undefined) {
+    throw new Error('Unable to get data');
+  }
 	return res;
 }
 

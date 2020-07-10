@@ -5,9 +5,8 @@ import {
 	equal,
 	routeNormalizer,
 	signature as signatureEquals,
-	getfrompath,
 	calcsignature,
-	removeElementFromArray,
+	removeElementFromArray, pickFromPath,
 } from "../../utils"
 import JSON5 from "json5"
 import { LiveSchema } from "../../live-schema"
@@ -103,7 +102,7 @@ export default class HTMLView extends LiveSchema {
 					const modelvertex = new ModelVertex(["$$", {
 						glassy: true,
 						source: () => modelstream.map(([state]) => {
-							const childs = getfrompath(state, this.prop.kit.getter);
+							const childs = pickFromPath(state, this.prop.kit.pick);
 							const res = childs.find( child => signatureEquals(signature, child) );
 							return res !== undefined ? [res] : EMPTY;
 						})
@@ -118,10 +117,11 @@ export default class HTMLView extends LiveSchema {
 					}
 					modelvertex.parent = (layers.get(this.acid) || layers.get(-1)).layer;
 					const _layers = new Map([ ...layers, [this.acid, { layer: modelvertex, vars: {} } ]]);
-          return this.createTeeEntity(
+					const res = this.createTeeEntity(
 						{ signature: {...sign, $: parentContainerSignature }, ...args },
 						{ layers: _layers }
 					);
+					return res;
 				}
 			});
 			ctr.todisconnect(() => cache.clear());
@@ -129,10 +129,10 @@ export default class HTMLView extends LiveSchema {
 			ctr.todisconnect(modelstream.get(({ value: [state] }) => {
 				let childs;
 				try {
-					childs = getfrompath(state, this.prop.kit.getter);
+					childs = pickFromPath(state, this.prop.kit.pick);
 				}
 				catch (e) {
-					childs = [];
+					return;
 				}
 				let domTreePlacment = container.begin;
 				const deleted = [...store];
