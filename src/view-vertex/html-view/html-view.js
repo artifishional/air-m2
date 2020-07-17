@@ -385,17 +385,16 @@ export default class HTMLView extends LiveSchema {
 		);
 	}
 	
-	lazyTeeEntityStrategy(container, view, model) {
+	lazyTeeEntityStrategy(container, view, viewStage, model, layers) {
 		const loader = this.obtain("@loader", { }, { layers });
-		const viewStage = view.gripFirst(([{ stage }]) => stage);
 		return stream.extendedCombine([
 			container,
 			model,
 			loader,
-			loader.gripFirst(([{ stage }]) => stage),
+			loader.gripFirst(HTMLView.gripStageProJ),
 			view,
 			viewStage,
-		], ([container, { tee }, [loader], loaderStageVl, [view] = [], viewStageVl]) => {
+		], ([container, tee, [loader], loaderStageVl, [view] = [], viewStageVl = -1]) => {
 			const transition = { loader: null, view: null };
 			if (!view && tee && (loaderStageVl === 0 || loaderStageVl === 2)) {
 				container.append(loader.target);
@@ -413,9 +412,9 @@ export default class HTMLView extends LiveSchema {
 			} else if (!tee && view && viewStageVl === 0) {
 				view.container.restore();
 			}
-			return { container, transition, on: tee };
+			return { transition, on: tee || viewStageVl > 0 };
 		}, {
-			tuner: (tuner, [{ transition, on }]) => {
+			tuner: (tuner, { transition, on }) => {
 				tuner.setup([[view, { on }], [viewStage, { on }]]);
 				if (transition.loader) {
 					tuner.get(3).hook(transition.loader);
@@ -434,24 +433,7 @@ export default class HTMLView extends LiveSchema {
 		return this.$zeroStageStream;
 	}
 	
-	staticTeeEntityStrategy(container, view, model) {
-		const viewStage = view.gripFirst(([{ stages }]) => {
-			if (stages.length) {
-				return stream.combine(
-					stages,
-					(states) => {
-						const firstChildStage = states[0];
-						if (states.some((stage) => stage !== firstChildStage)) {
-							return -1;
-						}
-						return firstChildStage;
-					},
-					{ ctrMode: 'all' }
-				);
-			} else {
-				return HTMLView.staticStage0stream;
-			}
-		});
+	staticTeeEntityStrategy(container, view, viewStage, model) {
 		return stream.extendedCombine([
 			container,
 			model,
@@ -477,6 +459,24 @@ export default class HTMLView extends LiveSchema {
 		});
 	}
 	
+	static gripStageProJ([{ stages }]) {
+		if (stages.length) {
+			return stream.combine(
+				stages,
+				(states) => {
+					const firstChildStage = states[0];
+					if (states.some((stage) => stage !== firstChildStage)) {
+						return -1;
+					}
+					return firstChildStage;
+				},
+				{ ctrMode: 'all' }
+			);
+		} else {
+			return HTMLView.staticStage0stream;
+		}
+	}
+	
 	createTeeEntity(args, manager) {
 		if (!this.layers.some(({ prop: { teeF } }) => teeF) && this.prop.preload) {
 			return this.createNextLayers(args, manager);
@@ -491,6 +491,7 @@ export default class HTMLView extends LiveSchema {
 		const teeFStreamLayers = new Map([...layers]
 			.filter(([acid]) => teeFLayers.includes(acid)));
 		const view = this.createNextLayers(args, { layers });
+		const viewStage = view.gripFirst(HTMLView.gripStageProJ);
 		const model = stream.combine(
 			[...teeFStreamLayers]
 				.map(([, { layer, vars }]) => layer.obtain("", vars)),
@@ -502,9 +503,9 @@ export default class HTMLView extends LiveSchema {
 		});
 		let res;
 		if (this.prop.preload) {
-			res = this.staticTeeEntityStrategy(container, view, model);
+			res = this.staticTeeEntityStrategy(container, view, viewStage, model, layers);
 		} else {
-			res = this.lazyTeeEntityStrategy(container, view, model);
+			res = this.lazyTeeEntityStrategy(container, view, viewStage, model, layers);
 		}
 		return container
 			.controller(res)
