@@ -11,11 +11,11 @@ import animate from "air-anime"
 export { anime } from "air-anime"
 export class BaseLayer {
 
-	createAnimateStream( keyframes, targets ) {
-		return animate( targets, keyframes, this.layer );
+	createAnimateStream(keyframes, targets) {
+		return animate(targets, keyframes, this.layer);
 	}
 
-	constructor(layer, { targets = [] } = { }) {
+	constructor(layer, targets = []) {
 		this.notObjectTargetType = targets.length && targets[0].type !== "data";
 		this.keyframes = layer.prop.keyframes;
 		this.fadeoutexist = this.keyframes.some(([ name ]) => name === "fade-out");
@@ -26,7 +26,7 @@ export class BaseLayer {
 			targets.find(({ type }) => type !== 'active') ||
 			this.keyframes.length
 		)) {
-			this.animateStream = this.createAnimateStream( this.keyframes, targets );
+			this.animateStream = this.createAnimateStream(this.keyframes, targets);
 		}
 		this.stream = stream.fromCbFunc((cb, ctr) => {
 			ctr.req("fade-in", () => {
@@ -67,7 +67,7 @@ export class BaseLayer {
 			}
 			ctr.req("disconnect", () => this.clear());
 			this.sweep(cb, ctr);
-		});
+		}).store();
 	}
 
 	sweep(cb, ctr) {
@@ -85,16 +85,16 @@ export class BaseLayer {
 }
 
 export class Layer extends BaseLayer {
-
+	
 	sweep(cb, ctr) {
 		if(this.model) {
 			//todo perf hack
 			if(this.targets[0].type === "data") {
-				ctr.req('disconnect', this.schema.model.layer
+				ctr.req('disconnect', this.schema.layer
 					._obtain(["#intl"])
 					.get(({ value: intl }) =>
 						this.targets.map(target => target.transition(intl))
-				));
+					));
 			}
 			this.handler = this.model
 				.get(({ value: data }) => {
@@ -108,50 +108,40 @@ export class Layer extends BaseLayer {
 			this.complete(cb);
 		}
 	}
-
-	constructor( layer, { schema }, { targets, resources }, { signature }) {
-
-		super( layer, { targets } );
-		
+	
+	constructor(layer, schema, targets, { signature }) {
+		super(layer, targets);
 		this.signature = signature;
-
 		this.loaderTimeoutID = null;
-    this.schema = schema;
-    this.resources = resources;
-
-		this.layer.prop.handlers.map( ({ name }) => {
-			if(name === "clickoutside") {
+		this.schema = schema;
+		this.layer.prop.handlers.map(({name}) => {
+			if (name === "clickoutside") {
 				window.addEventListener("click", this, false);
-			}
-			else if(name === "globalkeydown") {
+			} else if (name === "globalkeydown") {
 				window.addEventListener("keydown", this, false);
-			}
-			else if(name === "globalkeyup") {
+			} else if (name === "globalkeyup") {
 				window.addEventListener("keyup", this, false);
-			}
-			else {
+			} else {
 				this.targets
-					.filter( ( { type } ) => type === "active" )
-					.map( ({ node }) => node.addEventListener(name, this, false) )
+					.filter(({type}) => type === "active")
+					.map(({node}) => node.addEventListener(name, this, false))
 			}
 		});
-		if(this.checkModelNecessity()) {
-			this.model = this.schema.model.layer._obtain([], this.schema.model.vars);
+		if (this.checkModelNecessity()) {
+			this.model = schema.layer._obtain([], schema.vars);
 		} else {
 			this.model = null;
 		}
-		this.stream = this.layer.prop.plug.reduce( (acc, plug) => {
-			return plug( {
+		this.stream = this.layer.prop.plug.reduce((acc, plug) => {
+			return plug({
 				obtain: (path = "", vars = {}) =>
-					schema.model.layer.obtain(path, { ...schema.model.vars, ...vars }),
+					schema.model.layer.obtain(path, {...schema.vars, ...vars}),
 				source: acc,
 				schema,
-				resources,
 				targets
-			} );
-		}, this.stream );
-
-    }
+			});
+		}, this.stream);
+	}
 
 	checkModelNecessity() {
 		return [

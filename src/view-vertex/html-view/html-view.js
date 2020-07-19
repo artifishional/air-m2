@@ -91,7 +91,7 @@ export default class HTMLView extends LiveSchema {
 		signature: parentContainerSignature = null,
 		...args
 	} ) {
-		return stream.fromCbFunc((cb, ctr) => {
+		return stream.fromCbFn((cb, ctr) => {
 			const container = new PlaceHolderContainer(this, { type: "kit" });
 			//todo need layers sup
 			const modelvertex = layers.get(this.acid) || layers.get(-1);
@@ -170,7 +170,8 @@ export default class HTMLView extends LiveSchema {
 				target: container.target,
 				acids: this.layers.map(({ acid }) => acid),
 			}]);
-		});
+		})
+      .store();
 	}
 
 	createEntity(args, {
@@ -248,30 +249,18 @@ export default class HTMLView extends LiveSchema {
 		} );
 	}
 
-	createLayer(owner, material, args) {
-		if(material) {
-			return new Layer(this, owner, material, args);
+	createLayer(modelLayer, targets, args) {
+	  /* <debug> */
+		if(!targets || !targets.length) {
+      throw 'Empty targets unsupported now';
 		}
-		return new BaseLayer(this);
+    /* </debug> */
+    return new Layer(this, modelLayer, targets, args);
 	}
 	
 	createNextLayers(args, { layers }) {
 		return stream
 			.fromFn(() => {
-				const currentCommonViewLayers = [
-					...this.layers
-						.map((layer) => {
-							if ([
-								layer.prop.handlers.length,
-								layer.prop.keyframes.length,
-								layer.prop.keyframes.length,
-								layer.prop.plug.length,
-							].some(Boolean)) {
-								return {schema: {model: layers.get(layer.acid)}, layer};
-							}
-						})
-						.filter(Boolean)
-				];
 				const literal = this.layers.find(layer => layer.prop.literal);
 				if (literal) {
 					literal.prop.keyframes = this.layers.map(layer => layer.prop.keyframes).flat();
@@ -301,11 +290,7 @@ export default class HTMLView extends LiveSchema {
 							...container.targets("actives", comps[i].resources)
 						];
 						if (targets.length) {
-							return layer.createLayer(
-								{schema: {model: layers.get(layer.acid)}},
-								{resources: [], targets},
-								args
-							);
+							return layer.createLayer(layers.get(layer.acid), targets, args);
 						}
 						return null;
 					})
