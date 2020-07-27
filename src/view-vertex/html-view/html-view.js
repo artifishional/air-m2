@@ -145,7 +145,7 @@ export default class HTMLView extends LiveSchema {
 						domTreePlacment = box.end;
 						store.push({ signature, box });
 						cache.createIfNotExist( child, signature )
-							.get(({ value: [{ container }] }) => {
+							.get(({ value: { container } }) => {
 								container.restore();
 								box.append(container.target);
 							});
@@ -164,12 +164,15 @@ export default class HTMLView extends LiveSchema {
 					item.box.restore();
 				});
 			}));
-			cb([{
+			cb({
 				stages: [],
 				container,
-				target: container.target,
-				acids: this.layers.map(({ acid }) => acid),
-			}]);
+				src: this,
+				get acids() { throw new Error('Deprecation err'); },// acids: this.layers.map(({acid}) => acid),
+				get acid() { throw new Error('Deprecation err'); },// acid: this.acid,
+				get key() { throw new Error('Deprecation err'); }, // key: this.key,
+				get target() { throw new Error('Deprecation err'); },// target: container.target
+			});
 		})
       .store();
 	}
@@ -178,6 +181,7 @@ export default class HTMLView extends LiveSchema {
 		modelschema,
 		layers: layers = new Map([[ -1, { layer: modelschema, vars: {} }]])
 	}) {
+		this.prop.acids = this.layers.map(({acid}) => acid);
 		return stream((onrdy, ctr) => {
 			const clayers = new Map(
 				this.layers.map(
@@ -275,11 +279,8 @@ export default class HTMLView extends LiveSchema {
 				const rlayers = [];
 				const container = new PlaceHolderContainer(this, { type: "layers" });
 				const state = {
-					acids: this.layers.map(({acid}) => acid),
-					acid: this.acid,
+					src: this,
 					container,
-					key: this.key,
-					target: container.target
 				};
 				container.append(...comps.map(({container: {target}}) => target));
 				rlayers.push(...this.layers
@@ -299,10 +300,10 @@ export default class HTMLView extends LiveSchema {
 				const slots = container.slots();
 				if (children.length) {
 					if (slots.length) {
-						children.map(([{target, acids}]) => {
+						children.map(({ container: { target }, src: { prop: { acids } } }) => {
 							const place = slots
 								.filter(({acid}) => acids.includes(acid))
-								.reduce((exist, {slot}) => {
+								.reduce((exist, { slot }) => {
 									if (!exist) {
 										exist = slot;
 									} else if (
@@ -319,7 +320,7 @@ export default class HTMLView extends LiveSchema {
 							place.replaceWith(target);
 						});
 					} else {
-						container.append(...children.map(([{target}]) => target));
+						container.append(...children.map(({ container: { target } }) => target));
 					}
 				}
 				//todo hack clear unused slots ( when cross template mix to exmpl )
@@ -332,10 +333,15 @@ export default class HTMLView extends LiveSchema {
 						});
 					});
 				}
-				const childrenStages = children.map(([{ stages }]) => stages).flat();
-				return [{ ...state,
+				const childrenStages = children.map(({ stages }) => stages).flat();
+				return {
+					...state,
+					get acids() { throw new Error('Deprecation err'); },// acids: this.layers.map(({acid}) => acid),
+					get acid() { throw new Error('Deprecation err'); },// acid: this.acid,
+					get key() { throw new Error('Deprecation err'); }, // key: this.key,
+					get target() { throw new Error('Deprecation err'); },// target: container.target
 					stages: [...childrenStages, ...rlayers.map(({ stream }) => stream).filter(Boolean)],
-				}];
+				};
 			});
 	}
 
@@ -343,7 +349,7 @@ export default class HTMLView extends LiveSchema {
 		return stream
 			.combine([
 				...this.prop.resources,
-				...this.prop.styles.map(({style, idx}, priority) => {
+				...this.prop.styles.map(({ style, idx }, priority) => {
 					priority = +(style.getAttribute("priority") || priority);
 					return StylesController.get(style, idx, priority, this.prop.pack, this.resourceloader)
 				})
@@ -379,10 +385,10 @@ export default class HTMLView extends LiveSchema {
 			loader.gripFirst(HTMLView.gripStageProJ),
 			view,
 			viewStage,
-		], ([container, tee, [loader], loaderStageVl, [view] = [], viewStageVl = -1]) => {
+		], ([container, tee, loader, loaderStageVl, view = null, viewStageVl = -1]) => {
 			const transition = { loader: null, view: null };
 			if (!view && tee && (loaderStageVl === 0 || loaderStageVl === 2)) {
-				container.append(loader.target);
+				container.append(loader.container.target);
 				transition.loader = 'fade-in';
 			} else if (view && tee && loaderStageVl === 1) {
 				transition.loader = 'fade-out';
@@ -390,7 +396,7 @@ export default class HTMLView extends LiveSchema {
 				loader.container.restore();
 			}
 			if (loaderStageVl === 0 && tee && view && (viewStageVl === 0 || viewStageVl === 2)) {
-				container.append(view.target);
+				container.append(view.container.target);
 				transition.view = 'fade-in';
 			} else if(!tee && view && viewStageVl === 1) {
 				transition.view = 'fade-out';
@@ -424,10 +430,10 @@ export default class HTMLView extends LiveSchema {
 			model,
 			view,
 			viewStage,
-		], ([container, tee, [view], viewStageVl]) => {
+		], ([container, tee, view, viewStageVl]) => {
 			let transition = '';
 			if (tee && (viewStageVl === 0 || viewStageVl === 2)) {
-				container.append(view.target);
+				container.append(view.container.target);
 				transition = 'fade-in';
 			} else if(!tee && viewStageVl === 1) {
 				transition = 'fade-out';
@@ -444,7 +450,7 @@ export default class HTMLView extends LiveSchema {
 		});
 	}
 	
-	static gripStageProJ([{ stages }]) {
+	static gripStageProJ({ stages }) {
 		if (stages.length) {
 			return stream.combine(
 				stages,
@@ -495,16 +501,15 @@ export default class HTMLView extends LiveSchema {
 		return container
 			.controller(res)
 			.map((container) => {
-				const acids = this.layers.map(({ acid }) => acid);
-				const { key, acid } = this;
-				return [{
-					key,
-					acid,
-					acids,
+				return {
+					src: this,
 					container,
-					target: container.target,
 					stages: [],
-				}];
+					get acids() { throw new Error('Deprecation err'); },// acids: this.layers.map(({acid}) => acid),
+					get acid() { throw new Error('Deprecation err'); },// acid: this.acid,
+					get key() { throw new Error('Deprecation err'); }, // key: this.key,
+					get target() { throw new Error('Deprecation err'); },// target: container.target
+				};
 			});
 	}
 
