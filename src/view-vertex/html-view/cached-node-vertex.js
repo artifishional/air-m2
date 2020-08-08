@@ -2,7 +2,7 @@ import events from "../events";
 import spreading from "./spreading";
 import {BOOLEAN, EMPTY_FUNCTION} from "../../def";
 import JSON5 from 'json5';
-import {signature as signatureEquals} from "air-m2/src/utils";
+import { signature as signatureEquals } from '../../utils';
 
 
 let UNIQUE_IMAGE_IDX = 1;
@@ -32,8 +32,6 @@ export default class CachedNodeVertex {
         name: name.replace(/^on(:)?/, ""),
         hn: new Function("event", "options", "request", "key", "signature", "req", value )
       }) );
-    
-    const useOwnerProps = node.parentNode.tagName.toUpperCase() === "UNIT";
     
     const resources = JSON5.parse(node.getAttribute("resources") || "[]");
   
@@ -97,13 +95,12 @@ export default class CachedNodeVertex {
     const res = new CachedNodeVertex({
       rawKey,
       teeF,			      //switch mode (advanced)
-      node: $node,    // xml target node
+      node: $node,    //xml target node
       label,			    //debug layer label
       styles,         //inline style definitions
       streamplug,		  //stream inline plugins
       plug,			      //view inline plugins
-      controlled,     //has one or more active childrens (text or node)
-      useOwnerProps,  //must consider parent props
+      controlled,     //has one or more active children (text or node)
       kit,            //kit's container
       preload,        //must be fully loaded before readiness
       keyframes,      //animation ( data ) settings
@@ -279,7 +276,7 @@ export default class CachedNodeVertex {
   }
   
   static cuttee(node) {
-    let rawTee = node.getAttribute("tee")
+    let rawTee = node.getAttribute("tee");
     if(rawTee === null) {
       return null;
     }
@@ -313,7 +310,7 @@ export default class CachedNodeVertex {
       };
     }
     else {
-      const [_, getter = "", rawSignature = ""] = raw.match(REG_GETTER_KIT);
+      const [, getter = "", rawSignature = ""] = raw.match(REG_GETTER_KIT);
       return {
         prop: rawSignature.split(",").filter(Boolean),
         pick: new Function(`argv`, `return argv.${getter}`),
