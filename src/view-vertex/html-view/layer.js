@@ -91,7 +91,7 @@ export class Layer extends BaseLayer {
 			//todo perf hack
 			if(this.targets[0].type === "data") {
 				ctr.req('disconnect', this.schema.layer
-					._obtain(["#intl"])
+					._obtain(["@intl"])
 					.get(({ value: intl }) =>
 						this.targets.map(target => target.transition(intl))
 					));

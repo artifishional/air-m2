@@ -85,7 +85,7 @@ export default class HTMLView extends LiveSchema {
 	toJSON() {
 		return 'HTMLView';
 	}
-
+/*
 	createKitLayer( { $: { modelschema,
 		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) },
 		signature: parentContainerSignature = null,
@@ -176,7 +176,94 @@ export default class HTMLView extends LiveSchema {
 		})
       .store();
 	}
-
+*/
+	
+	
+	
+	createKitLayer( { $: { modelschema,
+		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) },
+		                signature: parentContainerSignature = null,
+		                ...args
+	                } ) {
+		return stream.fromCbFn((cb, ctr) => {
+			const container = new PlaceHolderContainer(this, { type: "kit" });
+			//todo need layers sup
+			const modelvertex = layers.get(this.acid) || layers.get(-1);
+			const modelstream = modelvertex.layer.obtain("", modelvertex.vars);
+			const cache = new Cached({
+				constructor: (source) => {
+					const signature = source;
+					const modelvertex = new ModelVertex(["$$", {
+						glassy: true,
+						source: () => source,
+					}], { resourceloader: this.resourceloader });
+					modelvertex.parent = (layers.get(this.acid) || layers.get(-1)).layer;
+					const _layers = new Map([ ...layers, [this.acid, { layer: modelvertex, vars: {} } ]]);
+					const res = this.createTeeEntity(
+						{ signature: { id: source.id, $: parentContainerSignature }, ...args },
+						{ layers: _layers }
+					);
+					return res;
+				}
+			});
+			ctr.todisconnect(() => cache.clear());
+			const store = [];
+			ctr.todisconnect(modelstream.get(({ value }) => {
+				let childs;
+				try {
+					childs = pickFromPath(value, this.prop.kit.pick);
+				}
+				catch (e) {
+					return;
+				}
+				let domTreePlacment = container.begin;
+				const deleted = [...store];
+				childs.map((child) => {
+					const signature = child;
+					const exist = store.find(({ signature: $ }) => signature === $);
+					if (!exist) {
+						const box = new PlaceHolderContainer(this, { type: "item" });
+						domTreePlacment.after(box.target);
+						domTreePlacment = box.end;
+						store.push({ signature, box });
+						const viewItemStream = cache.createIfNotExist(child, signature);
+						viewItemStream.get(({ value: { container, stages } }) => {
+							// TODO: Temporary solution
+							//s.connect();
+							stages.forEach((s) => s.get());
+							container.restore();
+							box.append(container.target);
+						});
+					} else {
+						removeElementFromArray(deleted, exist);
+						if(exist.box.begin !== domTreePlacment.nextSibling) {
+							exist.box.restore();
+							domTreePlacment.after(exist.box.target);
+						}
+						domTreePlacment = exist.box.end;
+					}
+				});
+				deleted.map((item) => {
+					const deleted = store.indexOf(item);
+					//store.splice(deleted, 1);
+					item.box.restore();
+				});
+			}));
+			cb({
+				stages: [],
+				container,
+				src: this,
+				get acids() { throw new Error('Deprecation err'); },// acids: this.layers.map(({acid}) => acid),
+				get acid() { throw new Error('Deprecation err'); },// acid: this.acid,
+				get key() { throw new Error('Deprecation err'); }, // key: this.key,
+				get target() { throw new Error('Deprecation err'); },// target: container.target
+			});
+		})
+			.store();
+	}
+	
+	
+	
 	createEntity(args, {
 		modelschema,
 		layers: layers = new Map([[ -1, { layer: modelschema, vars: {} }]])
