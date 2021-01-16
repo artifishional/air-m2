@@ -195,7 +195,11 @@ export default class HTMLView extends LiveSchema {
 					const signature = source;
 					const modelvertex = new ModelVertex(["$$", {
 						glassy: true,
-						source: () => source,
+						source: () => {
+							// TODO: HACK: Permanent VM getter
+							source.get();
+							return source
+						},
 					}], { resourceloader: this.resourceloader });
 					modelvertex.parent = (layers.get(this.acid) || layers.get(-1)).layer;
 					const _layers = new Map([ ...layers, [this.acid, { layer: modelvertex, vars: {} } ]]);

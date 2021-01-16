@@ -84,6 +84,13 @@ export class BaseLayer {
 
 }
 
+// Фиксировать соседение ближайшие взаимодействия с записью
+// Накапливать их в хранилище для Record (record.crossing.down, record.crossing.up)
+// Если изменение тайминга не влечет за собой изменение порядка,
+//  то и нет смыла в перерасчете состояния
+// Пересечения проверяются на входном сторе, также на всяком смежнике
+// Пересечение проверяются после сортировки
+
 export class Layer extends BaseLayer {
 	
 	sweep(cb, ctr) {
@@ -98,9 +105,16 @@ export class Layer extends BaseLayer {
 			}
 			this.handler = this.model
 				.get(({ value: data }) => {
-					!this.state && this.complete(cb);
-					const [state, action = 'default'] = data;
-					this.animateHandler(action, state);
+					// TODO: HACK: local debounce
+					this.$state = data;
+					if (!this.tmu) {
+						this.tmu = setTimeout(() => {
+							!this.state && this.complete(cb);
+							const [state, action = 'default'] = this.$state;
+							this.animateHandler(action, state);
+							this.tmu = null;
+						}, 20);
+					}
 				});
 			ctr.req(this.handler);
 		}
