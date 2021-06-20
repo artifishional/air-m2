@@ -8,6 +8,7 @@
     "patch": "npm version patch && npm publish && git push origin",
     "minor": "npm version minor && npm publish && git push origin"
   },
+  "type": "module",
   "dependencies": {
     "air-anime": "https://github.com/artifishional/air-anime.git#s2s",
     "air-schema": "^0.2.0",
