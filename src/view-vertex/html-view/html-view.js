@@ -1,23 +1,20 @@
-import { stream2 as stream, keyF, fromPromise } from 'air-stream'
+import { stream2 as stream, fromPromise } from 'air-stream';
 import { ENTRY_UNIT } from '../../globals';
-import StylesController from "./styles-controller"
+import StylesController from './styles-controller';
 import {
-	equal,
 	routeNormalizer,
 	signature as signatureEquals,
-	calcsignature,
 	removeElementFromArray, pickFromPath,
-} from "../../utils"
-import JSON5 from "json5"
-import { LiveSchema } from "../../live-schema"
-import { NODE_TYPES } from "./def"
-import { Layer, BaseLayer } from "./layer"
-import PlaceHolderContainer from "./place-holder-container"
-import ActiveNodeTarget from "./active-node-target"
-import { ModelVertex } from "../../model-vertex"
-import resourceloader from "../../loader/resource-loader"
-import CachedNodeVertex from './cached-node-vertex'
-import { EMPTY } from 'air-stream/src/stream2/signals';
+} from '../../utils';
+import JSON5 from 'json5';
+import { LiveSchema } from '../../live-schema';
+import { NODE_TYPES } from './def';
+import { Layer } from './layer';
+import PlaceHolderContainer from './place-holder-container';
+import ActiveNodeTarget from './active-node-target';
+import { ModelVertex } from '../../model-vertex';
+import resourceloader from '../../loader/resource-loader';
+import CachedNodeVertex from './cached-node-vertex';
 
 let UNIQUE_VIEW_KEY = 0;
 
