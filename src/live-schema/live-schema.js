@@ -59,7 +59,7 @@ export default class LiveSchema extends Schema {
     }
     throw 'Unsupported resource type.';
   }
-  
+
   /**
    * todo temporary solution
    * the parser should create layers with packages
@@ -96,6 +96,11 @@ export default class LiveSchema extends Schema {
    * @returns stream.<LiveSchema>
    */
   obtain(route = '', signature, $) {
+    // <debug>
+    if (signature === null) {
+      throw new TypeError('Second argumet \'signature\' must be object or \'undefined\'');
+    }
+    // </debug>
     const normilizedRoute = routeNormalizer(route);
     if (normilizedRoute[1] !== EMPTY_OBJECT) {
       signature = {...normilizedRoute[1], ...signature};

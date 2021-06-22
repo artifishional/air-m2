@@ -1,6 +1,6 @@
-import { stream2 as stream } from "air-stream"
-import animate from "air-anime"
-
+import { stream2 as stream } from 'air-stream';
+import animate from 'air-anime';
+import anime from 'animejs';
 /**
  * stage 0 - rdy
  * stage 1 - fade-in start
@@ -8,7 +8,7 @@ import animate from "air-anime"
  * stage 0 - fade-out completed
  */
 
-export { anime } from "air-anime"
+export { anime };
 export class BaseLayer {
 
 	createAnimateStream(keyframes, targets) {

@@ -3,6 +3,7 @@ import { ObservableCollection } from '../observable-collection'
 import { stream2 as stream } from 'air-stream'
 import { error } from '../error'
 import { ENTRY_UNIT } from '../globals';
+import resourceloader from '../loader/resource-loader';
 import { EMPTY } from '../def';
 import scriptLoader from '../live-schema/script_like_promise';
 
@@ -42,7 +43,7 @@ const EMPTY_STREAM_CR = () => EMPTY_STREAM;
 export default class ModelVertex extends LiveSchema {
 	constructor([ key, { source = EMPTY_STREAM_CR, ...prop }, ...item], src) {
 		super([ key, { source, ...prop }, ...item], src);
-		this.resourceloader = src.resourceloader;
+		this.resourceloader = src?.resourceloader || ModelVertex.resourceloader;
 	}
 
 	static resourceloader(resourceloader, { path }, { type, ...args }) {
@@ -116,9 +117,12 @@ export default class ModelVertex extends LiveSchema {
 		return this.prop.source({
 			obtain: (route, signature) => this.obtain(route, signature),
 			schema: this,
-			stream,
+			stream: () => {
+				console.warn('This API is deprecated now');
+				return stream;
+			},
 			...signature
-		});
+		}, signature);
     }
 
 }

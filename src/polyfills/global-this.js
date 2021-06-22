@@ -9,3 +9,15 @@
 	__magic__.globalThis = __magic__;
 	delete Object.prototype.__magic__;
 }());
+
+// TODO: Patch 4 node usage
+if (!('document' in globalThis)) {
+	globalThis.document = {
+		createElement() {},
+		currentScript: {
+			getAttribute() {},
+		},
+		addEventListener() {},
+	};
+	globalThis.window = {};
+}
