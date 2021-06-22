@@ -3,6 +3,7 @@ import { Schema} from 'air-schema';
 import { routeNormalizer, signature, equal } from '../utils';
 import { Loader } from '../loader';
 import { EMPTY_OBJECT } from '../def';
+import contentLoader from './content';
 
 export default class LiveSchema extends Schema {
   
@@ -50,6 +51,13 @@ export default class LiveSchema extends Schema {
   
   findByKey(key) {
     return this.item.find(({key: x}) => x === key);
+  }
+
+  static resourceloader(resourceloader, { path }, { type, ...args }) {
+    if (type === 'content') {
+      return contentLoader(resourceloader, { path }, { type, ...args });
+    }
+    throw 'Unsupported resource type.';
   }
   
   /**

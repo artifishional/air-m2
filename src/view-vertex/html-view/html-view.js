@@ -1,4 +1,4 @@
-import { stream2 as stream, fromPromise } from 'air-stream';
+import { stream2 as stream } from 'air-stream';
 import { ENTRY_UNIT } from '../../globals';
 import StylesController from './styles-controller';
 import {
@@ -37,7 +37,6 @@ class Cached {
 }
 
 export default class HTMLView extends LiveSchema {
-
 	constructor( args, src, { acid } = {} ) {
 		super( args, src, { acid } );
 
@@ -636,7 +635,7 @@ export default class HTMLView extends LiveSchema {
 			}
 			const resources = [
 				...(src.acid !== -1 && src.prop.resources || []),
-				...vertex.prop.resources.map(x => fromPromise(src.resourceloader(src.resourceloader, pack, x))),
+				...vertex.prop.resources.map(x => stream.fromPromise(src.resourceloader(src.resourceloader, pack, x))),
 			];
 			/* TODO HACK */
 			vertex.prop.styles.forEach( ({style}) => {

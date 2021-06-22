@@ -1,10 +1,10 @@
-import { LiveSchema } from "../live-schema"
-import { ObservableCollection } from "../observable-collection"
-import { stream2 as stream } from "air-stream"
-import { error } from "../error"
+import { LiveSchema } from '../live-schema'
+import { ObservableCollection } from '../observable-collection'
+import { stream2 as stream } from 'air-stream'
+import { error } from '../error'
 import { ENTRY_UNIT } from '../globals';
-import resourceloader from "../loader/resource-loader";
 import { EMPTY } from '../def';
+import scriptLoader from '../live-schema/script_like_promise';
 
 function frommodule(module, _key = "main") {
 	return [ _key,
@@ -40,13 +40,22 @@ const EMPTY_STREAM = stream.fromCbFunc((cb) => {
 const EMPTY_STREAM_CR = () => EMPTY_STREAM;
 
 export default class ModelVertex extends LiveSchema {
-
 	constructor([ key, { source = EMPTY_STREAM_CR, ...prop }, ...item], src) {
 		super([ key, { source, ...prop }, ...item], src);
 		this.resourceloader = src.resourceloader;
 	}
 
-	static createApplicationRoot( { path = ENTRY_UNIT, resourceloader = ModelVertex.resourceloader } ) {
+	static resourceloader(resourceloader, { path }, { type, ...args }) {
+		if (type === 'script') {
+			return scriptLoader(resourceloader, { path }, { type, ...args });
+		}
+		return super.resourceloader(resourceloader);
+	}
+
+	static createApplicationRoot({
+		 path = ENTRY_UNIT,
+		 resourceloader = (...args) => ModelVertex.resourceloader(...args),
+	}) {
 		const model = new ModelVertex( [ "$", {}, ], { resourceloader }, );
 		model.append([ "error", { id: "error", source: error } ], [ "main", { use: [{ path }]} ],);
 		return model;
@@ -113,5 +122,3 @@ export default class ModelVertex extends LiveSchema {
     }
 
 }
-
-ModelVertex.resourceloader = resourceloader;
