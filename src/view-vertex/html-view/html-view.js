@@ -178,9 +178,9 @@ export default class HTMLView extends LiveSchema {
 	
 	createKitLayer( { $: { modelschema,
 		layers: layers = new Map( [ [ -1, { layer: modelschema, vars: {} } ] ] ) },
-		                signature: parentContainerSignature = null,
-		                ...args
-	                } ) {
+			signature: parentContainerSignature = null,
+			...args
+		} ) {
 		return stream.fromCbFn((cb, ctr) => {
 			const container = new PlaceHolderContainer(this, { type: "kit" });
 			//todo need layers sup
@@ -464,44 +464,55 @@ export default class HTMLView extends LiveSchema {
 	}
 	
 	lazyTeeEntityStrategy(container, view, viewStage, model, layers) {
-		const loader = this.obtain("@loader", { }, { layers });
-		return stream.extendedCombine([
-			container,
-			model,
-			loader,
-			loader.gripFirst(HTMLView.gripStageProJ),
-			view,
-			viewStage,
-		], ([container, tee, loader, loaderStageVl, view = null, viewStageVl = -1]) => {
-			const transition = { loader: null, view: null };
-			if (!view && tee && (loaderStageVl === 0 || loaderStageVl === 2)) {
-				container.append(loader.container.target);
-				transition.loader = 'fade-in';
-			} else if (view && tee && loaderStageVl === 1) {
-				transition.loader = 'fade-out';
-			} else if(!tee || view && loaderStageVl === 0) {
-				loader.container.restore();
-			}
-			if (loaderStageVl === 0 && tee && view && (viewStageVl === 0 || viewStageVl === 2)) {
-				container.append(view.container.target);
-				transition.view = 'fade-in';
-			} else if(!tee && view && viewStageVl === 1) {
-				transition.view = 'fade-out';
-			} else if (!tee && view && viewStageVl === 0) {
-				view.container.restore();
-			}
-			return { transition, on: tee || viewStageVl > 0 };
-		}, {
-			tuner: (tuner, { transition, on }) => {
-				tuner.setup([[view, { on }], [viewStage, { on }]]);
-				if (transition.loader) {
-					tuner.get(3).hook(transition.loader);
+		const loader = this.obtain('@loader', { }, { layers });
+		const loaderStage = loader.gripFirst(HTMLView.gripStageProJ);
+		return stream
+			.eCombine([
+				container,
+				model,
+				loader,
+				loaderStage,
+				view,
+				viewStage,
+			],
+				([container, tee, loader, loaderStage, view = null, viewStage = -1]) => {
+					const transition = { loader: null, view: null };
+					if (!view && tee && (loaderStage === 0 || loaderStage === 2)) {
+						container.append(loader.container.target);
+						transition.loader = 'fade-in';
+					} else if (view && tee && loaderStage === 1) {
+						transition.loader = 'fade-out';
+					} else if(!tee || view && loaderStage === 0) {
+						loader.container.restore();
+					}
+					if (loaderStage === 0 && tee && view && (viewStage === 0 || viewStage === 2)) {
+						container.append(view.container.target);
+						transition.view = 'fade-in';
+					} else if(!tee && view && viewStage === 1) {
+						transition.view = 'fade-out';
+					} else if (!tee && view && viewStage === 0) {
+						view.container.restore();
+					}
+					return {
+						connection: {
+							view: tee || viewStage > 0,
+							viewStage: tee || viewStage > 0,
+						},
+						transition,
+						// Включен когда выбран или до окончания работы
+						on: tee || viewStage > 0,
+					};
+				},
+				({ on }) => [container, model, loader, loaderStage, ...on ? [view, viewStage] : []],
+				({ transition }, [,,,loaderStage,,viewStage]) => {
+					if (transition.view) {
+						viewStage(transition.view);
+					}
+					if (transition.loader) {
+						loaderStage(transition.loader);
+					}
 				}
-				if (transition.view) {
-					tuner.get(5).hook(transition.view);
-				}
-			}
-		})
+			)
 	}
 	
 	static get staticStage0stream() {
@@ -512,29 +523,32 @@ export default class HTMLView extends LiveSchema {
 	}
 	
 	staticTeeEntityStrategy(container, view, viewStage, model) {
-		return stream.extendedCombine([
-			container,
-			model,
-			view,
-			viewStage,
-		], ([container, tee, view, viewStageVl]) => {
-			let transition = '';
-			if (tee && (viewStageVl === 0 || viewStageVl === 2)) {
-				container.append(view.container.target);
-				transition = 'fade-in';
-			} else if(!tee && viewStageVl === 1) {
-				transition = 'fade-out';
-			} else if (!tee && viewStageVl === 0) {
-				view.container.restore();
-			}
-			return { transition };
-		}, {
-			tuner: (tuner, { transition }) => {
-				if (transition) {
-					tuner.get(3).hook(transition);
+		return stream
+			.eCombine([
+				container,
+				model,
+				view,
+				viewStage,
+			],
+				([container, tee, view, viewStageVl]) => {
+					let transition = '';
+					if (tee && (viewStageVl === 0 || viewStageVl === 2)) {
+						container.append(view.container.target);
+						transition = 'fade-in';
+					} else if(!tee && viewStageVl === 1) {
+						transition = 'fade-out';
+					} else if (!tee && viewStageVl === 0) {
+						view.container.restore();
+					}
+					return { transition };
+				},
+				null,
+				({ transition }, [,,,viewStage]) => {
+					if (transition) {
+						viewStage(transition);
+					}
 				}
-			}
-		});
+			);
 	}
 	
 	static gripStageProJ({ stages }) {
