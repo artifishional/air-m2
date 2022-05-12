@@ -1,5 +1,5 @@
-import {NODE_TYPES} from "./def"
-import { getfrompath } from "../../utils"
+import {NODE_TYPES} from "./def.mjs"
+import { getfrompath } from "../../utils/index.mjs"
 
 
 class NumberFormat {

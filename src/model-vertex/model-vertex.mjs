@@ -1,11 +1,10 @@
 import { LiveSchema } from '../live-schema'
-import { ObservableCollection } from '../observable-collection'
+import { ObservableCollection } from '../observable-collection/index.mjs'
 import { stream2 as stream } from 'air-stream'
-import { error } from '../error'
-import { ENTRY_UNIT } from '../globals';
-import resourceloader from '../loader/resource-loader';
-import { EMPTY } from '../def';
-import scriptLoader from '../live-schema/script_like_promise';
+import { error } from '../error/index.mjs'
+import { ENTRY_UNIT } from '../globals.mjs';
+import { EMPTY } from '../def.mjs';
+import scriptLoader from '../live-schema/script-like-promise.mjs';
 
 function frommodule(module, _key = "main") {
 	return [ _key,
@@ -50,7 +49,7 @@ export default class ModelVertex extends LiveSchema {
 		if (type === 'script') {
 			return scriptLoader(resourceloader, { path }, { type, ...args });
 		}
-		return super.resourceloader(resourceloader);
+		return super.resourceloader(resourceloader, { path }, { type, ...args });
 	}
 
 	static createApplicationRoot({

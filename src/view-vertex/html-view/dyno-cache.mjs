@@ -1,4 +1,4 @@
-import { signature as signatureEquals } from '../../utils';
+import { signature as signatureEquals } from '../../utils/index.mjs';
 
 const FATED_LIVE_TIME_MS = 5000;
 let FATED_COUNER = 0;

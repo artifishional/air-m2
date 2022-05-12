@@ -1,8 +1,8 @@
 import { stream2 as stream } from 'air-stream';
 import { Schema} from 'air-schema';
-import { routeNormalizer, signature, equal } from '../utils';
-import { Loader } from '../loader';
-import { EMPTY_OBJECT } from '../def';
+import { routeNormalizer, signature, equal } from '../utils/index.mjs';
+import { Loader } from '../loader/index.mjs';
+import { EMPTY_OBJECT } from '../def.mjs';
 import contentLoader from './content';
 
 export default class LiveSchema extends Schema {

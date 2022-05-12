@@ -1,4 +1,4 @@
-import { EMPTY_OBJECT, BOOLEAN } from '../def';
+import { EMPTY_OBJECT, BOOLEAN } from '../def.mjs';
 import JSON5 from 'json5';
 
 /**

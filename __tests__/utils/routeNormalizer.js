@@ -1,5 +1,5 @@
-import { routeNormalizer, routeNormalizer2 } from '../../src/utils';
-import { EMPTY_OBJECT } from "../../src/def";
+import { routeNormalizer, routeNormalizer2 } from '../../src/utils/index.mjs';
+import { EMPTY_OBJECT } from "../../src/def.mjs";
 
 const routes = [
   {

@@ -1,4 +1,4 @@
-import {EMPTY_FUNCTION, EMPTY_OBJECT} from "../../def";
+import {EMPTY_FUNCTION, EMPTY_OBJECT} from "../../def.mjs";
 
 export const STD_PROXY_CONFIG = {
 	has() {

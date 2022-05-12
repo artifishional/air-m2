@@ -1,8 +1,8 @@
-import events from "../events";
-import spreading from "./spreading";
-import {BOOLEAN, EMPTY_FUNCTION} from "../../def";
+import events from "../events/index.mjs";
+import spreading from "./spreading.mjs";
+import {BOOLEAN, EMPTY_FUNCTION} from "../../def.mjs";
 import JSON5 from 'json5';
-import { signature as signatureEquals } from '../../utils';
+import { signature as signatureEquals } from '../../utils/index.mjs';
 
 
 let UNIQUE_IMAGE_IDX = 1;

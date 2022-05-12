@@ -1,13 +1,13 @@
-import fontLoader from "./font";
-import soundLoader from "./sound";
-import imageLoader from "./image";
-import styleLoader from "./style";
-import Languages from "./languages";
-import intlLoader from "./intl";
-import inlineStyleLoader from "./inline-style";
-import htmlLoader from "./html";
-import jsonLoader from "./json";
-import { REVISION as revision, PORT as port } from '../globals';
+import fontLoader from "./font.mjs";
+import soundLoader from "./sound.mjs";
+import imageLoader from "./image.mjs";
+import styleLoader from "./style.mjs";
+import Languages from "./languages.mjs";
+import intlLoader from "./intl.mjs";
+import inlineStyleLoader from "./inline-style.mjs";
+import htmlLoader from "./html.mjs";
+import jsonLoader from "./json.mjs";
+import { REVISION as revision, PORT as port } from '../globals.mjs';
 import baseResourceloader from '../live-schema/resource-loader';
 
 export default function (resourceloader, { path }, { type, ...args }) {

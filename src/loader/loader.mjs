@@ -1,5 +1,5 @@
 const schtypes = {
-    "js": "/index.js",
+    "js": "/index.mjs",
     "json": "/index.json",
     "html": "/index.html",
 };

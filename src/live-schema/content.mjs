@@ -1,4 +1,4 @@
-import { PORT as port } from './../globals';
+import { PORT as port } from '../globals.mjs';
 const {protocol, hostname} = window.location;
 const urlOrigin = port ? `${protocol}//${hostname}:${port}` : window.location.origin;
 

@@ -1,20 +1,20 @@
 import { stream2 as stream } from 'air-stream';
-import { ENTRY_UNIT } from '../../globals';
-import StylesController from './styles-controller';
+import { ENTRY_UNIT } from '../../globals.mjs';
+import StylesController from './styles-controller.mjs';
 import {
 	routeNormalizer,
 	signature as signatureEquals,
 	removeElementFromArray, pickFromPath,
-} from '../../utils';
+} from '../../utils/index.mjs';
 import JSON5 from 'json5';
-import { LiveSchema } from '../../live-schema';
-import { NODE_TYPES } from './def';
-import { Layer } from './layer';
-import PlaceHolderContainer from './place-holder-container';
-import ActiveNodeTarget from './active-node-target';
-import { ModelVertex } from '../../model-vertex';
-import resourceloader from '../../loader/resource-loader';
-import CachedNodeVertex from './cached-node-vertex';
+import { LiveSchema } from '../../live-schema/index.mjs';
+import { NODE_TYPES } from './def.mjs';
+import { Layer } from './layer.mjs';
+import PlaceHolderContainer from './place-holder-container.mjs';
+import ActiveNodeTarget from './active-node-target.mjs';
+import { ModelVertex } from '../../model-vertex/index.mjs';
+import resourceloader from '../../loader/resource-loader.mjs';
+import CachedNodeVertex from './cached-node-vertex.mjs';
 
 let UNIQUE_VIEW_KEY = 0;
 
