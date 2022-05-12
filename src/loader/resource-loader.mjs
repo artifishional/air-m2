@@ -8,7 +8,7 @@ import inlineStyleLoader from "./inline-style.mjs";
 import htmlLoader from "./html.mjs";
 import jsonLoader from "./json.mjs";
 import { REVISION as revision, PORT as port } from '../globals.mjs';
-import baseResourceloader from '../live-schema/resource-loader';
+import baseResourceloader from '../live-schema/resource-loader.mjs';
 
 export default function (resourceloader, { path }, { type, ...args }) {
   const {protocol, hostname} = window.location;

@@ -1,4 +1,4 @@
-import { LiveSchema } from '../live-schema'
+import { LiveSchema } from '../live-schema/index.mjs';
 import { ObservableCollection } from '../observable-collection/index.mjs'
 import { stream2 as stream } from 'air-stream'
 import { error } from '../error/index.mjs'

@@ -1,1 +1,1 @@
-export {default as LiveSchema} from "./live-schema"
+export { default as LiveSchema } from './live-schema.mjs';

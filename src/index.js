@@ -1,5 +1,5 @@
 export * from "air-stream"
-export * from "./live-schema"
+export * from './live-schema/index.mjs';
 export * from "./loader/index.mjs"
 export * from "./model-vertex/index.mjs"
 export * from "./view-vertex/index.mjs"

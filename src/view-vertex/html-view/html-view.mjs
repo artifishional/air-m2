@@ -1,12 +1,13 @@
 import { stream2 as stream } from 'air-stream';
+import JSON5 from 'json5';
 import { ENTRY_UNIT } from '../../globals.mjs';
 import StylesController from './styles-controller.mjs';
 import {
-	routeNormalizer,
-	signature as signatureEquals,
-	removeElementFromArray, pickFromPath,
+  routeNormalizer,
+  signature as signatureEquals,
+  removeElementFromArray,
+  pickFromPath,
 } from '../../utils/index.mjs';
-import JSON5 from 'json5';
 import { LiveSchema } from '../../live-schema/index.mjs';
 import { NODE_TYPES } from './def.mjs';
 import { Layer } from './layer.mjs';
