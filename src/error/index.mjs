@@ -1,12 +1,10 @@
-import { stream2 as stream } from "../"
+import { stream2 as stream } from 'air-stream';
 
 export class Error {
-
-    constructor( { code }, rid ) {
-        Error.defaultEmitter.emt.kf();
-        Error.defaultEmitter.emt( { code } );
-    }
-
+  constructor({ code }) {
+    Error.defaultEmitter.emt.kf();
+    Error.defaultEmitter.emt({ code });
+  }
 }
 
 Error.default = stream
