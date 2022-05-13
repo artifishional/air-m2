@@ -3,7 +3,7 @@ import { Schema} from 'air-schema';
 import { routeNormalizer, signature, equal } from '../utils/index.mjs';
 import { Loader } from '../loader/index.mjs';
 import { EMPTY_OBJECT } from '../def.mjs';
-import contentLoader from './content';
+import contentLoader from './content.mjs';
 
 export default class LiveSchema extends Schema {
   
