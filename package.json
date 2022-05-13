@@ -11,7 +11,7 @@
   "type": "module",
   "dependencies": {
     "air-anime": "https://github.com/artifishional/air-anime.git#s2s",
-    "air-schema": "^0.2.0",
+    "air-schema": "https://github.com/artifishional/air-schema.git#s3s",
     "air-stream": "git+ssh://git@github.com/artifishional/air-stream.git#s3s",
     "fontfaceobserver": "^2.1.0",
     "howler": "^2.1.3",
