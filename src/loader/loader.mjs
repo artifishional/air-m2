@@ -28,7 +28,8 @@ export default class Loader {
         emt({data: module});
     } );
     */
-      module = resourceloader(resourceloader,
+      module = resourceloader(
+        resourceloader,
         { path: `${_path}/` },
         { url: schtypes[schtype], type: 'script' },
       )
