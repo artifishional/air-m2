@@ -13,13 +13,10 @@ function createPrioritySystemStyle (priority) {
 
 function inject (style, priority) {
 	createPrioritySystemStyle(priority);
-	
-
-	
 	PRIORITY[priority].after(style);
 }
 
-const IMGPreloaderSheet = document.createElement("style");
+const IMGPreloaderSheet = document.createElement('style');
 const IMGSStore = new Set();
 const PRIORITY = [];
 
@@ -46,7 +43,7 @@ export default (resourceloader, {path}, { acid, priority, style, revision, ...ar
 						fonts.push(fontFamilyMatch[1]);
 					}
 
-					rawFontCSSContent += fontFaceMatch.replace(/url\(['"]?([^\'")]+)['"]?\)/gm, (_, resource) => {
+					rawFontCSSContent += fontFaceMatch.replace(/url\(['"]?([^'")]+)['"]?\)/gm, (_, resource) => {
 						const url = new URL(
 							'm2units/' + path + resource,
 							window.location.origin + window.location.pathname
@@ -71,7 +68,7 @@ export default (resourceloader, {path}, { acid, priority, style, revision, ...ar
 		const commonStyle = document.createElement('style');
 		commonStyle.textContent = '';
 		rawCommonCSSContent = style.textContent.replace(/:scope/g, `[data-style-acid-${acid}]`);
-		const imageRegex = /\/\*\s<image\surl=\"([^"]+)">\s\*\//gm;
+		const imageRegex = /\/\*\s<image\surl="([^"]+)">\s\*\//gm;
 		const matches = rawCommonCSSContent.matchAll(imageRegex);
 		if (matches) {
 			for (const match of matches) {

@@ -224,14 +224,57 @@
 <!-- html standard tags are invisible -->
 
 
+<unit.form>
+    <script>
+        export default ({ obtain }) => {
+
+        }
+    </script>
+
+    <unit.field>
+        <script>
+          export default ({ obtain }) => {
+
+          }
+        </script>
+
+
+    </unit.field>
+
+    <unit.validate>
+        <script>
+          export default ({ obtain }) => {
+
+          }
+        </script>
+
+
+    </unit.validate>
+</unit.form>
+
+
+
+
+
+<unit [@form]>
+    <unit>
+        <form>
+            <unit>Family</unit>
+            <unit [@form.field] data={name:family}>
+                <input type="text"/>
+            </unit>
+        </form>
+    </unit>
+</unit>
+
 <!-- with animation -->
 
 <unit use = animate>
 
-    <keyframe action = fade-in prop = {delay:(to.delay),duration:(to.duration)}>
+    <keyframe action = fade-in prop = {delay:to.delay,duration:to.duration}>
         <!--    <keyframe action = fade-in prop = {delay:3,duration:(x)}>  "x" from argv-->
         <!--    <keyframe action = fade-in prop = {delay:3,duration:(y)}>  "y" from argv-->
-        <key offset = 1 prop = {x:(x),css:{opacity:1}} />
+        <key offset = 1 prop = {x,css:{opacity:1}} />
         <!--  default offset settings - [1] - 100%, [2] - 0%-100% [>2] k = index*100%/count -->
     </keyframe>
 
